@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <title>fête – Event & Gift Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4049798836230099" crossorigin="anonymous"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -31,13 +32,11 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
 .ib:hover{background:var(--surf2)}
 
 /* ── ADS ── */
-.ad-top{height:var(--ad-top);background:var(--gold-l);border-bottom:1px solid var(--gold-m);display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;cursor:pointer}
-.ad-top span{font-size:11.5px;color:var(--gold-d)}
-.ad-top strong{font-weight:600}
+.ad-top{height:var(--ad-top);background:var(--gold-l);border-bottom:1px solid var(--gold-m);display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0 10px}
+.ad-top .adsbygoogle{width:100%!important;height:100%!important}
 .adlbl{font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;background:rgba(192,144,80,0.15);border:1px solid rgba(192,144,80,0.3);border-radius:3px;padding:2px 5px;color:var(--gold-d);flex-shrink:0}
-.ad-bot{height:var(--ad-bot);background:var(--rose-l);border-top:1px solid var(--rose-m);display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;cursor:pointer}
-.ad-bot span{font-size:11.5px;color:var(--rose-d)}
-.ad-bot strong{font-weight:600}
+.ad-bot{height:var(--ad-bot);background:var(--rose-l);border-top:1px solid var(--rose-m);display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0 10px}
+.ad-bot .adsbygoogle{width:100%!important;height:100%!important}
 .adlbl-r{font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;background:rgba(196,99,122,0.1);border:1px solid rgba(196,99,122,0.25);border-radius:3px;padding:2px 5px;color:var(--rose-d);flex-shrink:0}
 .ad-inline{background:var(--gold-l);border:1.5px dashed rgba(192,144,80,0.35);border-radius:var(--rs);padding:9px 14px;margin:4px 0 12px;display:flex;align-items:center;justify-content:space-between}
 .ad-inline span{font-size:11px;color:var(--gold-d)}
@@ -449,9 +448,16 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
     </div>
   </header>
 
-  <div class="ad-top" onclick="App.toast('Opening WeddingWire…')">
-    <span class="adlbl">Ad</span>
-    <span>Plan your perfect event with <strong>WeddingWire</strong> – Free templates</span>
+  <div class="ad-top">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-4049798836230099"
+         data-ad-slot="REPLACE_WITH_TOP_AD_SLOT"
+         data-ad-format="horizontal"
+         data-full-width-responsive="true"></ins>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
   </div>
 
   <div class="scroll" id="main-scroll">
@@ -467,9 +473,16 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
     <div id="scr-rooms" class="screen pad"></div>
   </div>
 
-  <div class="ad-bot" onclick="App.toast('Opening Canva…')">
-    <span class="adlbl-r">Ad</span>
-    <span>Design beautiful invites on <strong>Canva</strong> – Try free →</span>
+  <div class="ad-bot">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-4049798836230099"
+         data-ad-slot="REPLACE_WITH_BOTTOM_AD_SLOT"
+         data-ad-format="horizontal"
+         data-full-width-responsive="true"></ins>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
   </div>
 
   <nav class="tabs">
@@ -930,3 +943,4 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
 
 </body>
 </html>
+

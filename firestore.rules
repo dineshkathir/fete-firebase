@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function eventDoc(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId));
+    }
+
+    function isEventMember(eventId) {
+      return signedIn() && myEmail() in eventDoc(eventId).data.memberEmails;
+    }
+
+    function isEventOrganizer(eventId) {
+      return signedIn() && myEmail() in eventDoc(eventId).data.organizerEmails;
+    }
+
+    function isEventRoomCoordinator(eventId) {
+      // Returns true if the document has a roomEmails field and the user is in it.
+      let docData = eventDoc(eventId).data;
+      return signedIn() && myEmail() in docData.get('roomEmails', []);
+    }
+
+    match /events/{eventId} {
+      allow read: if signedIn() && myEmail() in resource.data.memberEmails;
+      allow create: if signedIn()
+        && myEmail() in request.resource.data.memberEmails
+        && myEmail() in request.resource.data.organizerEmails;
+      allow update: if isEventOrganizer(eventId) || isEventRoomCoordinator(eventId) || (!('roomEmails' in resource.data) && isEventMember(eventId));
+      allow delete: if isEventOrganizer(eventId);
+    }
+
+    match /guests/{guestId} {
+      allow read, update, delete: if signedIn() && isEventMember(resource.data.eventId);
+      allow create: if signedIn() && isEventMember(request.resource.data.eventId);
+    }
+
+    match /gifts/{giftId} {
+      allow read, update, delete: if signedIn() && isEventMember(resource.data.eventId);
+      allow create: if signedIn() && isEventMember(request.resource.data.eventId);
+    }
+  }
+}

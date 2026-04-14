@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>fête – Event & Gift Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --rose:#C4637A;--rose-d:#8B3A52;--rose-l:#FAF0F3;--rose-m:#F2D5DD;
+  --gold:#C09050;--gold-d:#8A6020;--gold-l:#FBF6EC;--gold-m:#F0DEB8;
+  --sage:#6B9B7E;--sage-d:#3D6B50;--sage-l:#EEF5F0;--sage-m:#C2DCC9;
+  --slate:#5B7FA6;--slate-d:#2F5380;--slate-l:#EBF2F9;--slate-m:#BDD3EC;
+  --bg:#FDFAF6;--surf:#FFFFFF;--surf2:#F5F0E8;--surf3:#EDE7DA;
+  --txt:#1E1410;--txt2:#5C4A3A;--txt3:#9C8A7A;--txt4:#BFB0A0;
+  --bord:rgba(30,20,16,0.09);--bord2:rgba(30,20,16,0.05);
+  --sh1:0 1px 8px rgba(30,20,16,0.06);--sh2:0 4px 20px rgba(30,20,16,0.1);--sh3:0 8px 40px rgba(30,20,16,0.14);
+  --r:14px;--rs:8px;--rxs:5px;
+  --hdr:60px;--ad-top:48px;--tab:68px;--ad-bot:46px;
+}
+html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-serif;color:var(--txt);overflow:hidden}
+#app{width:100%;max-width:430px;height:100%;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,0.25)}
+
+/* ── HEADER ── */
+.hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;position:relative;z-index:20}
+.logo{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;letter-spacing:-0.5px;color:var(--rose-d)}
+.logo em{font-style:italic;color:var(--gold-d)}
+.hdr-right{display:flex;gap:6px}
+.ib{width:34px;height:34px;border-radius:50%;border:1px solid var(--bord);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--txt2);transition:background .15s}
+.ib:hover{background:var(--surf2)}
+
+/* ── ADS ── */
+.ad-top{height:var(--ad-top);background:var(--gold-l);border-bottom:1px solid var(--gold-m);display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;cursor:pointer}
+.ad-top span{font-size:11.5px;color:var(--gold-d)}
+.ad-top strong{font-weight:600}
+.adlbl{font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;background:rgba(192,144,80,0.15);border:1px solid rgba(192,144,80,0.3);border-radius:3px;padding:2px 5px;color:var(--gold-d);flex-shrink:0}
+.ad-bot{height:var(--ad-bot);background:var(--rose-l);border-top:1px solid var(--rose-m);display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;cursor:pointer}
+.ad-bot span{font-size:11.5px;color:var(--rose-d)}
+.ad-bot strong{font-weight:600}
+.adlbl-r{font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;background:rgba(196,99,122,0.1);border:1px solid rgba(196,99,122,0.25);border-radius:3px;padding:2px 5px;color:var(--rose-d);flex-shrink:0}
+.ad-inline{background:var(--gold-l);border:1.5px dashed rgba(192,144,80,0.35);border-radius:var(--rs);padding:9px 14px;margin:4px 0 12px;display:flex;align-items:center;justify-content:space-between}
+.ad-inline span{font-size:11px;color:var(--gold-d)}
+
+/* ── SCROLL AREA ── */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.scroll::-webkit-scrollbar{width:3px}
+.scroll::-webkit-scrollbar-track{background:transparent}
+.scroll::-webkit-scrollbar-thumb{background:var(--bord);border-radius:2px}
+.pad{padding:18px}
+
+/* ── TAB BAR ── */
+.tabs{height:var(--tab);background:var(--surf);border-top:1px solid var(--bord2);display:flex;align-items:flex-start;justify-content:space-around;padding:10px 4px 0;flex-shrink:0;position:relative;z-index:20}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 2px;border:none;background:transparent;border-radius:var(--rs);transition:background .15s;position:relative}
+.tab:hover{background:var(--surf2)}
+.tab-ico{font-size:19px;line-height:1;transition:transform .2s}
+.tab.active .tab-ico{transform:scale(1.15)}
+.tab-lbl{font-size:10px;font-weight:500;color:var(--txt3);letter-spacing:0.2px;transition:color .15s}
+.tab.active .tab-lbl{color:var(--rose-d);font-weight:600}
+.tab-dot{width:5px;height:5px;border-radius:50%;background:var(--rose-d);opacity:0;transition:opacity .15s;position:absolute;top:2px}
+.tab.active .tab-dot{opacity:1}
+.tab-badge{position:absolute;top:4px;right:calc(50% - 18px);background:var(--rose-d);color:white;font-size:9px;font-weight:600;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center}
+
+/* ── SCREENS ── */
+.screen{display:none}
+.screen.active{display:block}
+
+/* ── PAGE HEADER ── */
+.ph{margin-bottom:18px}
+.ph-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--txt);margin-bottom:2px}
+.ph-sub{font-size:12.5px;color:var(--txt3)}
+
+/* ── BUTTONS ── */
+.fab{width:100%;background:var(--rose-d);color:white;border:none;border-radius:var(--rs);padding:13px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s,transform .1s;margin-bottom:16px;letter-spacing:0.2px}
+.fab:hover{opacity:.92}
+.fab:active{transform:scale(.98)}
+.fab-outline{background:transparent;color:var(--rose-d);border:1.5px solid var(--rose-d)}
+.fab-outline:hover{background:var(--rose-l)}
+
+/* ── EVENT CARDS ── */
+.ev-card{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--r);margin-bottom:12px;cursor:pointer;overflow:hidden;transition:box-shadow .2s,transform .15s;position:relative}
+.ev-card:hover{box-shadow:var(--sh2);transform:translateY(-1px)}
+.ev-card:active{transform:scale(.99)}
+.ev-accent{position:absolute;top:0;left:0;width:100%;height:4px}
+.ev-body{padding:16px}
+.ev-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.ev-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--txt);line-height:1.2}
+.type-chip{font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;white-space:nowrap;margin-left:8px}
+.ev-meta{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.ev-meta-item{font-size:11.5px;color:var(--txt3);display:flex;align-items:center;gap:4px}
+.ev-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.ev-stat{background:var(--surf2);border-radius:var(--rxs);padding:8px;text-align:center}
+.ev-stat-n{font-size:18px;font-weight:600;color:var(--txt);display:block;font-family:'Cormorant Garamond',serif}
+.ev-stat-l{font-size:9.5px;color:var(--txt3);text-transform:uppercase;letter-spacing:0.6px}
+.ev-footer{display:flex;justify-content:space-between;align-items:center}
+.countdown{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;color:white}
+.ev-actions{display:flex;gap:6px}
+.ev-btn{font-size:11px;color:var(--txt3);background:var(--surf2);border:none;border-radius:var(--rxs);padding:4px 9px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:background .15s}
+.ev-btn:hover{background:var(--surf3)}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.s-card{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:11px;text-align:center}
+.s-n{font-size:22px;font-weight:600;font-family:'Cormorant Garamond',serif;display:block;line-height:1.1}
+.s-l{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;display:block}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--txt3);pointer-events:none}
+.search-inp{width:100%;padding:10px 12px 10px 36px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);font-size:13.5px;color:var(--txt);font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border-color .15s}
+.search-inp:focus{border-color:var(--rose)}
+.search-inp::placeholder{color:var(--txt4)}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.filters::-webkit-scrollbar{display:none}
+.fchip{flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--bord);background:var(--surf);color:var(--txt2);transition:all .15s;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif}
+.fchip.on{background:var(--rose-d);border-color:var(--rose-d);color:white}
+
+/* ── GUEST ROWS ── */
+.g-row{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:box-shadow .15s,transform .1s}
+.g-row:hover{box-shadow:var(--sh1);transform:translateX(1px)}
+.g-row:active{transform:scale(.99)}
+.g-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;font-family:'Cormorant Garamond',serif}
+.g-info{flex:1;min-width:0}
+.g-name{font-size:13.5px;font-weight:500;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-detail{font-size:11.5px;color:var(--txt3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.rsvp-btn{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:opacity .15s}
+.rsvp-btn:hover{opacity:.8}
+.r-attending{background:var(--sage-l);color:var(--sage-d)}
+.r-declined{background:#FEE8E8;color:#932B2B}
+.r-pending{background:var(--gold-l);color:var(--gold-d)}
+.r-invited{background:var(--surf2);color:var(--txt2)}
+.g-del{width:28px;height:28px;border-radius:50%;background:transparent;border:none;cursor:pointer;font-size:14px;color:var(--txt4);display:flex;align-items:center;justify-content:center;transition:background .15s}
+.g-del:hover{background:#FEE8E8;color:#932B2B}
+
+/* ── GIFT CARDS ── */
+.gift-card{background:var(--surf);border-radius:var(--r);margin-bottom:8px;cursor:pointer;transition:box-shadow .2s,transform .15s;position:relative;overflow:hidden;box-shadow:var(--sh1)}
+.gift-card:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.gift-card:active{transform:scale(.98)}
+.gift-stripe{position:absolute;top:0;left:0;width:5px;height:100%;border-radius:5px 0 0 5px}
+.gift-inner{padding:14px 14px 13px 20px}
+.gift-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:11px}
+.gift-ico{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;position:relative}
+.gift-body{flex:1;min-width:0}
+.gift-title{font-size:14px;font-weight:500;color:var(--txt);line-height:1.35;margin-bottom:4px;padding-right:22px}
+.gift-from-row{display:flex;align-items:center;gap:5px}
+.gift-from-av{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;font-family:'Cormorant Garamond',serif}
+.gift-from-name{font-size:12px;color:var(--txt3)}
+.gift-cat-chip{display:inline-block;font-size:10px;font-weight:500;padding:1px 7px;border-radius:10px;margin-left:4px}
+.gift-divider{height:1px;background:var(--bord2);margin-bottom:10px}
+.gift-bot{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.gift-val{font-size:19px;font-weight:600;font-family:'Cormorant Garamond',serif;line-height:1;color:var(--txt)}
+.gift-actions{display:flex;gap:6px;align-items:center}
+.ty-btn{padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;white-space:nowrap}
+.ty-btn:active{transform:scale(.95)}
+.ty-sent{background:var(--sage-l);color:var(--sage-d)}
+.ty-pending{background:var(--gold-l);color:var(--gold-d)}
+.ty-drafted{background:var(--slate-l);color:var(--slate-d)}
+.gift-del{position:absolute;top:11px;right:11px;width:24px;height:24px;border-radius:50%;background:transparent;border:none;cursor:pointer;font-size:11px;color:var(--txt4);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.gift-del:hover{background:#FEE8E8;color:#932B2B}
+.gift-photo-thumb{width:100%;height:96px;object-fit:cover;display:block;border-radius:0 0 var(--r) var(--r);margin-top:12px}
+/* summary strip */
+.gift-strip{display:flex;background:var(--surf);border-radius:var(--r);margin-bottom:12px;overflow:hidden;box-shadow:var(--sh1)}
+.gift-strip-cell{flex:1;padding:12px 8px;text-align:center;position:relative}
+.gift-strip-cell+.gift-strip-cell::before{content:'';position:absolute;left:0;top:18%;height:64%;width:1px;background:var(--bord2)}
+.gsn{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:600;display:block;line-height:1}
+.gsl{font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.7px;margin-top:3px;display:block}
+/* ty progress */
+.ty-bar-wrap{background:var(--surf);border-radius:var(--rs);padding:11px 14px;margin-bottom:12px;box-shadow:var(--sh1)}
+.ty-bar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.ty-bar-label{font-size:11.5px;font-weight:500;color:var(--txt2)}
+.ty-bar-pct{font-size:12px;font-weight:600;color:var(--sage-d)}
+.ty-track{height:6px;background:var(--surf2);border-radius:3px;overflow:hidden}
+.ty-fill{height:100%;border-radius:3px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+/* category filter pills */
+.cat-filters{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.cat-filters::-webkit-scrollbar{display:none}
+.cat-chip{flex-shrink:0;padding:5px 11px;border-radius:20px;font-size:11.5px;font-weight:500;cursor:pointer;border:1px solid var(--bord);background:var(--surf);color:var(--txt2);transition:all .15s;white-space:nowrap}
+.cat-chip.on{border-color:transparent;color:white}
+/* moi rows */
+.moi-row{background:var(--surf);border-radius:var(--rs);padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .2s,transform .15s;box-shadow:var(--sh1);border:1px solid var(--bord2)}
+.moi-row:hover{box-shadow:var(--sh2);transform:translateY(-1px)}
+.moi-row:active{transform:scale(.98)}
+.moi-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;font-family:'Cormorant Garamond',serif;border:2px solid rgba(255,255,255,.7)}
+/* moi hero */
+.moi-hero{border-radius:var(--r);padding:20px 18px 18px;margin-bottom:14px;position:relative;overflow:hidden;background:linear-gradient(135deg,#8B5E20 0%,#4A2E08 60%,#2E1A04 100%)}
+.moi-hero-orb{position:absolute;border-radius:50%;background:rgba(255,255,255,.07)}
+/* moi ty badge */
+.moi-ty-badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:600;cursor:pointer;transition:all .15s;border:none;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap}
+.moi-ty-badge:active{transform:scale(.92)}
+/* moi filter row */
+.moi-filter-row{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.moi-filter-row::-webkit-scrollbar{display:none}
+.moi-fchip{flex-shrink:0;padding:5px 13px;border-radius:20px;font-size:11.5px;font-weight:500;cursor:pointer;border:1px solid var(--bord);background:var(--surf);color:var(--txt2);transition:all .15s;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif}
+.moi-fchip.on{background:var(--gold-d);border-color:var(--gold-d);color:white}
+/* moi avg chip */
+.moi-avg-strip{display:flex;gap:8px;margin-bottom:14px}
+.moi-avg-cell{flex:1;background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:10px 8px;text-align:center;box-shadow:var(--sh1)}
+.moi-avg-n{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;display:block;line-height:1;color:var(--gold-d)}
+.moi-avg-l{font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;display:block}
+/* category picker in modal */
+.cat-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.cat-opt{border:1.5px solid var(--bord);border-radius:var(--rs);padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surf)}
+.cat-opt.sel{border-color:var(--rose-d);background:var(--rose-l)}
+.cat-opt-ico{font-size:22px;display:block;margin-bottom:3px}
+.cat-opt-lbl{font-size:10px;font-weight:500;color:var(--txt2)}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:40px 20px}
+.empty-ico{font-size:44px;margin-bottom:12px}
+.empty-t{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:5px}
+.empty-s{font-size:13px;color:var(--txt3)}
+
+/* ── EVENT SELECTOR ── */
+.ev-sel{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .15s}
+.ev-sel:hover{background:var(--surf2)}
+.ev-sel-lbl{font-size:11px;color:var(--txt3);margin-bottom:1px}
+.ev-sel-val{font-size:13.5px;font-weight:500;color:var(--txt)}
+.chev{font-size:11px;color:var(--txt3)}
+
+/* ── SETTINGS ── */
+.set-sec{margin-bottom:22px}
+.set-sec-t{font-size:10.5px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.set-item{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:13px 14px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .15s}
+.set-item:hover{background:var(--surf2)}
+.set-left{display:flex;align-items:center;gap:11px}
+.set-ico{width:34px;height:34px;border-radius:var(--rxs);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.set-lbl{font-size:13.5px;font-weight:500;color:var(--txt)}
+.set-sub{font-size:11.5px;color:var(--txt3);margin-top:1px}
+.tog{width:42px;height:23px;border-radius:12px;background:var(--bord);position:relative;cursor:pointer;transition:background .2s;border:none;flex-shrink:0}
+.tog.on{background:var(--sage-d)}
+.tog::after{content:'';width:17px;height:17px;border-radius:50%;background:white;position:absolute;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
+.tog.on::after{transform:translateX(19px)}
+.prem-banner{background:linear-gradient(135deg,var(--rose-d) 0%,#7A2A45 100%);border-radius:var(--r);padding:18px;margin-bottom:18px}
+.prem-t{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:white;margin-bottom:5px}
+.prem-s{font-size:12.5px;color:rgba(255,255,255,.8);margin-bottom:14px;line-height:1.5}
+.prem-cta{background:white;color:var(--rose-d);border:none;border-radius:var(--rs);padding:9px 18px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.prem-cta:hover{opacity:.9}
+.soon-badge{font-size:10px;color:var(--txt3);background:var(--surf2);padding:2px 8px;border-radius:10px}
+
+/* ── MODALS ── */
+.mo{position:fixed;inset:0;background:rgba(30,20,16,.45);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.mo.open{opacity:1;pointer-events:all}
+.ms{background:var(--bg);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:430px;padding:18px 18px 30px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:92vh;overflow-y:auto}
+.mo.open .ms{transform:translateY(0)}
+.ms::-webkit-scrollbar{display:none}
+.m-handle{width:36px;height:4px;background:var(--bord);border-radius:2px;margin:0 auto 18px}
+.m-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--txt);margin-bottom:16px}
+.fg{margin-bottom:12px}
+.fl{font-size:11px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px}
+.fi{width:100%;padding:10px 13px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;color:var(--txt);outline:none;transition:border-color .15s;appearance:none}
+.fi:focus{border-color:var(--rose)}
+.fi::placeholder{color:var(--txt4)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-p{width:100%;background:var(--rose-d);color:white;border:none;border-radius:var(--rs);padding:12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;font-weight:500;cursor:pointer;margin-top:6px;transition:opacity .15s;letter-spacing:.2px}
+.btn-p:hover{opacity:.9}
+.btn-s{width:100%;background:transparent;color:var(--txt2);border:1px solid var(--bord);border-radius:var(--rs);padding:12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;cursor:pointer;margin-top:7px;transition:background .15s}
+.btn-s:hover{background:var(--surf2)}
+.btn-danger{background:#FEE8E8;color:#932B2B;border:1px solid #FABCBC}
+.btn-danger:hover{background:#FDD0D0}
+
+/* ── EVENT PICKER ── */
+.ep-item{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:12px 14px;margin-bottom:7px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:box-shadow .15s}
+.ep-item:hover{box-shadow:var(--sh1)}
+.ep-item.sel{border-color:var(--rose);background:var(--rose-l)}
+.ep-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ── PHOTO UPLOAD ── */
+.photo-drop{border:1.5px dashed var(--bord);border-radius:var(--rs);padding:20px;text-align:center;cursor:pointer;color:var(--txt3);font-size:13px;transition:border-color .15s;position:relative;overflow:hidden}
+.photo-drop:hover{border-color:var(--rose)}
+.photo-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.photo-preview{width:100%;height:100px;object-fit:cover;border-radius:var(--rxs);display:none}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:calc(var(--ad-bot) + var(--tab) + 10px);left:50%;transform:translateX(-50%) translateY(14px);background:var(--txt);color:white;padding:9px 16px;border-radius:20px;font-size:12.5px;font-weight:500;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;pointer-events:none;max-width:85%;overflow:hidden;text-overflow:ellipsis}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── DETAIL VIEW ── */
+.detail-header{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.back-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--bord);background:var(--surf);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--txt2);flex-shrink:0}
+.detail-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;flex:1}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.info-cell{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:11px}
+.info-lbl{font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.info-val{font-size:13.5px;color:var(--txt);font-weight:500}
+.rsvp-big{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.rsvp-opt{flex:1;min-width:80px;padding:9px;border-radius:var(--rs);border:1.5px solid var(--bord);background:var(--surf);cursor:pointer;text-align:center;font-size:12px;font-weight:500;color:var(--txt2);font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s}
+.rsvp-opt.sel-attending{background:var(--sage-l);border-color:var(--sage-d);color:var(--sage-d)}
+.rsvp-opt.sel-declined{background:#FEE8E8;border-color:#C03030;color:#932B2B}
+.rsvp-opt.sel-pending{background:var(--gold-l);border-color:var(--gold-d);color:var(--gold-d)}
+.rsvp-opt.sel-invited{background:var(--surf2);border-color:var(--txt3);color:var(--txt2)}
+.linked-gifts{margin-top:16px}
+.lg-title{font-size:12px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.lg-item{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rxs);padding:9px 12px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+
+/* ── DASHBOARD HERO ── */
+.dash-hero{background:linear-gradient(135deg,var(--rose-d) 0%,#7A2A45 100%);border-radius:var(--r);padding:18px;margin-bottom:16px;color:white;position:relative;overflow:hidden}
+.dash-hero::after{content:'';position:absolute;right:-20px;bottom:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.06)}
+.dash-hero-event{font-size:11.5px;opacity:.75;margin-bottom:4px}
+.dash-hero-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;margin-bottom:10px;line-height:1.2}
+.dash-hero-stats{display:flex;gap:16px}
+.dash-stat{text-align:center}
+.dash-stat-n{font-size:22px;font-weight:600;font-family:'Cormorant Garamond',serif;display:block}
+.dash-stat-l{font-size:9.5px;opacity:.7;text-transform:uppercase;letter-spacing:.6px}
+.dash-cd{font-size:11px;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:12px;display:inline-block;margin-top:10px;font-weight:500}
+
+/* ── NO EVENTS ── */
+.no-events{text-align:center;padding:60px 30px}
+.no-events-ico{font-size:56px;margin-bottom:16px;opacity:.6}
+.no-events-t{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;margin-bottom:6px}
+.no-events-s{font-size:13px;color:var(--txt3);line-height:1.6;margin-bottom:24px}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeIn .25s ease forwards}
+
+/* ── ROOM MANAGEMENT ── */
+.room-loc-block{background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);padding:12px;margin-bottom:8px;position:relative}
+.room-loc-name{font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.room-list{display:flex;flex-wrap:wrap;gap:6px}
+.room-tag{display:flex;align-items:center;gap:4px;background:var(--slate-l);color:var(--slate-d);border-radius:20px;padding:3px 10px;font-size:11.5px;font-weight:500}
+.room-tag-del{background:none;border:none;cursor:pointer;color:var(--slate-d);font-size:12px;line-height:1;padding:0 0 0 2px;opacity:.7}
+.room-tag-del:hover{opacity:1}
+.room-add-row{display:flex;gap:6px;margin-top:8px}
+.room-add-inp{flex:1;padding:7px 10px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rxs);font-size:12.5px;color:var(--txt);font-family:'Plus Jakarta Sans',sans-serif;outline:none}
+.room-add-inp:focus{border-color:var(--slate)}
+.room-add-btn{padding:7px 12px;background:var(--slate-d);color:white;border:none;border-radius:var(--rxs);font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap}
+.add-loc-btn{width:100%;padding:9px;border:1.5px dashed var(--bord);border-radius:var(--rs);background:transparent;color:var(--txt3);font-size:12.5px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;margin-bottom:4px}
+.add-loc-btn:hover{border-color:var(--slate);color:var(--slate-d);background:var(--slate-l)}
+
+/* ── ROOM CONFLICT INDICATOR ── */
+.room-conflict{background:#FFF3CD;border:1px solid #FFC107;border-radius:var(--rxs);padding:7px 10px;margin-top:6px;font-size:11.5px;color:#7A5C00;display:flex;align-items:center;gap:6px;animation:fadeIn .2s ease}
+.room-conflict-name{font-weight:600}
+
+/* ── ROOMS SCREEN ── */
+.room-loc-section{margin-bottom:18px}
+.room-loc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.room-loc-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--txt)}
+.room-loc-count{font-size:11px;color:var(--txt3);background:var(--surf2);padding:2px 8px;border-radius:10px}
+.room-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.room-cell{background:var(--surf);border:1.5px solid var(--bord);border-radius:var(--rs);padding:10px 8px;text-align:center;cursor:pointer;transition:all .15s;position:relative;min-height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.room-cell:hover{box-shadow:var(--sh1)}
+.room-cell.occupied{border-color:var(--rose);background:var(--rose-l)}
+.room-cell.multi{border-color:#E67E22;background:#FEF3E2}
+.room-cell.vacant{border-color:var(--sage-m);background:var(--sage-l)}
+.room-cell-no{font-size:15px;font-weight:700;color:var(--txt);font-family:'Cormorant Garamond',serif;line-height:1}
+.room-cell-name{font-size:9.5px;color:var(--txt2);font-weight:500;line-height:1.3;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%}
+.room-cell-badge{position:absolute;top:4px;right:4px;background:var(--rose-d);color:white;font-size:8px;font-weight:700;border-radius:8px;padding:1px 4px;min-width:14px;text-align:center}
+.room-cell-vacant-lbl{font-size:9px;color:var(--sage-d);letter-spacing:.3px}
+.room-legend{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.room-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt3)}
+.room-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+
+/* ── AUTH SCREEN ── */
+#auth-screen{position:fixed;inset:0;background:linear-gradient(145deg,#FAF0F3 0%,#FBF6EC 50%,#EEF5F0 100%);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+.auth-card{width:100%;max-width:360px;background:var(--surf);border-radius:20px;padding:36px 28px 30px;box-shadow:var(--sh3);text-align:center}
+.auth-logo{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:600;color:var(--rose-d);margin-bottom:4px}.auth-logo em{font-style:italic;color:var(--gold-d)}
+.auth-tagline{font-size:13px;color:var(--txt3);margin-bottom:32px}
+.auth-divider{display:flex;align-items:center;gap:10px;margin:20px 0;color:var(--txt4);font-size:12px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--bord)}
+.auth-inp{width:100%;padding:11px 14px;border:1px solid var(--bord);border-radius:var(--rs);font-size:13.5px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;color:var(--txt);margin-bottom:10px;transition:border-color .15s;background:var(--surf)}
+.auth-inp:focus{border-color:var(--rose)}
+.auth-inp::placeholder{color:var(--txt4)}
+.btn-google{width:100%;padding:12px;border:1.5px solid var(--bord);border-radius:var(--rs);background:var(--surf);font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;font-weight:500;color:var(--txt2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .15s;margin-bottom:10px}
+.btn-google:hover{background:var(--surf2);border-color:var(--txt3)}
+.btn-email-login{width:100%;padding:12px;border:none;border-radius:var(--rs);background:var(--rose-d);color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;font-weight:500;cursor:pointer;transition:opacity .15s;margin-bottom:10px}
+.btn-email-login:hover{opacity:.9}
+.auth-toggle{font-size:12.5px;color:var(--txt3);cursor:pointer;margin-top:4px}
+.auth-toggle span{color:var(--rose-d);font-weight:600;text-decoration:underline}
+.auth-err{background:#FEE8E8;color:#932B2B;border-radius:var(--rxs);padding:8px 12px;font-size:12px;margin-bottom:10px;display:none;text-align:left}
+
+/* ── ROLE BADGE ── */
+.role-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.role-organizer{background:var(--rose-l);color:var(--rose-d);border:1px solid var(--rose-m)}
+.role-cash{background:var(--gold-l);color:var(--gold-d);border:1px solid var(--gold-m)}
+.role-room{background:var(--slate-l);color:var(--slate-d);border:1px solid var(--slate-m)}
+
+/* ── TEAM MODAL ── */
+.team-member-row{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:11px 13px;margin-bottom:7px;display:flex;align-items:center;gap:10px}
+.team-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;font-family:'Cormorant Garamond',serif;background:var(--rose-l);color:var(--rose-d)}
+.team-info{flex:1;min-width:0}
+.team-name{font-size:13px;font-weight:500;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team-email{font-size:11px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.role-sel{padding:4px 8px;border:1px solid var(--bord);border-radius:var(--rxs);font-size:11.5px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--surf2);color:var(--txt2);cursor:pointer;outline:none}
+
+/* ── CONFIRM DIALOG ── */
+.confirm-overlay{position:fixed;inset:0;background:rgba(30,20,16,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.confirm-overlay.open{opacity:1;pointer-events:all}
+.confirm-box{background:var(--bg);border-radius:var(--r);padding:22px;max-width:320px;width:100%;box-shadow:var(--sh3)}
+.confirm-t{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:6px}
+.confirm-s{font-size:13px;color:var(--txt2);margin-bottom:18px;line-height:1.5}
+.confirm-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+</style>
+</head>
+<body>
+<!-- ════ AUTH SCREEN ════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">fête<em>.</em></div>
+    <div class="auth-tagline">Event & Gift Tracker</div>
+
+    <button class="btn-google" onclick="Auth.googleLogin()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="auth-divider">or</div>
+
+    <div id="auth-err" class="auth-err"></div>
+    <input class="auth-inp" type="email" id="auth-email" placeholder="Email address" />
+    <input class="auth-inp" type="password" id="auth-pass" placeholder="Password" id="auth-pass" />
+    <input class="auth-inp" type="text" id="auth-name" placeholder="Display name" style="display:none" />
+    <button class="btn-email-login" id="auth-submit-btn" onclick="Auth.emailSubmit()">Sign In</button>
+    <div class="auth-toggle" id="auth-toggle-lbl">Don't have an account? <span onclick="Auth.toggleMode()">Sign up</span></div>
+    <div style="font-size:11px;color:var(--txt4);margin-top:16px;line-height:1.6">Your data syncs through Firebase across devices.<br>Sign in to collaborate on shared events.</div>
+  </div>
+</div>
+
+<!-- ════ TEAM MANAGEMENT MODAL ════ -->
+<div class="mo" id="mo-team">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">👥 Team & Roles</div>
+    <div style="font-size:12px;color:var(--txt3);margin:-8px 0 14px">Manage who can access this event and what they can do.</div>
+    <div id="team-member-list"></div>
+    <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">Invite by Email</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input class="fi" type="email" id="team-invite-email" placeholder="colleague@email.com" style="flex:1" />
+      <select class="fi" id="team-invite-role" style="width:130px">
+        <option value="organizer">Organizer</option>
+        <option value="cash" selected>Cash Collector</option>
+        <option value="room">Room Coord.</option>
+      </select>
+    </div>
+    <button class="btn-p" onclick="App.sendTeamInvite()">＋ Add Member</button>
+    <button class="btn-s" onclick="App.closeModal('team')">Close</button>
+  </div>
+</div>
+
+<div id="app">
+  <header class="hdr">
+    <div class="logo">fête<em>.</em></div>
+    <div class="hdr-right">
+      <button class="ib" onclick="App.openModal('search-global')" title="Search">🔍</button>
+      <button class="ib" id="hdr-team-btn" onclick="App.openTeamModal()" title="Team" style="display:none">👥</button>
+      <button class="ib" onclick="App.openUserMenu()" title="Account" id="hdr-user-btn">👤</button>
+    </div>
+  </header>
+
+  <div class="ad-top" onclick="App.toast('Opening WeddingWire…')">
+    <span class="adlbl">Ad</span>
+    <span>Plan your perfect event with <strong>WeddingWire</strong> – Free templates</span>
+  </div>
+
+  <div class="scroll" id="main-scroll">
+    <!-- EVENTS -->
+    <div id="scr-events" class="screen active pad"></div>
+    <!-- GUESTS -->
+    <div id="scr-guests" class="screen pad"></div>
+    <!-- GIFTS -->
+    <div id="scr-gifts" class="screen pad"></div>
+    <!-- SETTINGS -->
+    <div id="scr-settings" class="screen pad"></div>
+    <!-- ROOMS -->
+    <div id="scr-rooms" class="screen pad"></div>
+  </div>
+
+  <div class="ad-bot" onclick="App.toast('Opening Canva…')">
+    <span class="adlbl-r">Ad</span>
+    <span>Design beautiful invites on <strong>Canva</strong> – Try free →</span>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" id="tab-events" onclick="App.switchTab('events')">
+      <span class="tab-dot"></span>
+      <span class="tab-ico">🎉</span>
+      <span class="tab-lbl">Events</span>
+    </button>
+    <button class="tab" id="tab-guests" onclick="App.switchTab('guests')">
+      <span class="tab-dot"></span>
+      <span class="tab-ico">👥</span>
+      <span class="tab-lbl">Guests</span>
+    </button>
+    <button class="tab" id="tab-gifts" onclick="App.switchTab('gifts')">
+      <span class="tab-dot"></span>
+      <span class="tab-ico">🎁</span>
+      <span class="tab-lbl">Gifts</span>
+    </button>
+    <button class="tab" id="tab-settings" onclick="App.switchTab('settings')">
+      <span class="tab-dot"></span>
+      <span class="tab-ico">⚙️</span>
+      <span class="tab-lbl">Settings</span>
+    </button>
+    <button class="tab" id="tab-rooms" onclick="App.switchTab('rooms')">
+      <span class="tab-dot"></span>
+      <span class="tab-ico">🏨</span>
+      <span class="tab-lbl">Rooms</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ════════════════════ MODALS ════════════════════ -->
+
+<!-- ADD / EDIT EVENT -->
+<div class="mo" id="mo-add-event">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="mo-event-title">New Event</div>
+    <div class="fg">
+      <label class="fl">Event Name *</label>
+      <input class="fi" type="text" id="ev-name" placeholder="e.g. Priya & Arjun's Wedding" />
+    </div>
+    <div class="fr">
+      <div class="fg">
+        <label class="fl">Date *</label>
+        <input class="fi" type="date" id="ev-date" />
+      </div>
+      <div class="fg">
+        <label class="fl">Type</label>
+        <select class="fi" id="ev-type">
+          <option value="wedding">💍 Wedding</option>
+          <option value="birthday">🎂 Birthday</option>
+          <option value="babyshower">🍼 Baby Shower</option>
+          <option value="party">🎊 Party</option>
+          <option value="other">✨ Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Location</label>
+      <div style="position:relative">
+        <input class="fi" type="text" id="ev-loc" placeholder="Search venue or address…" autocomplete="off" oninput="App.locSearch(this.value)" onfocus="App.locSearch(this.value)" />
+        <div id="loc-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surf);border:1px solid var(--bord);border-top:none;border-radius:0 0 var(--rs) var(--rs);z-index:50;max-height:180px;overflow-y:auto;box-shadow:var(--sh2)"></div>
+      </div>
+      <div id="loc-map-preview" style="display:none;margin-top:8px;border-radius:var(--rs);overflow:hidden;height:160px;border:1px solid var(--bord);position:relative">
+        <iframe id="loc-map-frame" width="100%" height="160" style="border:0;display:block" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src=""></iframe>
+        <a id="loc-map-link" href="#" target="_blank" style="position:absolute;bottom:6px;right:6px;background:white;border-radius:4px;padding:3px 8px;font-size:10.5px;font-weight:600;color:#1a73e8;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.2);display:flex;align-items:center;gap:3px">🗺 Open in Maps</a>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Theme Color</label>
+      <select class="fi" id="ev-color">
+        <option value="rose">🌸 Rose</option>
+        <option value="sage">🌿 Sage</option>
+        <option value="gold">✨ Gold</option>
+        <option value="slate">💙 Slate</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">🏨 Room Locations</label>
+      <div id="ev-room-locs"></div>
+      <button class="add-loc-btn" onclick="App.addRoomLocation()">＋ Add Location (Hall / Block / Floor)</button>
+    </div>
+    <button class="btn-p" onclick="App.saveEvent()">Save Event</button>
+    <button class="btn-s" onclick="App.closeModal('add-event')">Cancel</button>
+    <button class="btn-s btn-danger" id="del-event-btn" onclick="App.confirmDeleteEvent()" style="display:none">Delete Event</button>
+  </div>
+</div>
+
+<!-- ADD / EDIT GUEST -->
+<div class="mo" id="mo-add-guest">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="mo-guest-title">Add Guest</div>
+    <div class="fr">
+      <div class="fg">
+        <label class="fl">First Name *</label>
+        <input class="fi" type="text" id="g-first" placeholder="Ananya" />
+      </div>
+      <div class="fg">
+        <label class="fl">Last Name</label>
+        <input class="fi" type="text" id="g-last" placeholder="Kumar" />
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Phone / Email</label>
+      <input class="fi" type="text" id="g-contact" placeholder="+91 98000 00000" />
+    </div>
+    <div class="fr">
+      <div class="fg">
+        <label class="fl">Number of People</label>
+        <input class="fi" type="number" id="g-party" value="1" min="1" max="50" />
+      </div>
+      <div class="fg">
+        <label class="fl">RSVP</label>
+        <select class="fi" id="g-rsvp">
+          <option value="invited">Invited</option>
+          <option value="attending">Attending</option>
+          <option value="declined">Declined</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Notes / Dietary</label>
+      <input class="fi" type="text" id="g-notes" placeholder="Vegetarian, no nuts…" />
+    </div>
+    <div class="fg">
+      <label class="fl">Table / Group</label>
+      <input class="fi" type="text" id="g-table" placeholder="e.g. Table 4, VIP" />
+    </div>
+    <div class="fr">
+      <div class="fg">
+        <label class="fl">🏨 Room Location</label>
+        <select class="fi" id="g-room-loc" onchange="App.refreshRoomNumbers()">
+          <option value="">— None —</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">🚪 Room Number</label>
+        <select class="fi" id="g-room-no" onchange="App.checkRoomConflict()">
+          <option value="">— None —</option>
+        </select>
+      </div>
+    </div>
+    <div id="room-conflict-indicator" style="display:none"></div>
+    <button class="btn-p" onclick="App.saveGuest()">Save Guest</button>
+    <button class="btn-p" style="background:var(--sage-d);margin-top:8px" id="send-invite-btn" onclick="App.sendGuestInvite()" style="display:none">📲 Send WhatsApp Invite</button>
+    <button class="btn-s" onclick="App.closeModal('add-guest')">Cancel</button>
+    <button class="btn-s btn-danger" id="del-guest-btn" onclick="App.confirmDeleteGuest()" style="display:none">Remove Guest</button>
+  </div>
+</div>
+
+<!-- ADD / EDIT GIFT -->
+<div class="mo" id="mo-add-gift">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="mo-gift-title">Log a Gift</div>
+    <div class="fg">
+      <label class="fl">Category</label>
+      <div class="cat-picker" id="gi-cat-picker">
+        <div class="cat-opt sel" data-cat="💝" onclick="App.selectCat(this,'💝')"><span class="cat-opt-ico">💝</span><span class="cat-opt-lbl">Personal</span></div>
+        <div class="cat-opt" data-cat="🏠" onclick="App.selectCat(this,'🏠')"><span class="cat-opt-ico">🏠</span><span class="cat-opt-lbl">Home</span></div>
+        <div class="cat-opt" data-cat="👗" onclick="App.selectCat(this,'👗')"><span class="cat-opt-ico">👗</span><span class="cat-opt-lbl">Clothing</span></div>
+        <div class="cat-opt" data-cat="🍽️" onclick="App.selectCat(this,'🍽️')"><span class="cat-opt-ico">🍽️</span><span class="cat-opt-lbl">Kitchen</span></div>
+        <div class="cat-opt" data-cat="💳" onclick="App.selectCat(this,'💳')"><span class="cat-opt-ico">💳</span><span class="cat-opt-lbl">Cash/Card</span></div>
+        <div class="cat-opt" data-cat="📦" onclick="App.selectCat(this,'📦')"><span class="cat-opt-ico">📦</span><span class="cat-opt-lbl">Other</span></div>
+      </div>
+      <input type="hidden" id="gi-cat" value="💝" />
+    </div>
+    <div class="fg">
+      <label class="fl">Gift Description *</label>
+      <input class="fi" type="text" id="gi-desc" placeholder="e.g. Silk saree set, Stand mixer…" />
+    </div>
+    <div class="fg">
+      <label class="fl">From Guest</label>
+      <input class="fi" type="text" id="gi-from" placeholder="Guest name" list="guest-datalist" />
+      <datalist id="guest-datalist"></datalist>
+    </div>
+    <div class="fr">
+      <div class="fg">
+        <label class="fl">Est. Value (₹)</label>
+        <input class="fi" type="number" id="gi-val" placeholder="5000" min="0" inputmode="numeric" />
+      </div>
+      <div class="fg">
+        <label class="fl">Thank-You</label>
+        <select class="fi" id="gi-ty">
+          <option value="pending">⏳ Pending</option>
+          <option value="drafted">✏️ Drafted</option>
+          <option value="sent">✅ Sent</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Notes</label>
+      <input class="fi" type="text" id="gi-notes" placeholder="Colour, size, occasion…" />
+    </div>
+    <div class="fg">
+      <label class="fl">Photo</label>
+      <div class="photo-drop" id="gift-photo-drop">
+        <img class="photo-preview" id="gift-photo-img" alt="Gift photo" />
+        <input type="file" accept="image/*" onchange="App.handleGiftPhoto(this)" />
+        <div id="gift-photo-label">📷 Tap to add photo</div>
+      </div>
+    </div>
+    <button class="btn-p" onclick="App.saveGift()">Save Gift</button>
+    <button class="btn-s" onclick="App.closeModal('add-gift')">Cancel</button>
+    <button class="btn-s btn-danger" id="del-gift-btn" onclick="App.confirmDeleteGift()" style="display:none">Delete Gift</button>
+  </div>
+</div>
+
+<!-- ADD CASH GIFT -->
+<div class="mo" id="mo-add-cash">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="mo-cash-title">Log Cash / Card Gift</div>
+    <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">💳</span>
+      <div style="font-size:12px;color:var(--gold-d);line-height:1.5">Track cash envelopes, cheques, UPI transfers and gift cards in one place.</div>
+    </div>
+    <div class="fg">
+      <label class="fl">From Guest *</label>
+      <input class="fi" type="text" id="ca-from" placeholder="Guest name" list="cash-guest-datalist" />
+      <datalist id="cash-guest-datalist"></datalist>
+    </div>
+    <div class="fg">
+      <label class="fl">Type</label>
+      <select class="fi" id="ca-type">
+        <option value="Cash Envelope">💵 Cash Envelope</option>
+        <option value="UPI / Bank Transfer">📲 UPI / Bank Transfer</option>
+        <option value="Cheque">🏦 Cheque</option>
+        <option value="Gift Card">🎫 Gift Card</option>
+        <option value="Gold / Jewellery">💛 Gold / Jewellery</option>
+      </select>
+    </div>
+    <div class="fr">
+      <div class="fg">
+        <label class="fl">Amount (₹) *</label>
+        <input class="fi" type="number" id="ca-val" placeholder="5000" min="0" />
+      </div>
+      <div class="fg">
+        <label class="fl">Thank-You Status</label>
+        <select class="fi" id="ca-ty">
+          <option value="pending">⏳ Pending</option>
+          <option value="drafted">✏️ Drafted</option>
+          <option value="sent">✅ Sent</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Notes</label>
+      <input class="fi" type="text" id="ca-notes" placeholder="e.g. Given at reception, via GPay…" />
+    </div>
+    <button class="btn-p" style="background:var(--gold-d)" onclick="App.saveCash()">Save Cash Gift</button>
+    <button class="btn-s" onclick="App.closeModal('add-cash')">Cancel</button>
+    <button class="btn-s btn-danger" id="del-cash-btn" onclick="App.confirmDeleteCash()" style="display:none">Delete</button>
+  </div>
+</div>
+
+<!-- EVENT PICKER -->
+<div class="mo" id="mo-event-pick">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">Select Event</div>
+    <div id="ep-list"></div>
+    <button class="btn-s" onclick="App.closeModal('event-pick')">Cancel</button>
+  </div>
+</div>
+
+<!-- GUEST DETAIL -->
+<div class="mo" id="mo-guest-detail">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div id="guest-detail-content"></div>
+  </div>
+</div>
+
+<!-- PREMIUM -->
+<div class="mo" id="mo-premium">
+  <div class="ms" style="text-align:center;padding:24px 22px 32px">
+    <div class="m-handle"></div>
+    <div style="font-size:44px;margin-bottom:12px">✨</div>
+    <div class="m-title" style="text-align:center">fête Premium</div>
+    <p style="font-size:13px;color:var(--txt2);margin-bottom:20px;line-height:1.6">Remove all ads forever and unlock Digital RSVP Links, Collaborator Mode, and priority support.</p>
+    <div style="background:var(--rose-l);border-radius:var(--rs);padding:16px;margin-bottom:18px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--rose-d)">₹499</div>
+      <div style="font-size:12px;color:var(--txt3)">per year · cancel anytime</div>
+    </div>
+    <button class="btn-p" onclick="App.unlockPremium()">Unlock Premium</button>
+    <button class="btn-s" onclick="App.closeModal('premium')">Maybe later</button>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div class="mo" id="mo-profile">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">Profile</div>
+    <div style="text-align:center;padding:10px 0 20px">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--rose-l);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:28px;font-family:'Cormorant Garamond',serif;font-weight:600;color:var(--rose-d)" id="profile-av">P</div>
+      <div style="font-size:16px;font-weight:500" id="profile-name">Guest Host</div>
+      <div style="font-size:12px;color:var(--txt3);margin-top:2px" id="profile-email">Sign in to sync across devices</div>
+    </div>
+    <div class="fg">
+      <label class="fl">Display Name</label>
+      <input class="fi" type="text" id="prof-name" placeholder="Your name" />
+    </div>
+    <div class="fg">
+      <label class="fl">Email</label>
+      <input class="fi" type="email" id="prof-email" placeholder="you@email.com" />
+    </div>
+    <button class="btn-p" onclick="App.saveProfile()">Save Profile</button>
+    <button class="btn-s" onclick="App.closeModal('profile')">Close</button>
+  </div>
+</div>
+
+<!-- EXPORT -->
+<div class="mo" id="mo-export">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">Export Data</div>
+    <p style="font-size:13px;color:var(--txt2);margin-bottom:18px;line-height:1.5">Download your guest list and gift tracker as CSV files, ready for Excel or Google Sheets.</p>
+    <div class="ev-sel" onclick="App.openModal('event-pick-export')" style="margin-bottom:16px">
+      <div><div class="ev-sel-lbl">Export for</div><div class="ev-sel-val" id="export-ev-name">Select an event</div></div>
+      <span class="chev">▼</span>
+    </div>
+    <button class="btn-p" onclick="App.exportGuests()">📋 Export Guest List (CSV)</button>
+    <button class="btn-p" style="margin-top:8px;background:var(--sage-d)" onclick="App.exportGifts()">🎁 Export Gift Tracker (CSV)</button>
+    <button class="btn-s" onclick="App.closeModal('export')">Cancel</button>
+  </div>
+</div>
+
+<!-- EVENT PICKER FOR EXPORT -->
+<div class="mo" id="mo-event-pick-export">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">Select Event to Export</div>
+    <div id="ep-export-list"></div>
+    <button class="btn-s" onclick="App.closeModal('event-pick-export')">Cancel</button>
+  </div>
+</div>
+
+<!-- ADD MOI -->
+<div class="mo" id="mo-add-moi">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="m-title" id="mo-moi-title" style="margin-bottom:0">Add Moi Entry</div>
+      <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rxs);padding:4px 10px;font-size:11px;font-weight:600;color:var(--gold-d)">💵 மொய்</div>
+    </div>
+    <div style="background:linear-gradient(135deg,var(--gold-l),#fff8ee);border:1px solid var(--gold-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:20px;flex-shrink:0;margin-top:1px">🪙</span>
+      <div style="font-size:12px;color:var(--gold-d);line-height:1.6">Record cash, cheque or digital transfers received from guests. Each entry is linked to your guest list for easy thank-you tracking.</div>
+    </div>
+    <div class="fg">
+      <label class="fl">Guest Name *</label>
+      <div style="position:relative">
+        <input class="fi" type="text" id="moi-from" placeholder="e.g. Rajan & Family" list="moi-datalist" style="padding-left:38px" />
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none">👤</span>
+      </div>
+      <datalist id="moi-datalist"></datalist>
+    </div>
+    <div class="fg">
+      <label class="fl">Amount (₹) *</label>
+      <div style="position:relative">
+        <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:600;color:var(--gold-d);font-family:'Cormorant Garamond',serif;pointer-events:none">₹</span>
+        <input class="fi" type="number" id="moi-amount" placeholder="e.g. 1001" min="0" inputmode="numeric" style="padding-left:28px;font-size:15px;font-weight:500" />
+      </div>
+    </div>
+    <!-- Quick amount chips -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:-4px;margin-bottom:14px">
+      <span style="font-size:10.5px;color:var(--txt4);align-self:center;margin-right:2px">Quick:</span>
+      <button onclick="document.getElementById('moi-amount').value=501" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹501</button>
+      <button onclick="document.getElementById('moi-amount').value=1001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹1,001</button>
+      <button onclick="document.getElementById('moi-amount').value=2001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹2,001</button>
+      <button onclick="document.getElementById('moi-amount').value=5001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹5,001</button>
+      <button onclick="document.getElementById('moi-amount').value=10001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹10,001</button>
+    </div>
+    <div class="fg">
+      <label class="fl">Payment Mode</label>
+      <select class="fi" id="moi-notes">
+        <option value="">Select mode…</option>
+        <option value="Cash Envelope">💵 Cash Envelope</option>
+        <option value="UPI / GPay">📲 UPI / GPay</option>
+        <option value="Bank Transfer">🏦 Bank Transfer</option>
+        <option value="Cheque">📄 Cheque</option>
+        <option value="Gold / Jewellery">💛 Gold / Jewellery</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Thank-You Status</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="moi-ty-picker">
+        <button onclick="setMoiTy('pending',this)" class="moi-ty-pick-btn" data-val="pending" style="padding:10px 6px;border:1.5px solid var(--gold-d);border-radius:var(--rs);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">⏳ Pending</button>
+        <button onclick="setMoiTy('drafted',this)" class="moi-ty-pick-btn" data-val="drafted" style="padding:10px 6px;border:1.5px solid var(--bord);border-radius:var(--rs);background:var(--surf);color:var(--txt3);font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">✏️ Drafted</button>
+        <button onclick="setMoiTy('sent',this)" class="moi-ty-pick-btn" data-val="sent" style="padding:10px 6px;border:1.5px solid var(--bord);border-radius:var(--rs);background:var(--surf);color:var(--txt3);font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">✅ Sent</button>
+      </div>
+      <input type="hidden" id="moi-ty" value="pending" />
+    </div>
+    <button class="btn-p" style="background:var(--gold-d);margin-top:6px" onclick="App.saveMoi()">💾 Save Moi Entry</button>
+    <button class="btn-s" onclick="App.closeModal('add-moi')">Cancel</button>
+    <button class="btn-s btn-danger" id="del-moi-btn" onclick="App.confirmDeleteGift(App._editingGift())" style="display:none">🗑️ Delete Entry</button>
+  </div>
+</div>
+
+<!-- ROOM ALLOCATE -->
+<div class="mo" id="mo-room-alloc">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="mo-room-alloc-title">Room 101</div>
+    <div id="mo-room-alloc-loc" style="font-size:12px;color:var(--txt3);margin:-10px 0 14px;letter-spacing:.2px"></div>
+    <div id="mo-room-occupants"></div>
+    <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Assign Guest</div>
+    <select class="fi" id="room-alloc-guest-sel" onchange="App.onRoomAllocGuestChange()">
+      <option value="">— Select a guest —</option>
+    </select>
+    <div id="room-alloc-conflict" style="display:none;margin-top:6px"></div>
+    <button class="btn-p" style="margin-top:12px" onclick="App.assignGuestToRoom()">✅ Assign to Room</button>
+    <button class="btn-s" onclick="App.closeModal('room-alloc')">Cancel</button>
+  </div>
+</div>
+
+<!-- WHATSAPP THANK YOU -->
+<div class="mo" id="mo-whatsapp">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">💬 Send Thank You</div>
+    <div style="background:var(--sage-l);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px;font-size:12.5px;color:var(--sage-d)">
+      To: <strong id="wa-to-name"></strong> &nbsp;·&nbsp; <span id="wa-to-phone"></span>
+    </div>
+    <div class="fg">
+      <label class="fl">Message</label>
+      <textarea class="fi" id="wa-msg" rows="5" style="resize:vertical;line-height:1.5" placeholder="Write your thank you message…"></textarea>
+    </div>
+    <button class="btn-p" style="background:#25D366;display:flex;align-items:center;justify-content:center;gap:8px" onclick="App.sendWhatsApp()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Send via WhatsApp
+    </button>
+    <button class="btn-s" onclick="App.closeModal('whatsapp')">Cancel</button>
+  </div>
+</div>
+
+<!-- CONFIRM DIALOG -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-t" id="confirm-t">Are you sure?</div>
+    <div class="confirm-s" id="confirm-s">This action cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="btn-s" onclick="App.closeConfirm()">Cancel</button>
+      <button class="btn-p btn-danger" id="confirm-ok" style="margin-top:0;padding:10px">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script type="module" src="app.js"></script>
+
+</body>
+</html>

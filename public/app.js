@@ -776,6 +776,23 @@ function renderGuestFeedbackSection(ev, guest, prefix='gf'){
     </div>`;
 }
 
+function openGuestFeedbackModal(eventId){
+  const targetId=eventId||DB.activeEvent;
+  const ev=DB.events.find(e=>e.id===targetId);
+  if(!ev||!ev._isGuestOnly){toast('⚠️ Guest feedback not available');return;}
+  if(!isFeedbackEnabled(ev)){toast('ℹ️ Feedback is turned off for this event');return;}
+  DB.activeEvent=targetId;
+  save();
+  const me=getCurrentGuestInvite(targetId);
+  if(!me){toast('⚠️ Guest record not found');return;}
+  ensureGuestFeedbackDefaults(me);
+  document.getElementById('gf-title').textContent='Event Feedback';
+  document.getElementById('gf-event-name').textContent=ev.name;
+  document.getElementById('gf-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
+  document.getElementById('gf-content').innerHTML=renderGuestFeedbackSection(ev, me, 'gf-modal');
+  openModal('guest-feedback');
+}
+
 let _toastTimer;
 function toast(msg){
   const el=document.getElementById('toast');
@@ -885,7 +902,9 @@ function renderEvents(){
       <div class="no-events-ico">📅</div>
       <div class="no-events-t">No upcoming events</div>
       <p class="no-events-s">Your past events are still available whenever you need to look back at them.</p>
-      <button class="fab" onclick="App.togglePastEvents(true)">View Past Events</button>
+      <div style="display:flex;justify-content:center;margin-top:10px">
+        <button class="fchip" style="padding:8px 16px;font-size:12.5px" onclick="App.togglePastEvents(true)">View Past Events</button>
+      </div>
     </div>`;
     return;
   }
@@ -913,6 +932,10 @@ function renderEvents(){
         <div class="dash-stat"><span class="dash-stat-n">${giftc.length}</span><span class="dash-stat-l">Gifts</span></div>`}
       </div>
       ${days!==null?`<div class="dash-cd">${days>0?'⏳ '+days+' days away':days===0?'🎉 Today!':'✅ Past event'}</div>`:''}
+      ${ae._isGuestOnly?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()">
+        <button class="ev-btn" onclick="App.setActive('${ae.id}');${isRoomRequestEnabled(ae)?`App.openGuestRequestModal('${ae.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ae)?'Request Room':'View Rooms'}</button>
+        ${isFeedbackEnabled(ae)?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFeedbackModal('${ae.id}')">Feedback</button>`:''}
+      </div>`:''}
     </div>`;
   }
   const cards=myEvents.map(ev=>{
@@ -946,7 +969,8 @@ function renderEvents(){
           ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?'⏳ '+days+' days':days===0?'🎉 Today!':'✅ Past'}</span>`:'<span></span>'}
           <div class="ev-actions">
             ${ev._isGuestOnly
-              ?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
+              ?`${isFeedbackEnabled(ev)?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFeedbackModal('${ev.id}')">Feedback</button>`:''}
+            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
               :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>`}
             ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openEditEvent('${ev.id}')">✏️</button>`:''}
@@ -956,7 +980,7 @@ function renderEvents(){
     </div>`;
   }).join('');
   const pastToggle=pastEvents.length
-    ? `<button class="chip ${_showPastEvents?'active':''}" onclick="App.togglePastEvents(${_showPastEvents?'false':'true'})">${_showPastEvents?'Hide Past Events':'View Past Events'} (${pastEvents.length})</button>`
+    ? `<button class="fchip ${_showPastEvents?'on':''}" style="padding:8px 14px;font-size:12px;margin:6px 0 14px" onclick="App.togglePastEvents(${_showPastEvents?'false':'true'})">${_showPastEvents?'Hide Past Events':'View Past Events'} (${pastEvents.length})</button>`
     : '';
   el.innerHTML=heroHtml+
     `<div class="ph"><div class="ph-title">My Events</div><div class="ph-sub">${myEvents.length} event${myEvents.length!==1?'s':''}</div></div>`+
@@ -981,6 +1005,10 @@ function renderGuests(){
   const att=guests.filter(g=>g.rsvp==='attending').length;
   const dec=guests.filter(g=>g.rsvp==='declined').length;
   const pen=guests.filter(g=>g.rsvp==='pending').length;
+  const feedbackGuests=DB.guests
+    .filter(g=>g.eventId===DB.activeEvent)
+    .map(g=>ensureGuestFeedbackDefaults(g))
+    .filter(g=>g.feedbackMessage||g.feedbackUpdatedAt||g.feedbackFoodRating||g.feedbackEventRating||g.feedbackRoomRating);
   // filter
   if(_guestFilter!=='all') guests=guests.filter(g=>g.rsvp===_guestFilter);
   if(_guestSearch) guests=guests.filter(g=>(g.first+' '+g.last+' '+(g.contact||'')+' '+(g.email||'')+' '+(g.table||'')).toLowerCase().includes(_guestSearch.toLowerCase()));
@@ -1025,12 +1053,27 @@ function renderGuests(){
     });
   }
   const isOrg=Auth.isOrganizer(DB.activeEvent);
+  const feedbackHtml=isOrg&&DB.activeEvent
+    ? `<div class="guest-card" style="margin-top:16px">
+        <div class="guest-card-title">Guest Feedback${feedbackGuests.length?` (${feedbackGuests.length})`:''}</div>
+        ${feedbackGuests.length
+          ? feedbackGuests.map(g=>`<div class="request-row" onclick="App.openGuestDetail('${g.id}')" style="cursor:pointer">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--txt)">${g.first} ${g.last}</div>
+                <div style="font-size:12px;color:var(--txt3);margin-top:4px">Food ${renderFeedbackStars(g.feedbackFoodRating)} · Event ${renderFeedbackStars(g.feedbackEventRating)} · Rooms ${renderFeedbackStars(g.feedbackRoomRating)}</div>
+                ${g.feedbackMessage?`<div style="font-size:12px;color:var(--txt2);margin-top:6px;line-height:1.5">${g.feedbackMessage}</div>`:''}
+              </div>
+              <button class="request-btn secondary" onclick="event.stopPropagation();App.openGuestDetail('${g.id}')">View Guest</button>
+            </div>`).join('')
+          : `<div style="font-size:12px;color:var(--txt3);line-height:1.6">No guest feedback submitted yet.</div>`}
+      </div>`
+    : '';
   el.innerHTML=evSelHtml+
     `<div class="ph"><div class="ph-title">Guest List</div></div>`+
     statsHtml+
     (isOrg?`<button class="fab" onclick="App.openAddGuest()">＋ Add Guest</button>`:'')+
     `<div class="search-wrap"><span class="search-ico">🔍</span><input class="search-inp" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
-    filtersHtml+listHtml;
+    filtersHtml+listHtml+feedbackHtml;
   // Hide delete buttons for non-organisers
   if(!isOrg){
     el.querySelectorAll('.g-del').forEach(b=>b.style.display='none');
@@ -1116,8 +1159,7 @@ function renderGuestPortal(){
       </div>
       <button class="btn-p" style="background:var(--slate-d)" onclick="App.submitGuestRoomRequest()">Send Room Request</button>`
       : `<div style="font-size:12px;color:var(--txt3);line-height:1.6;margin-top:12px">Room requests are currently closed. Any room assignment made by the organiser or room coordinator will still appear above.</div>`}
-    </div>`+
-    renderGuestFeedbackSection(ev, me, 'gp-feedback');
+    </div>`;
 }
 
 function openGuestRequestModal(eventId){
@@ -2004,7 +2046,6 @@ function renderRooms(){
       el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">Room details unavailable</div><div class="empty-s">We couldn't find your guest record for this invitation.</div></div>`;
       return;
     }
-    ensureGuestFeedbackDefaults(me);
     const rooms=getGuestRoomAssignments(me);
     const requestsEnabled=isRoomRequestEnabled(ev);
     el.innerHTML=evSelHtml+
@@ -2027,8 +2068,7 @@ function renderRooms(){
       </div>`+
       `${requestsEnabled
         ? `<button class="fab" style="background:var(--slate-d)" onclick="App.openGuestRequestModal('${ev.id}')">Update Room Request</button>`
-        : `<div class="guest-card"><div class="guest-card-title">Room Requests Closed</div><div style="font-size:13px;color:var(--txt2);line-height:1.6">The organiser has turned off guest room requests for this event. You can still view any room allocation shown above.</div></div>`}`+
-      renderGuestFeedbackSection(ev, me, 'room-feedback');
+        : `<div class="guest-card"><div class="guest-card-title">Room Requests Closed</div><div style="font-size:13px;color:var(--txt2);line-height:1.6">The organiser has turned off guest room requests for this event. You can still view any room allocation shown above.</div></div>`}`;
     return;
   }
   if(!Auth.isRoom(DB.activeEvent)){
@@ -2855,7 +2895,7 @@ window.App={
   setGiftTab,setGiftCatFilter,selectCat,
   openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,filterMoi,setMoiFilter,setMoiTy,
   _editingGift:()=>_editing.gift,
-  openGuestRequestModal,
+  openGuestRequestModal,openGuestFeedbackModal,
   submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   saveProfile,openProfileModal,toggleSetting,unlockPremium,clearAllData,

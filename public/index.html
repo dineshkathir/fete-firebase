@@ -530,7 +530,7 @@ body{overscroll-behavior:none}
       </div>
       <div class="fg">
         <label class="fl">Time</label>
-        <input class="fi" type="text" id="ev-time" placeholder="e.g. 10:00 AM - 2:00 PM" />
+        <input class="fi" type="time" id="ev-time" />
       </div>
     </div>
     <div class="fr">
@@ -1003,6 +1003,33 @@ body{overscroll-behavior:none}
     </div>
     <div id="gm-content"></div>
     <button class="btn-s" onclick="App.closeModal('guest-menu')">Close</button>
+  </div>
+</div>
+
+<!-- GOOGLE CONTACT IMPORT -->
+<div class="mo mo-center" id="mo-google-contacts">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">Import Google Contacts</div>
+    <div style="background:var(--slate-l);border:1px solid var(--slate-m);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--slate-d);margin-bottom:4px">Organizer Import</div>
+      <div style="font-size:11.5px;color:var(--txt3);line-height:1.6">Pick contacts from your Google account and add them as invited guests for the current event.</div>
+    </div>
+    <div class="search-wrap" style="margin-bottom:10px">
+      <span class="search-ico">🔍</span>
+      <input class="search-inp" type="text" id="gci-search" placeholder="Search contacts…" oninput="App.setGoogleContactsSearch(this.value)" />
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div id="gci-count" style="font-size:12px;color:var(--txt3)">0 selected</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="fchip" style="padding:7px 12px;font-size:11.5px" onclick="App.toggleAllGoogleContacts(true)">Select All</button>
+        <button class="fchip" style="padding:7px 12px;font-size:11.5px" onclick="App.toggleAllGoogleContacts(false)">Clear</button>
+        <button class="fchip" style="padding:7px 12px;font-size:11.5px" onclick="App.fetchGoogleContacts()">Refresh</button>
+      </div>
+    </div>
+    <div id="gci-list" style="display:grid;gap:8px;max-height:360px;overflow-y:auto;margin-bottom:14px"></div>
+    <button class="btn-p" id="gci-import-btn" onclick="App.importSelectedGoogleContacts()">Import Selected Contacts</button>
+    <button class="btn-s" onclick="App.closeModal('google-contacts')">Close</button>
   </div>
 </div>
 

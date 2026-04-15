@@ -2,7 +2,7 @@
 // FIREBASE — real Google OAuth only
 // ═══════════════════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, reauthenticateWithPopup, signInWithEmailAndPassword, signInWithPopup, signOut as fbSignOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut as fbSignOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { collection, deleteDoc, doc, getDocs, getFirestore, query, setDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const _fbApp = initializeApp({
@@ -677,13 +677,6 @@ function fmtVal(v){
 function initials(first,last){return((first||'')[0]||(last||'')[0]||'?').toUpperCase()+((last||'')[0]||'').toUpperCase()}
 function avStyle(id){const i=Math.abs(id.charCodeAt?[...id].reduce((a,c)=>a+c.charCodeAt(0),0):0)%6;return`background:${AV_BG[i]};color:${AV_C[i]}`}
 function normalizeEmailValue(email){return(email||'').trim().toLowerCase()}
-function normalizePhoneValue(phone){return(phone||'').replace(/\D/g,'')}
-function splitContactName(fullName){
-  const name=String(fullName||'').trim();
-  if(!name) return {first:'Guest',last:''};
-  const parts=name.split(/\s+/).filter(Boolean);
-  return {first:parts.shift()||'Guest',last:parts.join(' ')};
-}
 function guestMatchesSession(guest,session){
   const email=normalizeEmailValue(session?.email);
   if(!email||!guest)return false;
@@ -729,14 +722,6 @@ function myManagedEvents(){
 }
 function renderCreateEventState(title,message){
   return `<div class="empty"><div class="empty-ico">🎉</div><div class="empty-t">${title}</div><div class="empty-s">${message}</div><button class="fab" style="margin-top:16px" onclick="App.openAddEvent()">＋ Create New Event</button></div>`;
-}
-function escapeHtml(value){
-  return String(value??'')
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
 }
 function addGuestRoomAssignment(guest,loc,no){
   const rooms=getGuestRoomAssignments(guest);
@@ -954,10 +939,6 @@ let _eventMenusTemp=[];
 let _eventMenuEditorDisabled=false;
 let _giftPhotoData=null;
 let _showPastEvents=false;
-let _googleContactsTemp=[];
-let _googleContactsSelected=new Set();
-let _googleContactsSearch='';
-let _googleContactsBusy=false;
 
 function openModal(id){document.getElementById('mo-'+id)?.classList.add('open')}
 function closeModal(id){document.getElementById('mo-'+id)?.classList.remove('open')}
@@ -1184,7 +1165,6 @@ function renderGuests(){
   const isOrg=Auth.isOrganizer(DB.activeEvent);
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <button class="fab" style="margin-bottom:0;flex:1 1 180px" onclick="App.openAddGuest()">＋ Add Guest</button>
-      <button class="fchip" style="padding:10px 14px;font-size:12px" onclick="App.openGoogleContactsImport()">Import Contacts</button>
       ${feedbackGuests.length?`<button class="fchip" style="padding:8px 14px;font-size:12px" onclick="App.scrollGuestsToFeedback()">Jump to Feedback</button>`:''}
     </div>`:'';
   let listHtml='';
@@ -1338,193 +1318,6 @@ function renderGuestPortal(){
       : `<div style="font-size:12px;color:var(--txt3);line-height:1.6;margin-top:12px">Room requests are currently closed. Any room assignment made by the organiser or room coordinator will still appear above.</div>`}
     </div>`+
     renderGuestFoodMenuSection(ev, me, 'portal');
-}
-
-function renderGoogleContactsImportModal(){
-  const listEl=document.getElementById('gci-list');
-  const countEl=document.getElementById('gci-count');
-  const searchEl=document.getElementById('gci-search');
-  const importBtn=document.getElementById('gci-import-btn');
-  if(searchEl&&searchEl.value!==_googleContactsSearch) searchEl.value=_googleContactsSearch;
-  if(importBtn) importBtn.disabled=_googleContactsSelected.size===0||_googleContactsBusy;
-  if(countEl) countEl.textContent=_googleContactsBusy?'Loading contacts…':`${_googleContactsSelected.size} selected`;
-  if(!listEl) return;
-  if(_googleContactsBusy){
-    listEl.innerHTML=`<div class="empty" style="padding:26px 12px"><div class="empty-ico">📇</div><div class="empty-t" style="font-size:17px">Loading contacts</div><div class="empty-s">Please wait while we fetch your Google contacts.</div></div>`;
-    return;
-  }
-  const filtered=_googleContactsTemp.filter(contact=>{
-    const haystack=`${contact.name} ${contact.email} ${contact.phone}`.toLowerCase();
-    return !_googleContactsSearch||haystack.includes(_googleContactsSearch.toLowerCase());
-  });
-  if(!filtered.length){
-    listEl.innerHTML=`<div class="empty" style="padding:26px 12px"><div class="empty-ico">📭</div><div class="empty-t" style="font-size:17px">No contacts found</div><div class="empty-s">${_googleContactsSearch?'Try clearing your search.':'No Google contacts with usable name, email, or phone were found.'}</div></div>`;
-    return;
-  }
-  listEl.innerHTML=filtered.map(contact=>{
-    const selected=_googleContactsSelected.has(contact.id);
-    return `<label style="display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border:1px solid ${selected?'var(--rose-m)':'var(--bord2)'};background:${selected?'var(--rose-l)':'var(--surf)'};border-radius:12px;cursor:pointer">
-        <input type="checkbox" ${selected?'checked':''} onchange="App.toggleGoogleContact('${contact.id}')" style="margin-top:2px" />
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;color:var(--txt)">${escapeHtml(contact.name||'Unnamed Contact')}</div>
-          ${contact.email?`<div style="font-size:11.5px;color:var(--txt3);margin-top:3px">${escapeHtml(contact.email)}</div>`:''}
-          ${contact.phone?`<div style="font-size:11.5px;color:var(--txt3);margin-top:${contact.email?'2px':'3px'}">${escapeHtml(contact.phone)}</div>`:''}
-        </div>
-      </label>`;
-  }).join('');
-}
-
-async function fetchGoogleContacts(){
-  if(_googleContactsBusy) return;
-  const sess=Auth.currentSession();
-  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
-  if(!Auth.isOrganizer(DB.activeEvent)){toast('⚠️ Only organisers can import contacts');return;}
-  if(sess?.provider!=='google.com'){toast('⚠️ Contact import currently works for Google-signed-in organisers only');return;}
-  const user=_fbAuth.currentUser;
-  if(!user){toast('⚠️ Please sign in again');return;}
-  _googleContactsBusy=true;
-  renderGoogleContactsImportModal();
-  try{
-    const provider=new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/contacts.readonly');
-    provider.setCustomParameters({prompt:'consent'});
-    const result=await reauthenticateWithPopup(user,provider);
-    const credential=GoogleAuthProvider.credentialFromResult(result);
-    const accessToken=credential?.accessToken;
-    if(!accessToken) throw new Error('missing-token');
-    const contacts=[];
-    let pageToken='';
-    for(let page=0; page<5; page++){
-      const url=new URL('https://people.googleapis.com/v1/people/me/connections');
-      url.searchParams.set('personFields','names,emailAddresses,phoneNumbers');
-      url.searchParams.set('pageSize','200');
-      if(pageToken) url.searchParams.set('pageToken',pageToken);
-      const resp=await fetch(url.toString(),{
-        headers:{Authorization:`Bearer ${accessToken}`}
-      });
-      if(!resp.ok) throw new Error('contacts-fetch-failed');
-      const data=await resp.json();
-      (data.connections||[]).forEach((person,idx)=>{
-        const name=person.names?.find(n=>n.displayName)?.displayName?.trim()||'';
-        const email=normalizeEmailValue(person.emailAddresses?.find(e=>e.value)?.value||'');
-        const phone=(person.phoneNumbers?.find(p=>p.value)?.value||'').trim();
-        if(!name&&!email&&!phone) return;
-        contacts.push({
-          id:person.resourceName||`contact-${page}-${idx}-${email||normalizePhoneValue(phone)||name}`,
-          name:name||email||phone||'Unnamed Contact',
-          email,
-          phone
-        });
-      });
-      pageToken=data.nextPageToken||'';
-      if(!pageToken) break;
-    }
-    const deduped=[];
-    const seen=new Set();
-    contacts.forEach(contact=>{
-      const key=`${normalizeEmailValue(contact.email)}|${normalizePhoneValue(contact.phone)}|${contact.name.toLowerCase()}`;
-      if(seen.has(key)) return;
-      seen.add(key);
-      deduped.push(contact);
-    });
-    _googleContactsTemp=deduped;
-    _googleContactsSelected=new Set(deduped.slice(0,Math.min(10,deduped.length)).map(contact=>contact.id));
-    renderGoogleContactsImportModal();
-    toast(deduped.length?`✅ ${deduped.length} Google contacts loaded`:'ℹ️ No usable Google contacts found');
-  }catch(err){
-    if(err?.code==='auth/popup-closed-by-user'){
-      toast('ℹ️ Contact import cancelled');
-    } else {
-      toast('⚠️ Could not load Google contacts');
-    }
-  } finally {
-    _googleContactsBusy=false;
-    renderGoogleContactsImportModal();
-  }
-}
-
-function openGoogleContactsImport(){
-  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
-  if(!Auth.isOrganizer(DB.activeEvent)){toast('⚠️ Only organisers can import contacts');return;}
-  _googleContactsSearch='';
-  openModal('google-contacts');
-  if(!_googleContactsTemp.length) fetchGoogleContacts();
-  else renderGoogleContactsImportModal();
-}
-
-function setGoogleContactsSearch(value){
-  _googleContactsSearch=value||'';
-  renderGoogleContactsImportModal();
-}
-
-function toggleGoogleContact(id){
-  if(_googleContactsSelected.has(id)) _googleContactsSelected.delete(id);
-  else _googleContactsSelected.add(id);
-  renderGoogleContactsImportModal();
-}
-
-function toggleAllGoogleContacts(selectAll){
-  const visible=_googleContactsTemp.filter(contact=>{
-    const haystack=`${contact.name} ${contact.email} ${contact.phone}`.toLowerCase();
-    return !_googleContactsSearch||haystack.includes(_googleContactsSearch.toLowerCase());
-  });
-  if(selectAll) visible.forEach(contact=>_googleContactsSelected.add(contact.id));
-  else visible.forEach(contact=>_googleContactsSelected.delete(contact.id));
-  renderGoogleContactsImportModal();
-}
-
-function importSelectedGoogleContacts(){
-  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
-  const selected=_googleContactsTemp.filter(contact=>_googleContactsSelected.has(contact.id));
-  if(!selected.length){toast('⚠️ Select at least one contact');return;}
-  const eventGuests=DB.guests.filter(g=>g.eventId===DB.activeEvent);
-  const emailSet=new Set(eventGuests.map(g=>normalizeEmailValue(g.email)).filter(Boolean));
-  const phoneSet=new Set(eventGuests.map(g=>normalizePhoneValue(g.contact)).filter(Boolean));
-  const nameSet=new Set(eventGuests.map(g=>`${(g.first||'').trim().toLowerCase()} ${(g.last||'').trim().toLowerCase()}`.trim()).filter(Boolean));
-  let added=0;
-  let skipped=0;
-  selected.forEach(contact=>{
-    const email=normalizeEmailValue(contact.email);
-    const phone=contact.phone||'';
-    const phoneKey=normalizePhoneValue(phone);
-    const nameParts=splitContactName(contact.name);
-    const fullName=`${nameParts.first} ${nameParts.last}`.trim().toLowerCase();
-    const isDup=(email&&emailSet.has(email))||(phoneKey&&phoneSet.has(phoneKey))||(!email&&!phoneKey&&fullName&&nameSet.has(fullName));
-    if(isDup){ skipped++; return; }
-    DB.guests.push({
-      id:uid(),eventId:DB.activeEvent,
-      first:nameParts.first,last:nameParts.last,
-      contact:phone,
-      email,
-      party:1,
-      rsvp:'invited',
-      notes:'',
-      table:'',
-      roomLoc:'',roomNo:'',
-      roomAssignments:[],
-      roomRequestType:'undecided',
-      requestedRoomCount:1,
-      requestedStayCount:1,
-      roomRequestNote:'',
-      roomRequestStatus:'none',
-      feedbackFoodRating:0,
-      feedbackEventRating:0,
-      feedbackRoomRating:0,
-      feedbackMessage:'',
-      foodMenuLikes:[],
-      createdAt:Date.now()
-    });
-    if(email) emailSet.add(email);
-    if(phoneKey) phoneSet.add(phoneKey);
-    if(fullName) nameSet.add(fullName);
-    added++;
-  });
-  save();
-  syncActiveEventData();
-  closeModal('google-contacts');
-  renderGuests();
-  render();
-  toast(added?`✅ Imported ${added} contact${added!==1?'s':''}${skipped?` · Skipped ${skipped} duplicate${skipped!==1?'s':''}`:''}`:`ℹ️ All selected contacts were already added`);
 }
 
 function openGuestRequestModal(eventId){
@@ -3404,7 +3197,6 @@ window.App={
   saveProfile,openProfileModal,toggleSetting,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,
-  openGoogleContactsImport,fetchGoogleContacts,setGoogleContactsSearch,toggleGoogleContact,toggleAllGoogleContacts,importSelectedGoogleContacts,
   addEventMenu,_updateEventMenuTitle,_updateEventMenuItems,_removeEventMenu,
   addRoomLocation:addRoomLocationGated,_updateLocName,_removeLocation,_addRoom,_removeRoom,
   populateRoomSelects,refreshRoomNumbers,checkRoomConflict,sendGuestInvite,

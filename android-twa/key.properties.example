@@ -1,0 +1,4 @@
+storeFile=eventise-upload-key.jks
+storePassword=CHANGE_ME
+keyAlias=eventiseupload
+keyPassword=CHANGE_ME

@@ -1,0 +1,13 @@
+R_DEF: Internal format may change without notice
+local
+color brand_charcoal
+color brand_coral
+color brand_surface
+drawable ic_launcher
+drawable ic_logo
+drawable ic_splash
+string app_name
+string asset_statements
+string launch_url
+style Theme.Eventise
+xml filepaths

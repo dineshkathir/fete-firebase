@@ -64,6 +64,8 @@ node_modules/
 
 # dotenv environment variables file
 .env
+android-twa/key.properties
+android-twa/*.jks
 
 # dataconnect generated files
 .dataconnect

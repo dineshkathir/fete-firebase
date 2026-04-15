@@ -765,6 +765,18 @@ function ensureGuestFoodLikesDefaults(guest){
   return guest;
 }
 
+function getEventFoodLikeCounts(eventId){
+  const counts=new Map();
+  DB.guests
+    .filter(guest=>guest.eventId===eventId)
+    .forEach(guest=>{
+      ensureGuestFoodLikesDefaults(guest);
+      const uniqueLikes=new Set((guest.foodMenuLikes||[]).map(item=>String(item)));
+      uniqueLikes.forEach(key=>counts.set(key,(counts.get(key)||0)+1));
+    });
+  return counts;
+}
+
 function ensureGuestFeedbackDefaults(guest){
   if(!guest) return guest;
   if(guest.feedbackFoodRating==null) guest.feedbackFoodRating=0;
@@ -983,7 +995,7 @@ function renderEvents(){
   if(accessibleEvents.length===0){
     el.innerHTML=`<div class="no-events">
       <div class="no-events-ico">🎊</div>
-      <div class="no-events-t">Welcome to fête!</div>
+      <div class="no-events-t">Welcome to eventise!</div>
       <p class="no-events-s">Manage guest lists and track gifts for all your special events in one beautiful place.</p>
       <button class="fab" onclick="App.openAddEvent()">＋ Create Your First Event</button>
     </div>`;
@@ -1558,11 +1570,11 @@ function renderSettings(){
   <div class="ph"><div class="ph-title">Settings</div></div>
   ${!DB.premium?`<div class="prem-banner">
     <div class="prem-t">Go Ad-Free</div>
-    <div class="prem-s">Enjoy Plan with Flow without interruptions. Unlock premium features coming soon.</div>
+    <div class="prem-s">Enjoy eventise without interruptions. Unlock premium features coming soon.</div>
     <button class="prem-cta" onclick="App.openModal('premium')">Upgrade - Rs 499 / year</button>
   </div>`:`<div class="prem-banner" style="background:linear-gradient(135deg,var(--sage-d) 0%,#2A5038 100%)">
     <div class="prem-t">Premium Active</div>
-    <div class="prem-s">You're enjoying Plan with Flow ad-free. Thank you for your support!</div>
+    <div class="prem-s">You're enjoying eventise ad-free. Thank you for your support!</div>
   </div>`}
   <div class="set-sec">
     <div class="set-sec-t">Account</div>
@@ -1632,7 +1644,7 @@ function renderSettings(){
       <span class="soon-badge">v1.5</span>
     </div>
   </div>
-  <div style="text-align:center;padding:10px 0 20px;font-size:11.5px;color:var(--txt4)">Plan with Flow v1.0</div>`;
+  <div style="text-align:center;padding:10px 0 20px;font-size:11.5px;color:var(--txt4)">eventise v1.0</div>`;
 }
 
 // ═══════════════════════════════════════════════
@@ -2045,8 +2057,13 @@ function openGuestDetail(id){
 function renderEventMenusEditor(){
   const container=document.getElementById('ev-food-menus');
   const addBtn=document.getElementById('ev-food-menu-add-btn');
-  if(addBtn) addBtn.style.display=_eventMenuEditorDisabled?'none':'block';
+  if(addBtn){
+    addBtn.style.display=_eventMenuEditorDisabled?'none':'block';
+    addBtn.textContent='+ Add Menu Section';
+  }
   if(!container) return;
+  const canViewLikes=!!_editing.event&&Auth.isOrganizer(_editing.event);
+  const likeCounts=canViewLikes?getEventFoodLikeCounts(_editing.event):new Map();
   if(_eventMenusTemp.length===0){
     container.innerHTML=`<div style="font-size:12px;color:var(--txt3);line-height:1.6">Add one or more menu sections like Breakfast, Lunch, or Evening Snacks.</div>`;
     return;
@@ -2058,6 +2075,18 @@ function renderEventMenusEditor(){
         ${_eventMenuEditorDisabled?'':`<button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 0 0 6px" onclick="App._removeEventMenu(${idx})" title="Remove menu section">✕</button>`}
       </div>
       <textarea class="fi" rows="4" style="resize:vertical" placeholder="Enter each menu item on a new line" oninput="App._updateEventMenuItems(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''}>${menu.items||''}</textarea>
+      ${canViewLikes&&normalizeMenuItems(menu.items).length?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surf);border:1px solid var(--bord2)">
+        <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Guest Hearts</div>
+        <div style="display:grid;gap:6px">
+          ${normalizeMenuItems(menu.items).map(itemText=>{
+            const count=likeCounts.get(getFoodMenuLikeKey(menu,itemText))||0;
+            return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--txt2)">
+                <span style="line-height:1.5">${itemText}</span>
+                <span style="flex-shrink:0;padding:3px 9px;border-radius:999px;background:${count?'var(--rose-l)':'var(--surf2)'};color:${count?'var(--rose-d)':'var(--txt3)'};font-weight:600">${count} heart${count===1?'':'s'}</span>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`:''}
     </div>`).join('');
 }
 
@@ -3064,7 +3093,7 @@ function openUserMenu(){
   const roleLabel=role==='organizer'?'👑 Organizer':role==='cash'?'💵 Cash Collector':role==='room'?'🏨 Room Coordinator':'—';
   openConfirm(
     sess.name||sess.email,
-    `${sess.email}\nRole: ${roleLabel}\n\nSign out of fête?`,
+    `${sess.email}\nRole: ${roleLabel}\n\nSign out of eventise?`,
     ()=>{ Auth.logout(); }
   );
   document.getElementById('confirm-ok').textContent='Sign Out';

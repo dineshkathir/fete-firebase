@@ -230,6 +230,7 @@ const Cloud = (() => {
   function applyEventsToLocal(events, session) {
     DB.events = events.map(event => ({
       id: event.id,
+      _isGuestOnly: !!event._isGuestOnly,
       name: event.name || '',
       date: event.date || '',
       type: event.type || 'wedding',

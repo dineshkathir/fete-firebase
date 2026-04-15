@@ -510,7 +510,7 @@ const Auth = (() => {
               <option value="cash" ${m.role==='cash'?'selected':''}>Cash</option>
               <option value="room" ${m.role==='room'?'selected':''}>Room</option>
             </select>
-            <button onclick="Auth._removeMember('${eventId}','${m.userId}')" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--txt4);padding:0 4px">✕</button>`
+            <button onclick="Auth._removeMember('${eventId}','${m.userId}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--txt4);padding:0 4px;font-weight:600">Remove</button>`
           :`<span class="role-badge role-${roleCls}">${roleLabel}</span>`}
       </div>`;
     }).join('');
@@ -1189,7 +1189,7 @@ function renderGuests(){
   } else {
     guests.forEach((g,i)=>{
       if(i>0&&i%15===0&&!DB.premium){
-        listHtml+=`<div class="ad-inline"><span>🎂 Order a custom cake at <strong>FNP</strong> – Free delivery</span><span class="adlbl" style="font-size:9px">AD</span></div>`;
+        listHtml+=`<div class="ad-inline"><span>Order a custom cake at <strong>FNP</strong> with free delivery</span><span class="adlbl" style="font-size:9px">AD</span></div>`;
       }
       const first=g.first||'Guest';
       const last=g.last||'';
@@ -1209,7 +1209,7 @@ function renderGuests(){
         </div>
         <div class="g-actions">
           <button class="rsvp-btn r-${rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${rsvpLabel}</button>
-          <button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">✕</button>
+          <button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">Remove</button>
         </div>
       </div>`;
     });
@@ -1364,13 +1364,30 @@ let _giftTab='gifts';
 let _giftCatFilter='all';
 
 const CAT_META={
-  '💝':{label:'Personal',  stripe:'#C4637A',bg:'#FAF0F3',chip:'background:#FAF0F3;color:#8B3A52'},
-  '🏠':{label:'Home',      stripe:'#5B7FA6',bg:'#EBF2F9',chip:'background:#EBF2F9;color:#2F5380'},
-  '💳':{label:'Cash/Card', stripe:'#C09050',bg:'#FBF6EC',chip:'background:#FBF6EC;color:#8A6020'},
-  '👗':{label:'Clothing',  stripe:'#9B6BC4',bg:'#F5EEFA',chip:'background:#F5EEFA;color:#6A2B9A'},
-  '🍽️':{label:'Kitchen',  stripe:'#6B9B7E',bg:'#EEF5F0',chip:'background:#EEF5F0;color:#3D6B50'},
-  '📦':{label:'Other',     stripe:'#888780',bg:'#F5F0E8',chip:'background:#F5F0E8;color:#5F5E5A'},
+  personal:{label:'Personal',  stripe:'#C4637A',bg:'#FAF0F3',chip:'background:#FAF0F3;color:#8B3A52'},
+  home:{label:'Home',      stripe:'#5B7FA6',bg:'#EBF2F9',chip:'background:#EBF2F9;color:#2F5380'},
+  cash_card:{label:'Cash/Card', stripe:'#C09050',bg:'#FBF6EC',chip:'background:#FBF6EC;color:#8A6020'},
+  clothing:{label:'Clothing',  stripe:'#9B6BC4',bg:'#F5EEFA',chip:'background:#F5EEFA;color:#6A2B9A'},
+  kitchen:{label:'Kitchen',  stripe:'#6B9B7E',bg:'#EEF5F0',chip:'background:#EEF5F0;color:#3D6B50'},
+  other:{label:'Other',     stripe:'#888780',bg:'#F5F0E8',chip:'background:#F5F0E8;color:#5F5E5A'},
+  cash_gift:{label:'Cash Gift',stripe:'#C09050',bg:'#FBF6EC',chip:'background:#FBF6EC;color:#8A6020'},
 };
+
+const LEGACY_GIFT_CATEGORY_MAP={
+  '\u{1F49D}':'personal',
+  '\u{1F3E0}':'home',
+  '\u{1F4B3}':'cash_card',
+  '\u{1F457}':'clothing',
+  '\u{1F37D}\uFE0F':'kitchen',
+  '\u{1F4E6}':'other',
+  '\u{1F4B5}':'cash_gift',
+};
+
+function normalizeGiftCategory(cat){
+  return LEGACY_GIFT_CATEGORY_MAP[cat] || cat || 'other';
+}
+
+DB.gifts=DB.gifts.map(g=>({ ...g, cat: normalizeGiftCategory(g.cat) }));
 
 function renderGifts(){
   const el=document.getElementById('scr-gifts');
@@ -1411,7 +1428,7 @@ function renderGifts(){
   }
 
   function giftCard(g){
-    const meta=CAT_META[g.cat]||CAT_META['📦'];
+    const meta=CAT_META[normalizeGiftCategory(g.cat)]||CAT_META.other;
     const gm=DB.guests.find(gu=>gu.eventId===DB.activeEvent&&(gu.first+' '+gu.last).toLowerCase().trim()===(g.from||'').toLowerCase().trim());
     const avS=gm?avStyle(gm.id):'background:var(--surf3);color:var(--txt3)';
     const ini=gm?initials(gm.first,gm.last):(g.from||'?').charAt(0).toUpperCase();
@@ -1447,7 +1464,7 @@ function renderGifts(){
         </div>
         ${g.photo?`<img class="gift-photo-thumb" src="${g.photo}" alt="Gift" />`:''}
       </div>
-      <button class="gift-del" onclick="event.stopPropagation();App.confirmDeleteGift('${g.id}')">✕</button>
+      <button class="gift-del" onclick="event.stopPropagation();App.confirmDeleteGift('${g.id}')">Remove</button>
     </div>`;
   }
 
@@ -1518,7 +1535,7 @@ function renderGifts(){
     if(cats.length>1){
       body+=`<div class="cat-filters">
         <span class="cat-chip ${_giftCatFilter==='all'?'on':''}" style="${_giftCatFilter==='all'?'background:var(--txt);color:white;border-color:var(--txt)':''}" onclick="App.setGiftCatFilter('all')">All</span>
-        ${cats.map(c=>{const m=CAT_META[c]||CAT_META['📦'];return`<span class="cat-chip ${_giftCatFilter===c?'on':''}" style="${_giftCatFilter===c?m.chip+';border-color:transparent':''}" onclick="App.setGiftCatFilter('${c}')">${m.label}</span>`;}).join('')}
+        ${cats.map(c=>{const m=CAT_META[c]||CAT_META.other;return`<span class="cat-chip ${_giftCatFilter===c?'on':''}" style="${_giftCatFilter===c?m.chip+';border-color:transparent':''}" onclick="App.setGiftCatFilter('${c}')">${m.label}</span>`;}).join('')}
       </div>`;
     }
     const filtered=_giftCatFilter==='all'?physGifts:physGifts.filter(g=>g.cat===_giftCatFilter);
@@ -1874,7 +1891,7 @@ async function saveEvent(){
       }
       savedEvent=ev;
     }
-    toast('✅ Event updated');
+    toast('Event updated');
   } else {
     const ev={
       id:uid(),name,
@@ -1894,7 +1911,7 @@ async function saveEvent(){
     if(!DB.activeEvent)DB.activeEvent=ev.id;
     Auth.addCreatorAsOrganizer(ev.id);
     savedEvent=ev;
-    toast('🎉 Event created!');
+    toast('Event created');
   }
   save();
   if(savedEvent){
@@ -1918,7 +1935,7 @@ function confirmDeleteEvent(){
     if(DB.activeEvent===ev.id)DB.activeEvent=DB.events[0]?.id||null;
     save();
     Cloud.deleteEvent(ev.id).catch(()=>toast('⚠️ Could not delete cloud event'));
-    closeModal('add-event');render();toast('🗑️ Event deleted');
+    closeModal('add-event');render();toast('Event deleted');
   });
 }
 
@@ -1998,7 +2015,7 @@ function saveGuest(){
       syncGuestPrimaryRoom(g);
       recomputeGuestRoomRequestStatus(g);
     }
-    toast('✅ Guest updated');
+    toast('Guest updated');
   } else {
     DB.guests.push({
       id:uid(),eventId:DB.activeEvent,
@@ -2023,7 +2040,7 @@ function saveGuest(){
       foodMenuLikes:[],
       createdAt:Date.now()
     });
-    toast(`👤 ${first} added!`);
+    toast(`${first} added`);
   }
   save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();
 }
@@ -2042,7 +2059,7 @@ function confirmDeleteGuest(id){
   if(!g)return;
   openConfirm(`Remove ${g.first} ${g.last}?`,'This guest will be removed from the list.',()=>{
     DB.guests=DB.guests.filter(x=>x.id!==gid);
-    save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();toast('🗑️ Guest removed');
+    save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();toast('Guest removed');
   });
 }
 
@@ -2061,14 +2078,14 @@ function openGuestDetail(id){
     <div class="detail-header">
       <div class="g-av" style="${avStyle(g.id)};width:44px;height:44px;font-size:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials(g.first,g.last)}</div>
       <div class="detail-title">${g.first} ${g.last}</div>
-      <button class="ib" onclick="App.openEditGuest('${g.id}');App.closeModal('guest-detail')">✏️</button>
+      <button class="ib" onclick="App.openEditGuest('${g.id}');App.closeModal('guest-detail')">Edit</button>
     </div>
     <div class="info-grid">
       ${g.contact?`<div class="info-cell"><div class="info-lbl">Phone</div><div class="info-val">${g.contact}</div></div>`:''}
       ${g.email?`<div class="info-cell"><div class="info-lbl">Email</div><div class="info-val">${g.email}</div></div>`:''}
       <div class="info-cell"><div class="info-lbl">Peoples</div><div class="info-val">${g.party||1}</div></div>
       ${g.table?`<div class="info-cell"><div class="info-lbl">Table / Group</div><div class="info-val">${g.table}</div></div>`:''}
-      ${getGuestRoomAssignments(g).length?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">🏨 Assigned Rooms</div><div class="info-val">${formatGuestRooms(g)}</div></div>`:''}
+      ${getGuestRoomAssignments(g).length?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Assigned Rooms</div><div class="info-val">${formatGuestRooms(g)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Stay Request</div><div class="info-val">${roomRequestTypeLabel(g.roomRequestType)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Request Status</div><div class="info-val">${roomRequestStatusLabel(g.roomRequestStatus)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Rooms Requested</div><div class="info-val">${Math.max(1,parseInt(g.requestedRoomCount)||1)}</div></div>`:''}
@@ -2096,7 +2113,7 @@ function openGuestDetail(id){
     ${hasPhone?`<button onclick="App.sendGuestInvite('${g.id}')" style="width:100%;padding:11px;background:#25D366;color:white;border:none;border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;transition:opacity .15s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> Send WhatsApp Invite</button>`:''}
     ${linkedGifts.length>0?`<div class="linked-gifts">
       <div class="lg-title">Linked Gifts (${linkedGifts.length})</div>
-      ${linkedGifts.map(gi=>`<div class="lg-item"><span>${gi.cat||'📦'} ${gi.desc}</span><span style="color:var(--sage-d);font-weight:500">${gi.value?fmtVal(gi.value):''}</span></div>`).join('')}
+      ${linkedGifts.map(gi=>{const meta=CAT_META[gi.cat]||CAT_META.other;return`<div class="lg-item"><span>${meta.label} · ${gi.desc}</span><span style="color:var(--sage-d);font-weight:500">${gi.value?fmtVal(gi.value):''}</span></div>`;}).join('')}
     </div>`:''}
     <button class="btn-s btn-danger" style="margin-top:16px" onclick="App.confirmDeleteGuest('${g.id}')">Remove Guest</button>
   `;
@@ -2125,7 +2142,7 @@ function renderEventMenusEditor(){
     <div class="room-loc-block">
       <div class="room-loc-name" style="margin-bottom:10px">
         <input style="flex:1;background:transparent;border:none;outline:none;font-size:12.5px;font-weight:600;color:var(--txt2);font-family:'Plus Jakarta Sans',sans-serif" value="${menu.title||''}" placeholder="Section title (e.g. Breakfast)" oninput="App._updateEventMenuTitle(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''} />
-        ${_eventMenuEditorDisabled?'':`<button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 0 0 6px" onclick="App._removeEventMenu(${idx})" title="Remove menu section">✕</button>`}
+        ${_eventMenuEditorDisabled?'':`<button style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--txt4);padding:0 0 0 6px;font-weight:600" onclick="App._removeEventMenu(${idx})" title="Remove menu section">Remove</button>`}
       </div>
       <textarea class="fi" rows="4" style="resize:vertical" placeholder="Enter each menu item on a new line" oninput="App._updateEventMenuItems(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''}>${menu.items||''}</textarea>
       ${canViewLikes&&normalizeMenuItems(menu.items).length?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surf);border:1px solid var(--bord2)">
@@ -2176,10 +2193,10 @@ function renderRoomLocsEditor(){
     <div class="room-loc-block">
       <div class="room-loc-name">
         <input style="flex:1;background:transparent;border:none;outline:none;font-size:12.5px;font-weight:600;color:var(--txt2);font-family:'Plus Jakarta Sans',sans-serif" value="${loc.name}" placeholder="Location name (e.g. Block A, Hall 1)" oninput="App._updateLocName(${li},this.value)" />
-        <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 0 0 6px" onclick="App._removeLocation(${li})" title="Remove location">✕</button>
+        <button style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--txt4);padding:0 0 0 6px;font-weight:600" onclick="App._removeLocation(${li})" title="Remove location">Remove</button>
       </div>
       <div class="room-list" id="room-list-${li}">
-        ${loc.rooms.map((r,ri)=>`<span class="room-tag">${r}<button class="room-tag-del" onclick="App._removeRoom(${li},${ri})">✕</button></span>`).join('')}
+        ${loc.rooms.map((r,ri)=>`<span class="room-tag">${r}<button class="room-tag-del" onclick="App._removeRoom(${li},${ri})">Remove</button></span>`).join('')}
       </div>
       <div class="room-add-row">
         <input class="room-add-inp" id="room-inp-${li}" type="text" placeholder="e.g. 101 or 101,102 or 101-110" onkeydown="if(event.key==='Enter'){event.preventDefault();App._addRoom(${li})}" />
@@ -2232,8 +2249,8 @@ function _addRoom(li){
   }
   inp.value='';
   renderRoomLocsEditor();
-  if(added>0&&skipped>0) toast(`✅ Added ${added} rooms · ${skipped} already existed`);
-  else if(added>0) toast(`✅ ${added} room${added>1?'s':''} added`);
+  if(added>0&&skipped>0) toast(`Added ${added} rooms · ${skipped} already existed`);
+  else if(added>0) toast(`${added} room${added>1?'s':''} added`);
   else toast('⚠️ All rooms already added');
   // re-focus the input for this block
   const newInp=document.getElementById(`room-inp-${li}`);
@@ -2282,7 +2299,7 @@ function checkRoomConflict(){
   if(occupied.length===0){ind.style.display='none';return;}
   const names=occupied.map(g=>`${g.first} ${g.last}`).join(', ');
   ind.style.display='block';
-  ind.innerHTML=`<div class="room-conflict">⚠️ Already allocated to: <span class="room-conflict-name">${names}</span></div>`;
+  ind.innerHTML=`<div class="room-conflict">Already allocated to: <span class="room-conflict-name">${names}</span></div>`;
 }
 
 // ═══════════════════════════════════════════════
@@ -2296,13 +2313,13 @@ function renderRooms(){
     <span class="chev">▼</span>
   </div>`;
   if(!ev){
-    el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">No event selected</div><div class="empty-s">Select an event to manage rooms</div></div>`;
+    el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">${uiIcon('room',42)}</div><div class="empty-t">No event selected</div><div class="empty-s">Select an event to manage rooms</div></div>`;
     return;
   }
   if(ev._isGuestOnly){
     const me=ensureGuestRequestDefaults(getCurrentGuestInvite(ev.id));
     if(!me){
-      el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">Room details unavailable</div><div class="empty-s">We couldn't find your guest record for this invitation.</div></div>`;
+      el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">${uiIcon('room',42)}</div><div class="empty-t">Room details unavailable</div><div class="empty-s">We couldn't find your guest record for this invitation.</div></div>`;
       return;
     }
     const rooms=getGuestRoomAssignments(me);
@@ -2331,14 +2348,14 @@ function renderRooms(){
     return;
   }
   if(!Auth.isRoom(DB.activeEvent)){
-    el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">🔐</div><div class="empty-t">Room access required</div><div class="empty-s">Only organisers and room coordinators can fulfill stay requests and allocate rooms.</div></div>`;
+    el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">${uiIcon('room',42)}</div><div class="empty-t">Room access required</div><div class="empty-s">Only organisers and room coordinators can fulfill stay requests and allocate rooms.</div></div>`;
     return;
   }
   const locs=(ev.roomLocs)||[];
   if(locs.length===0){
     el.innerHTML=evSelHtml+
       `<div class="ph"><div class="ph-title">Room Management</div></div>`+
-      `<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">No rooms configured</div><div class="empty-s">Add room locations in the Event settings to manage guest room allocation.</div><button class="fab" style="margin-top:16px" onclick="App.openEditEvent('${ev.id}')">⚙️ Configure Rooms</button></div>`;
+      `<div class="empty"><div class="empty-ico">${uiIcon('room',42)}</div><div class="empty-t">No rooms configured</div><div class="empty-s">Add room locations in the Event settings to manage guest room allocation.</div><button class="fab" style="margin-top:16px" onclick="App.openEditEvent('${ev.id}')">Configure Rooms</button></div>`;
     return;
   }
   // build stats
@@ -2426,7 +2443,7 @@ function openRoomDetail(locName,roomNo){
   const roomGuests=allGuests.filter(g=>getGuestRoomAssignments(g).some(room=>room.loc===locName&&room.no===roomNo));
 
   document.getElementById('mo-room-alloc-title').textContent=`Room ${roomNo}`;
-  document.getElementById('mo-room-alloc-loc').textContent=`📍 ${locName}`;
+  document.getElementById('mo-room-alloc-loc').textContent=locName;
 
   // Occupants section
   const occEl=document.getElementById('mo-room-occupants');
@@ -2443,7 +2460,7 @@ function openRoomDetail(locName,roomNo){
         <button onclick="App.unassignGuestRoom('${g.id}')" style="background:#FEE8E8;color:#932B2B;border:1px solid #FABCBC;border-radius:var(--rxs);padding:4px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">Remove This Room</button>
       </div>`).join('');
   } else {
-    occEl.innerHTML=`<div style="background:var(--sage-l);border:1px solid var(--sage-m);border-radius:var(--rs);padding:10px 13px;margin-bottom:12px;font-size:12px;color:var(--sage-d)">🟢 Vacant — no guests assigned</div>`;
+    occEl.innerHTML=`<div style="background:var(--sage-l);border:1px solid var(--sage-m);border-radius:var(--rs);padding:10px 13px;margin-bottom:12px;font-size:12px;color:var(--sage-d)">Vacant — no guests assigned</div>`;
   }
 
   // Guest dropdown — show all guests, mark already-in-room ones
@@ -2453,7 +2470,7 @@ function openRoomDetail(locName,roomNo){
       const rooms=getGuestRoomAssignments(g);
       const inThisRoom=rooms.some(room=>room.loc===locName&&room.no===roomNo);
       const otherRooms=rooms.filter(room=>!(room.loc===locName&&room.no===roomNo));
-      const label=`${g.first} ${g.last}`+(inThisRoom?' ✓ (this room)':otherRooms.length?` (${otherRooms.map(room=>room.loc+' #'+room.no).join(', ')})`:'');
+      const label=`${g.first} ${g.last}`+(inThisRoom?' (this room)':otherRooms.length?` (${otherRooms.map(room=>room.loc+' #'+room.no).join(', ')})`:'');
       return`<option value="${g.id}" ${inThisRoom?'disabled':''}>${label}</option>`;
     }).join('');
   document.getElementById('room-alloc-conflict').style.display='none';
@@ -2472,7 +2489,7 @@ function onRoomAllocGuestChange(){
   const rooms=getGuestRoomAssignments(g);
   if(g&&rooms.length){
     conflictEl.style.display='block';
-    conflictEl.innerHTML=`<div class="room-conflict">⚠️ Already assigned to ${rooms.map(room=>room.loc+' Room '+room.no).join(', ')} — this room will be added too</div>`;
+    conflictEl.innerHTML=`<div class="room-conflict">Already assigned to ${rooms.map(room=>room.loc+' Room '+room.no).join(', ')} — this room will be added too</div>`;
   } else {
     conflictEl.style.display='none';
   }
@@ -2480,7 +2497,7 @@ function onRoomAllocGuestChange(){
 
 function assignGuestToRoom(){
   const gid=document.getElementById('room-alloc-guest-sel').value;
-  if(!gid){toast('⚠️ Select a guest');return;}
+  if(!gid){toast('Select a guest');return;}
   const g=DB.guests.find(x=>x.id===gid);
   if(!g)return;
   ensureGuestRequestDefaults(g);
@@ -2488,7 +2505,7 @@ function assignGuestToRoom(){
   recomputeGuestRoomRequestStatus(g);
   save();syncActiveEventData();
   _preferredRoomGuestId='';
-  toast(`✅ ${g.first} assigned to ${_roomAllocLoc} Room ${_roomAllocNo}`);
+  toast(`${g.first} assigned to ${_roomAllocLoc} Room ${_roomAllocNo}`);
   closeModal('room-alloc');
   renderRooms();
 }
@@ -2501,7 +2518,7 @@ function unassignGuestRoom(gid){
   removeGuestRoomAssignment(g,_roomAllocLoc,_roomAllocNo);
   recomputeGuestRoomRequestStatus(g);
   save();syncActiveEventData();
-  toast(`🗑️ ${name} unassigned from ${_roomAllocLoc} Room ${_roomAllocNo}`);
+  toast(`${name} unassigned from ${_roomAllocLoc} Room ${_roomAllocNo}`);
   // re-open to refresh
   openRoomDetail(_roomAllocLoc,_roomAllocNo);
   renderRooms();
@@ -2515,7 +2532,7 @@ function clearGuestRooms(gid){
   syncGuestPrimaryRoom(g);
   recomputeGuestRoomRequestStatus(g);
   save();syncActiveEventData();render();
-  toast(`🗑️ Cleared all rooms for ${g.first}`);
+  toast(`Cleared all rooms for ${g.first}`);
 }
 
 function prepareGuestRoomAssignment(gid){
@@ -2537,7 +2554,7 @@ function resolveGuestRoomRequest(gid,outcome){
     g.roomRequestStatus='fulfilled';
   }
   save();syncActiveEventData();renderRooms();
-  toast(`✅ ${g.first}'s request updated`);
+  toast(`${g.first}'s request updated`);
 }
 
 function sendGuestInvite(guestId){
@@ -2552,11 +2569,11 @@ function sendGuestInvite(guestId){
   const evDate=ev.date?fmtDate(ev.date):'';
   const venue=ev.location||'';
   const rooms=getGuestRoomAssignments(g);
-  const roomPart=rooms.length?`\n🏨 Rooms: ${rooms.map(room=>`${room.loc} Room ${room.no}`).join(', ')}`:'';
-  const msg=`🎉 *You're Invited!*\n\nDear ${g.first},\n\nWe joyfully invite you to *${ev.name}*\n\n📅 Date: ${evDate}\n📍 Venue: ${venue}${roomPart}\n\nYour presence will make this celebration truly special. We look forward to seeing you!\n\nWith warm regards 🙏`;
+  const roomPart=rooms.length?`\nRooms: ${rooms.map(room=>`${room.loc} Room ${room.no}`).join(', ')}`:'';
+  const msg=`*You're Invited!*\n\nDear ${g.first},\n\nWe joyfully invite you to *${ev.name}*\n\nDate: ${evDate}\nVenue: ${venue}${roomPart}\n\nYour presence will make this celebration truly special. We look forward to seeing you!\n\nWith warm regards`;
   const url=`https://wa.me/${intlPhone}?text=${encodeURIComponent(msg)}`;
   window.open(url,'_blank');
-  toast('📲 WhatsApp invite opened!');
+  toast('WhatsApp invite opened');
 }
 
 function submitGuestRoomRequest(){
@@ -2577,7 +2594,7 @@ function submitGuestRoomRequest(){
   me.roomRequestUpdatedAt=Date.now();
   me.roomRequestStatus=me.roomRequestType==='undecided'?'none':'pending';
   save();syncActiveEventData();closeModal('guest-request');renderGuestPortal();render();
-  toast('✅ Room request sent');
+  toast('Room request sent');
 }
 
 function setGuestFeedbackRating(field,value,prefix='gf'){
@@ -2610,7 +2627,7 @@ function submitGuestFeedback(prefix='gf'){
   me.feedbackMessage=(messageEl?.value||'').trim();
   me.feedbackUpdatedAt=Date.now();
   save();syncActiveEventData();renderGuestPortal();render();
-  toast('✅ Feedback sent');
+  toast('Feedback sent');
 }
 
 function clearGuestFeedback(){
@@ -2628,7 +2645,7 @@ function clearGuestFeedback(){
   if(content&&document.getElementById('mo-guest-feedback')?.classList.contains('open')){
     content.innerHTML=renderGuestFeedbackSection(ev, me, 'gf-modal');
   }
-  toast('🗑️ Feedback removed');
+  toast('Feedback removed');
 }
 
 function toggleGuestFoodLike(sectionIdx,itemIdx,eventId){
@@ -2676,13 +2693,13 @@ function setRsvpDirect(id,status){
 // GIFT CRUD
 // ═══════════════════════════════════════════════
 function openAddGift(){
-  if(!DB.activeEvent){toast('⚠️ Please select an event first');return;}
+  if(!DB.activeEvent){toast('Please select an event first');return;}
   _editing.gift=null;
   _giftPhotoData=null;
   document.getElementById('mo-gift-title').textContent='Log a Gift';
   ['gi-desc','gi-from','gi-val','gi-notes'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('gi-cat').value='💝';
-  document.querySelectorAll('#gi-cat-picker .cat-opt').forEach(o=>o.classList.toggle('sel',o.dataset.cat==='💝'));
+  document.getElementById('gi-cat').value='personal';
+  document.querySelectorAll('#gi-cat-picker .cat-opt').forEach(o=>o.classList.toggle('sel',o.dataset.cat==='personal'));
   document.getElementById('gi-ty').value='pending';
   document.getElementById('gift-photo-img').style.display='none';
   document.getElementById('gift-photo-label').style.display='block';
@@ -2701,7 +2718,7 @@ function openEditGift(id){
   document.getElementById('gi-desc').value=g.desc||'';
   document.getElementById('gi-from').value=g.from||'';
   document.getElementById('gi-val').value=g.value||'';
-  const cat=g.cat||'📦';
+  const cat=g.cat||'other';
   document.getElementById('gi-cat').value=cat;
   document.querySelectorAll('#gi-cat-picker .cat-opt').forEach(o=>o.classList.toggle('sel',o.dataset.cat===cat));
   document.getElementById('gi-ty').value=g.ty||'pending';
@@ -2741,24 +2758,24 @@ function saveGift(){
     if(g){
       g.desc=desc;g.from=document.getElementById('gi-from').value.trim();
       g.value=parseFloat(document.getElementById('gi-val').value)||0;
-      g.cat=document.getElementById('gi-cat').value;
+      g.cat=normalizeGiftCategory(document.getElementById('gi-cat').value);
       g.ty=document.getElementById('gi-ty').value;
       g.notes=document.getElementById('gi-notes').value.trim();
       g.photo=_giftPhotoData||null;
     }
-    toast('✅ Gift updated');
+    toast('Gift updated');
   } else {
     DB.gifts.push({
       id:uid(),eventId:DB.activeEvent,
       desc,from:document.getElementById('gi-from').value.trim(),
       value:parseFloat(document.getElementById('gi-val').value)||0,
-      cat:document.getElementById('gi-cat').value,
+      cat:normalizeGiftCategory(document.getElementById('gi-cat').value),
       ty:document.getElementById('gi-ty').value,
       notes:document.getElementById('gi-notes').value.trim(),
       photo:_giftPhotoData||null,
       createdAt:Date.now()
     });
-    toast('🎁 Gift logged!');
+    toast('Gift logged');
   }
   save();syncActiveEventData();closeModal('add-gift');render();
 }
@@ -2777,7 +2794,7 @@ function confirmDeleteGift(id){
   if(!g)return;
   openConfirm('Delete this gift?','This gift record will be permanently removed.',()=>{
     DB.gifts=DB.gifts.filter(x=>x.id!==gid);
-    save();syncActiveEventData();closeModal('add-gift');closeModal('add-moi');render();toast('🗑️ Gift deleted');
+    save();syncActiveEventData();closeModal('add-gift');closeModal('add-moi');render();toast('Gift deleted');
   });
 }
 
@@ -2788,7 +2805,7 @@ function renderEventPicker(){
   const el=document.getElementById('ep-list');
   const sess=Auth.currentSession();
   const myEvents=DB.events.filter(ev=>Auth.getTeam(ev.id).some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase())));
-  if(myEvents.length===0){el.innerHTML=`<div class="empty"><div class="empty-ico">🎉</div><div class="empty-t">No events yet</div></div>`;return;}
+  if(myEvents.length===0){el.innerHTML=`<div class="empty"><div class="empty-ico">${uiIcon('event',42)}</div><div class="empty-t">No events yet</div></div>`;return;}
   el.innerHTML=myEvents.map(ev=>{
     const col=COLORS[ev.color]||COLORS.rose;
     return`<div class="ep-item ${ev.id===DB.activeEvent?'sel':''}" onclick="App.pickEvent('${ev.id}')">
@@ -2861,7 +2878,7 @@ function exportGuests(){
   const rows=[['First Name','Last Name','Phone','Email','Peoples','RSVP Status','Table/Group','Notes']];
   guests.forEach(g=>rows.push([g.first,g.last,g.contact,g.email,g.party,g.rsvp,g.table,g.notes]));
   downloadCSV(`${(ev?.name||'event').replace(/\s+/g,'_')}_guests.csv`,rows);
-  toast('📊 Guest list exported!');
+  toast('Guest list exported');
   closeModal('export');
 }
 
@@ -2872,9 +2889,12 @@ function exportGifts(){
   const gifts=DB.gifts.filter(g=>g.eventId===evId);
   if(gifts.length===0){toast('⚠️ No gifts to export');return;}
   const rows=[['Description','From','Category','Estimated Value (₹)','Thank-You Status','Notes']];
-  gifts.forEach(g=>rows.push([g.desc,g.from,g.cat,g.value,g.ty,g.notes]));
+  gifts.forEach(g=>{
+    const meta=CAT_META[normalizeGiftCategory(g.cat)]||CAT_META.other;
+    rows.push([g.desc,g.from,meta.label,g.value,g.ty,g.notes]);
+  });
   downloadCSV(`${(ev?.name||'event').replace(/\s+/g,'_')}_gifts.csv`,rows);
-  toast('🎁 Gift tracker exported!');
+  toast('Gift tracker exported');
   closeModal('export');
 }
 
@@ -2884,7 +2904,7 @@ function exportGifts(){
 function saveProfile(){
   DB.profile.name=document.getElementById('prof-name').value.trim();
   DB.profile.email=document.getElementById('prof-email').value.trim();
-  save();closeModal('profile');render();toast('✅ Profile saved');
+  save();closeModal('profile');render();toast('Profile saved');
 }
 
 function openProfileModal(){
@@ -2913,7 +2933,7 @@ function toggleSetting(key,btn){
 
 function unlockPremium(){
   DB.premium=true;save();closeModal('premium');render();
-  toast('🎉 Premium unlocked! Ads removed.');
+  toast('Premium unlocked. Ads removed.');
   if(!DB.premium) return;
   document.querySelector('.ad-top').style.display='none';
   document.querySelector('.ad-bot').style.display='none';
@@ -2925,7 +2945,7 @@ function clearAllData(){
     DB.events=[];DB.guests=[];DB.gifts=[];DB.activeEvent=null;
     save();
     Cloud.clearAllCloudData(eventIds).catch(()=>toast('⚠️ Could not delete cloud data'));
-    render();toast('🗑️ All data cleared');
+    render();toast('All data cleared');
   });
 }
 
@@ -2943,7 +2963,7 @@ function locSearch(val){
       const data=await r.json();
       if(!sug)return;
       if(!data.length){sug.style.display='none';return;}
-      sug.innerHTML=data.map((p,i)=>`<div onclick="App.pickLoc('${encodeURIComponent(p.display_name)}','${p.lat}','${p.lon}')" style="padding:10px 13px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--bord2);transition:background .12s" onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background=''">📍 ${p.display_name}</div>`).join('');
+      sug.innerHTML=data.map((p,i)=>`<div onclick="App.pickLoc('${encodeURIComponent(p.display_name)}','${p.lat}','${p.lon}')" style="padding:10px 13px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--bord2);transition:background .12s" onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background=''">${p.display_name}</div>`).join('');
       sug.style.display='block';
     }catch(e){if(sug)sug.style.display='none';}
   },400);
@@ -2984,7 +3004,7 @@ function openWhatsApp(giftId){
   _waGiftId=giftId;
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
   const evName=ev?ev.name:'our event';
-  const defaultMsg=`Dear ${g.from},\n\nThank you so much for the wonderful ${g.desc}${g.value?' (worth '+fmtVal(g.value)+')':''}. Your thoughtfulness means the world to us. We are truly grateful for your presence and generosity at ${evName}.\n\nWith love & gratitude 🙏`;
+  const defaultMsg=`Dear ${g.from},\n\nThank you so much for the wonderful ${g.desc}${g.value?' (worth '+fmtVal(g.value)+')':''}. Your thoughtfulness means the world to us. We are truly grateful for your presence and generosity at ${evName}.\n\nWith love and gratitude`;
   document.getElementById('wa-to-name').textContent=g.from||'Guest';
   document.getElementById('wa-to-phone').textContent=guestMatch.contact;
   document.getElementById('wa-msg').value=defaultMsg;
@@ -3007,7 +3027,7 @@ function sendWhatsApp(){
   g.ty='sent';save();syncActiveEventData();
   closeModal('whatsapp');
   render();
-  toast('✅ WhatsApp opened · Marked as TY Sent');
+  toast('WhatsApp opened · Marked as TY Sent');
 }
 function setMoiTy(val,btn){
   document.getElementById('moi-ty').value=val;
@@ -3103,10 +3123,10 @@ function saveMoi(){
   if(_editing.gift){
     const g=DB.gifts.find(x=>x.id===_editing.gift);
     if(g){g.from=from;g.value=amount;g.notes=document.getElementById('moi-notes').value.trim();g.ty=document.getElementById('moi-ty').value;}
-    toast('✅ Cash gift entry updated');
+    toast('Cash gift entry updated');
   } else {
-    DB.gifts.push({id:uid(),eventId:DB.activeEvent,isMoi:true,desc:'Cash Gift',from,value:amount,cat:'💵',ty:document.getElementById('moi-ty').value,notes:document.getElementById('moi-notes').value.trim(),createdAt:Date.now()});
-    toast(`💵 ₹${amount.toLocaleString('en-IN')} from ${from} recorded`);
+    DB.gifts.push({id:uid(),eventId:DB.activeEvent,isMoi:true,desc:'Cash Gift',from,value:amount,cat:'cash_gift',ty:document.getElementById('moi-ty').value,notes:document.getElementById('moi-notes').value.trim(),createdAt:Date.now()});
+    toast(`Cash gift of ₹${amount.toLocaleString('en-IN')} from ${from} recorded`);
   }
   save();syncActiveEventData();closeModal('add-moi');renderGifts();
 }
@@ -3135,7 +3155,7 @@ async function sendTeamInvite(){
   if(result===false){toast('⚠️ Invalid email');return;}
   document.getElementById('team-invite-email').value='';
   const roleLabel=role==='organizer'?'Organizer':role==='cash'?'Cash Collector':'Room Coordinator';
-  toast(`✅ ${email} added as ${roleLabel}`);
+  toast(`${email} added as ${roleLabel}`);
   try{ await Cloud.loadEventsForSession(Auth.currentSession()); }catch(e){}
 }
 
@@ -3143,7 +3163,7 @@ function openUserMenu(){
   const sess=Auth.currentSession();
   if(!sess){openProfileModal();return;}
   const role=Auth.currentRole(DB.activeEvent);
-  const roleLabel=role==='organizer'?'👑 Organizer':role==='cash'?'💵 Cash Collector':role==='room'?'🏨 Room Coordinator':'—';
+  const roleLabel=role==='organizer'?'Organizer':role==='cash'?'Cash Collector':role==='room'?'Room Coordinator':'—';
   openConfirm(
     sess.name||sess.email,
     `${sess.email}\nRole: ${roleLabel}\n\nSign out of eventise?`,
@@ -3255,12 +3275,12 @@ if(false && DB.events.length===0){
     {id:gids[5],eventId:eid,first:'Rohan',last:'Gupta',contact:'+91 98600 66666',party:1,rsvp:'declined',notes:'',table:''},
   ];
   DB.gifts=[
-    {id:uid(),eventId:eid,desc:'Silk saree set (Kanjivaram)',from:'Divya Sharma',value:15000,cat:'💝',ty:'sent',notes:''},
-    {id:uid(),eventId:eid,desc:'KitchenAid Stand Mixer',from:'Karthik Nair',value:28000,cat:'🏠',ty:'pending',notes:'Red colour'},
-    {id:uid(),eventId:eid,desc:'Crystal dinner set',from:'Ananya Iyer',value:12000,cat:'🏠',ty:'drafted',notes:'12 piece'},
-    {id:uid(),eventId:eid,isMoi:true,desc:'Cash Gift',from:'Vikram Singh',value:5001,cat:'💵',ty:'sent',notes:'Cash'},
-    {id:uid(),eventId:eid,isMoi:true,desc:'Cash Gift',from:'Rohan Gupta',value:2100,cat:'💵',ty:'pending',notes:''},
-    {id:uid(),eventId:eid,isMoi:true,desc:'Cash Gift',from:'Sneha Patel',value:3000,cat:'💵',ty:'pending',notes:'Online transfer'},
+    {id:uid(),eventId:eid,desc:'Silk saree set (Kanjivaram)',from:'Divya Sharma',value:15000,cat:'personal',ty:'sent',notes:''},
+    {id:uid(),eventId:eid,desc:'KitchenAid Stand Mixer',from:'Karthik Nair',value:28000,cat:'home',ty:'pending',notes:'Red colour'},
+    {id:uid(),eventId:eid,desc:'Crystal dinner set',from:'Ananya Iyer',value:12000,cat:'home',ty:'drafted',notes:'12 piece'},
+    {id:uid(),eventId:eid,isMoi:true,desc:'Cash Gift',from:'Vikram Singh',value:5001,cat:'cash_gift',ty:'sent',notes:'Cash'},
+    {id:uid(),eventId:eid,isMoi:true,desc:'Cash Gift',from:'Rohan Gupta',value:2100,cat:'cash_gift',ty:'pending',notes:''},
+    {id:uid(),eventId:eid,isMoi:true,desc:'Cash Gift',from:'Sneha Patel',value:3000,cat:'cash_gift',ty:'pending',notes:'Online transfer'},
   ];
   save();
   // Seed organizer for demo event based on current session

@@ -679,14 +679,14 @@ body{overscroll-behavior:none}
     <div class="fg">
       <label class="fl">Category</label>
       <div class="cat-picker" id="gi-cat-picker">
-        <div class="cat-opt sel" data-cat="💝" onclick="App.selectCat(this,'💝')"><span class="cat-opt-ico">💝</span><span class="cat-opt-lbl">Personal</span></div>
-        <div class="cat-opt" data-cat="🏠" onclick="App.selectCat(this,'🏠')"><span class="cat-opt-ico">🏠</span><span class="cat-opt-lbl">Home</span></div>
-        <div class="cat-opt" data-cat="👗" onclick="App.selectCat(this,'👗')"><span class="cat-opt-ico">👗</span><span class="cat-opt-lbl">Clothing</span></div>
-        <div class="cat-opt" data-cat="🍽️" onclick="App.selectCat(this,'🍽️')"><span class="cat-opt-ico">🍽️</span><span class="cat-opt-lbl">Kitchen</span></div>
-        <div class="cat-opt" data-cat="💳" onclick="App.selectCat(this,'💳')"><span class="cat-opt-ico">💳</span><span class="cat-opt-lbl">Cash/Card</span></div>
-        <div class="cat-opt" data-cat="📦" onclick="App.selectCat(this,'📦')"><span class="cat-opt-ico">📦</span><span class="cat-opt-lbl">Other</span></div>
+        <div class="cat-opt sel" data-cat="personal" onclick="App.selectCat(this,'personal')"><span class="cat-opt-ico">P</span><span class="cat-opt-lbl">Personal</span></div>
+        <div class="cat-opt" data-cat="home" onclick="App.selectCat(this,'home')"><span class="cat-opt-ico">H</span><span class="cat-opt-lbl">Home</span></div>
+        <div class="cat-opt" data-cat="clothing" onclick="App.selectCat(this,'clothing')"><span class="cat-opt-ico">C</span><span class="cat-opt-lbl">Clothing</span></div>
+        <div class="cat-opt" data-cat="kitchen" onclick="App.selectCat(this,'kitchen')"><span class="cat-opt-ico">K</span><span class="cat-opt-lbl">Kitchen</span></div>
+        <div class="cat-opt" data-cat="cash_card" onclick="App.selectCat(this,'cash_card')"><span class="cat-opt-ico">C</span><span class="cat-opt-lbl">Cash/Card</span></div>
+        <div class="cat-opt" data-cat="other" onclick="App.selectCat(this,'other')"><span class="cat-opt-ico">O</span><span class="cat-opt-lbl">Other</span></div>
       </div>
-      <input type="hidden" id="gi-cat" value="💝" />
+      <input type="hidden" id="gi-cat" value="personal" />
     </div>
     <div class="fg">
       <label class="fl">Gift Description *</label>
@@ -705,9 +705,9 @@ body{overscroll-behavior:none}
       <div class="fg">
         <label class="fl">Thank-You</label>
         <select class="fi" id="gi-ty">
-          <option value="pending">⏳ Pending</option>
-          <option value="drafted">✏️ Drafted</option>
-          <option value="sent">✅ Sent</option>
+          <option value="pending">Pending</option>
+          <option value="drafted">Drafted</option>
+          <option value="sent">Sent</option>
         </select>
       </div>
     </div>
@@ -720,7 +720,7 @@ body{overscroll-behavior:none}
       <div class="photo-drop" id="gift-photo-drop">
         <img class="photo-preview" id="gift-photo-img" alt="Gift photo" />
         <input type="file" accept="image/*" onchange="App.handleGiftPhoto(this)" />
-        <div id="gift-photo-label">📷 Tap to add photo</div>
+        <div id="gift-photo-label">Tap to add photo</div>
       </div>
     </div>
     <button class="btn-p" onclick="App.saveGift()">Save Gift</button>
@@ -735,7 +735,7 @@ body{overscroll-behavior:none}
     <div class="m-handle"></div>
     <div class="m-title" id="mo-cash-title">Log Cash / Card Gift</div>
     <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
-      <span style="font-size:22px">💳</span>
+      <span style="font-size:18px;font-weight:700;color:var(--gold-d)">₹</span>
       <div style="font-size:12px;color:var(--gold-d);line-height:1.5">Track cash envelopes, cheques, UPI transfers and gift cards in one place.</div>
     </div>
     <div class="fg">
@@ -746,11 +746,11 @@ body{overscroll-behavior:none}
     <div class="fg">
       <label class="fl">Type</label>
       <select class="fi" id="ca-type">
-        <option value="Cash Envelope">💵 Cash Envelope</option>
-        <option value="UPI / Bank Transfer">📲 UPI / Bank Transfer</option>
-        <option value="Cheque">🏦 Cheque</option>
-        <option value="Gift Card">🎫 Gift Card</option>
-        <option value="Gold / Jewellery">💛 Gold / Jewellery</option>
+        <option value="Cash Envelope">Cash Envelope</option>
+        <option value="UPI / Bank Transfer">UPI / Bank Transfer</option>
+        <option value="Cheque">Cheque</option>
+        <option value="Gift Card">Gift Card</option>
+        <option value="Gold / Jewellery">Gold / Jewellery</option>
       </select>
     </div>
     <div class="fr">
@@ -761,9 +761,9 @@ body{overscroll-behavior:none}
       <div class="fg">
         <label class="fl">Thank-You Status</label>
         <select class="fi" id="ca-ty">
-          <option value="pending">⏳ Pending</option>
-          <option value="drafted">✏️ Drafted</option>
-          <option value="sent">✅ Sent</option>
+          <option value="pending">Pending</option>
+          <option value="drafted">Drafted</option>
+          <option value="sent">Sent</option>
         </select>
       </div>
     </div>
@@ -799,7 +799,7 @@ body{overscroll-behavior:none}
 <div class="mo" id="mo-premium">
   <div class="ms" style="text-align:center;padding:24px 22px 32px">
     <div class="m-handle"></div>
-    <div style="font-size:44px;margin-bottom:12px">✨</div>
+    <div style="font-size:44px;margin-bottom:12px;font-family:'Cormorant Garamond',serif;color:var(--rose-d)">E</div>
     <div class="m-title" style="text-align:center">eventise Premium</div>
     <p style="font-size:13px;color:var(--txt2);margin-bottom:20px;line-height:1.6">Remove all ads forever and unlock Digital RSVP Links, Collaborator Mode, and priority support.</p>
     <div style="background:var(--rose-l);border-radius:var(--rs);padding:16px;margin-bottom:18px">
@@ -866,7 +866,7 @@ body{overscroll-behavior:none}
     <div class="m-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div class="m-title" id="mo-moi-title" style="margin-bottom:0">Add Cash Gift Entry</div>
-      <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rxs);padding:4px 10px;font-size:11px;font-weight:600;color:var(--gold-d)">💵 மொய்</div>
+      <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rxs);padding:4px 10px;font-size:11px;font-weight:600;color:var(--gold-d)">Cash Gift</div>
     </div>
     <div style="background:linear-gradient(135deg,var(--gold-l),#fff8ee);border:1px solid var(--gold-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
       <span style="font-size:20px;flex-shrink:0;margin-top:1px">🪙</span>
@@ -876,7 +876,7 @@ body{overscroll-behavior:none}
       <label class="fl">Guest Name *</label>
       <div style="position:relative">
         <input class="fi" type="text" id="moi-from" placeholder="e.g. Rajan & Family" list="moi-datalist" style="padding-left:38px" />
-        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none">👤</span>
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;pointer-events:none;color:var(--gold-d)">ID</span>
       </div>
       <datalist id="moi-datalist"></datalist>
     </div>
@@ -900,25 +900,25 @@ body{overscroll-behavior:none}
       <label class="fl">Payment Mode</label>
       <select class="fi" id="moi-notes">
         <option value="">Select mode…</option>
-        <option value="Cash Envelope">💵 Cash Envelope</option>
-        <option value="UPI / GPay">📲 UPI / GPay</option>
-        <option value="Bank Transfer">🏦 Bank Transfer</option>
-        <option value="Cheque">📄 Cheque</option>
-        <option value="Gold / Jewellery">💛 Gold / Jewellery</option>
+        <option value="Cash Envelope">Cash Envelope</option>
+        <option value="UPI / GPay">UPI / GPay</option>
+        <option value="Bank Transfer">Bank Transfer</option>
+        <option value="Cheque">Cheque</option>
+        <option value="Gold / Jewellery">Gold / Jewellery</option>
       </select>
     </div>
     <div class="fg">
       <label class="fl">Thank-You Status</label>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="moi-ty-picker">
-        <button onclick="setMoiTy('pending',this)" class="moi-ty-pick-btn" data-val="pending" style="padding:10px 6px;border:1.5px solid var(--gold-d);border-radius:var(--rs);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">⏳ Pending</button>
-        <button onclick="setMoiTy('drafted',this)" class="moi-ty-pick-btn" data-val="drafted" style="padding:10px 6px;border:1.5px solid var(--bord);border-radius:var(--rs);background:var(--surf);color:var(--txt3);font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">✏️ Drafted</button>
-        <button onclick="setMoiTy('sent',this)" class="moi-ty-pick-btn" data-val="sent" style="padding:10px 6px;border:1.5px solid var(--bord);border-radius:var(--rs);background:var(--surf);color:var(--txt3);font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">✅ Sent</button>
+        <button onclick="setMoiTy('pending',this)" class="moi-ty-pick-btn" data-val="pending" style="padding:10px 6px;border:1.5px solid var(--gold-d);border-radius:var(--rs);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">Pending</button>
+        <button onclick="setMoiTy('drafted',this)" class="moi-ty-pick-btn" data-val="drafted" style="padding:10px 6px;border:1.5px solid var(--bord);border-radius:var(--rs);background:var(--surf);color:var(--txt3);font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">Drafted</button>
+        <button onclick="setMoiTy('sent',this)" class="moi-ty-pick-btn" data-val="sent" style="padding:10px 6px;border:1.5px solid var(--bord);border-radius:var(--rs);background:var(--surf);color:var(--txt3);font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">Sent</button>
       </div>
       <input type="hidden" id="moi-ty" value="pending" />
     </div>
-    <button class="btn-p" style="background:var(--gold-d);margin-top:6px" onclick="App.saveMoi()">💾 Save Cash Gift Entry</button>
+    <button class="btn-p" style="background:var(--gold-d);margin-top:6px" onclick="App.saveMoi()">Save Cash Gift Entry</button>
     <button class="btn-s" onclick="App.closeModal('add-moi')">Cancel</button>
-    <button class="btn-s btn-danger" id="del-moi-btn" onclick="App.confirmDeleteGift(App._editingGift())" style="display:none">🗑️ Delete Entry</button>
+    <button class="btn-s btn-danger" id="del-moi-btn" onclick="App.confirmDeleteGift(App._editingGift())" style="display:none">Delete Entry</button>
   </div>
 </div>
 
@@ -934,7 +934,7 @@ body{overscroll-behavior:none}
       <option value="">— Select a guest —</option>
     </select>
     <div id="room-alloc-conflict" style="display:none;margin-top:6px"></div>
-    <button class="btn-p" style="margin-top:12px" onclick="App.assignGuestToRoom()">✅ Assign to Room</button>
+    <button class="btn-p" style="margin-top:12px" onclick="App.assignGuestToRoom()">Assign to Room</button>
     <button class="btn-s" onclick="App.closeModal('room-alloc')">Cancel</button>
   </div>
 </div>
@@ -1018,7 +1018,7 @@ body{overscroll-behavior:none}
       <div style="font-size:11.5px;color:var(--txt3);line-height:1.6">Pick contacts from your Google account and add them as invited guests for the current event.</div>
     </div>
     <div class="search-wrap" style="margin-bottom:10px">
-      <span class="search-ico">🔍</span>
+      <span class="search-ico">Search</span>
       <input class="search-inp" type="text" id="gci-search" placeholder="Search contacts" />
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -1039,7 +1039,7 @@ body{overscroll-behavior:none}
 <div class="mo" id="mo-whatsapp">
   <div class="ms">
     <div class="m-handle"></div>
-    <div class="m-title">💬 Send Thank You</div>
+    <div class="m-title">Send Thank You</div>
     <div style="background:var(--sage-l);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px;font-size:12.5px;color:var(--sage-d)">
       To: <strong id="wa-to-name"></strong> &nbsp;·&nbsp; <span id="wa-to-phone"></span>
     </div>

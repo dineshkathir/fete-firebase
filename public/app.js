@@ -1181,6 +1181,7 @@ function renderGuests(){
     <span class="fchip ${_guestFilter==='declined'?'on':''}" onclick="App.setGFilter('declined')">❌ Declined</span>
     <span class="fchip ${_guestFilter==='invited'?'on':''}" onclick="App.setGFilter('invited')">📬 Invited</span>
   </div>`;
+  const isOrg=Auth.isOrganizer(DB.activeEvent);
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <button class="fab" style="margin-bottom:0;flex:1 1 180px" onclick="App.openAddGuest()">＋ Add Guest</button>
       <button class="fchip" style="padding:10px 14px;font-size:12px" onclick="App.openGoogleContactsImport()">Import Contacts</button>
@@ -1210,7 +1211,6 @@ function renderGuests(){
       </div>`;
     });
   }
-  const isOrg=Auth.isOrganizer(DB.activeEvent);
   const feedbackHtml=isOrg&&DB.activeEvent
     ? `<div class="guest-card" id="guest-feedback-section" style="margin-top:16px">
         <div class="guest-card-title">Guest Feedback${feedbackGuests.length?` (${feedbackGuests.length})`:''}</div>

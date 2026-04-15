@@ -750,9 +750,10 @@ function renderFeedbackStars(value){
 function renderGuestFeedbackSection(ev, guest, prefix='gf'){
   ensureGuestFeedbackDefaults(guest);
   const feedbackEnabled=isFeedbackEnabled(ev);
+  const canRateRoom=getGuestRoomAssignments(guest).length>0;
   const foodRating=Math.max(0,Math.min(5,parseInt(guest.feedbackFoodRating)||0));
   const eventRating=Math.max(0,Math.min(5,parseInt(guest.feedbackEventRating)||0));
-  const roomRating=Math.max(0,Math.min(5,parseInt(guest.feedbackRoomRating)||0));
+  const roomRating=canRateRoom?Math.max(0,Math.min(5,parseInt(guest.feedbackRoomRating)||0)):0;
   const submittedAt=guest.feedbackUpdatedAt?new Date(guest.feedbackUpdatedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'';
   const starPicker=(field,label,current)=>`<div class="fg" style="margin-bottom:12px">
       <label class="fl">${label}</label>
@@ -766,7 +767,7 @@ function renderGuestFeedbackSection(ev, guest, prefix='gf'){
       <div style="font-size:13px;color:var(--txt2);line-height:1.6;margin-bottom:12px">${feedbackEnabled?'Share your wishes and rate your experience for the organiser.':'Feedback is currently turned off for this event.'}</div>
       ${feedbackEnabled?`${starPicker('food-rating','Food Rating',foodRating)}
       ${starPicker('event-rating','Event Rating',eventRating)}
-      ${starPicker('room-rating','Room Rating',roomRating)}
+      ${canRateRoom?starPicker('room-rating','Room Rating',roomRating):`<div class="fg" style="margin-bottom:12px"><label class="fl">Room Rating</label><div style="font-size:12px;color:var(--txt3);line-height:1.6">Room rating becomes available once a room is allocated to you.</div><input type="hidden" id="${prefix}-room-rating" value="0" /></div>`}
       <div class="fg">
         <label class="fl">Wishes and Feedback</label>
         <textarea class="fi" id="${prefix}-message" rows="4" style="resize:vertical" placeholder="Share your wishes, feedback, and suggestions...">${guest.feedbackMessage||''}</textarea>
@@ -1054,7 +1055,7 @@ function renderGuests(){
   }
   const isOrg=Auth.isOrganizer(DB.activeEvent);
   const feedbackHtml=isOrg&&DB.activeEvent
-    ? `<div class="guest-card" style="margin-top:16px">
+    ? `<div class="guest-card" id="guest-feedback-section" style="margin-top:16px">
         <div class="guest-card-title">Guest Feedback${feedbackGuests.length?` (${feedbackGuests.length})`:''}</div>
         ${feedbackGuests.length
           ? feedbackGuests.map(g=>`<div class="request-row" onclick="App.openGuestDetail('${g.id}')" style="cursor:pointer">
@@ -1071,7 +1072,7 @@ function renderGuests(){
   el.innerHTML=evSelHtml+
     `<div class="ph"><div class="ph-title">Guest List</div></div>`+
     statsHtml+
-    (isOrg?`<button class="fab" onclick="App.openAddGuest()">＋ Add Guest</button>`:'')+
+    (isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><button class="fab" onclick="App.openAddGuest()">＋ Add Guest</button>${feedbackGuests.length?`<button class="fchip" style="padding:8px 14px;font-size:12px" onclick="App.scrollGuestsToFeedback()">Jump to Feedback</button>`:''}</div>`:'')+
     `<div class="search-wrap"><span class="search-ico">🔍</span><input class="search-inp" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
     filtersHtml+listHtml+feedbackHtml;
   // Hide delete buttons for non-organisers
@@ -2340,17 +2341,24 @@ function submitGuestFeedback(prefix='gf'){
   const me=getCurrentGuestInvite(ev.id);
   if(!me){toast('⚠️ Guest record not found');return;}
   ensureGuestFeedbackDefaults(me);
+  const canRateRoom=getGuestRoomAssignments(me).length>0;
   const foodEl=document.getElementById(`${prefix}-food-rating`);
   const eventEl=document.getElementById(`${prefix}-event-rating`);
   const roomEl=document.getElementById(`${prefix}-room-rating`);
   const messageEl=document.getElementById(`${prefix}-message`);
   me.feedbackFoodRating=Math.max(0,Math.min(5,parseInt(foodEl?.value)||0));
   me.feedbackEventRating=Math.max(0,Math.min(5,parseInt(eventEl?.value)||0));
-  me.feedbackRoomRating=Math.max(0,Math.min(5,parseInt(roomEl?.value)||0));
+  me.feedbackRoomRating=canRateRoom?Math.max(0,Math.min(5,parseInt(roomEl?.value)||0)):0;
   me.feedbackMessage=(messageEl?.value||'').trim();
   me.feedbackUpdatedAt=Date.now();
   save();syncActiveEventData();renderGuestPortal();render();
   toast('✅ Feedback sent');
+}
+
+function scrollGuestsToFeedback(){
+  const target=document.getElementById('guest-feedback-section');
+  if(!target) return;
+  target.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function setRsvpDirect(id,status){
@@ -2896,7 +2904,7 @@ window.App={
   openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,filterMoi,setMoiFilter,setMoiTy,
   _editingGift:()=>_editing.gift,
   openGuestRequestModal,openGuestFeedbackModal,
-  submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
+  submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   saveProfile,openProfileModal,toggleSetting,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,

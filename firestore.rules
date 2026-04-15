@@ -60,7 +60,7 @@ service cloud.firestore {
             'roomRequestStatus',
             'roomRequestUpdatedAt'
           ]) &&
-          request.resource.data.roomRequestStatus == 'pending'
+          (request.resource.data.roomRequestStatus == 'pending' || request.resource.data.roomRequestStatus == 'none')
         )
       );
       allow delete: if signedIn() && isEventMember(resource.data.eventId);

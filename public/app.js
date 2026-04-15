@@ -1973,10 +1973,6 @@ function submitGuestRoomRequest(){
   me.roomRequestNote=document.getElementById('gp-room-request-note').value.trim();
   me.roomRequestUpdatedAt=Date.now();
   me.roomRequestStatus=me.roomRequestType==='undecided'?'none':'pending';
-  if(me.roomRequestType==='no_room_needed'){
-    me.roomLoc='';
-    me.roomNo='';
-  }
   save();syncActiveEventData();renderGuestPortal();
   toast('✅ Room request sent');
 }

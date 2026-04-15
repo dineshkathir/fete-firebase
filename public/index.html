@@ -18,7 +18,7 @@
   --bord:rgba(30,20,16,0.09);--bord2:rgba(30,20,16,0.05);
   --sh1:0 1px 8px rgba(30,20,16,0.06);--sh2:0 4px 20px rgba(30,20,16,0.1);--sh3:0 8px 40px rgba(30,20,16,0.14);
   --r:14px;--rs:8px;--rxs:5px;
-  --hdr:60px;--ad-top:48px;--tab:68px;--ad-bot:46px;
+  --hdr:60px;--tab:68px;
 }
 html,body{height:100%;min-height:100dvh;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-serif;color:var(--txt);overflow:hidden}
 body{overscroll-behavior:none}
@@ -33,11 +33,7 @@ body{overscroll-behavior:none}
 .ib:hover{background:var(--surf2)}
 
 /* ── ADS ── */
-.ad-top{height:var(--ad-top);background:var(--gold-l);border-bottom:1px solid var(--gold-m);display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0 10px}
-.ad-top .adsbygoogle{width:100%!important;height:100%!important}
 .adlbl{font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;background:rgba(192,144,80,0.15);border:1px solid rgba(192,144,80,0.3);border-radius:3px;padding:2px 5px;color:var(--gold-d);flex-shrink:0}
-.ad-bot{height:var(--ad-bot);background:var(--rose-l);border-top:1px solid var(--rose-m);display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0 10px}
-.ad-bot .adsbygoogle{width:100%!important;height:100%!important}
 .adlbl-r{font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;background:rgba(196,99,122,0.1);border:1px solid rgba(196,99,122,0.25);border-radius:3px;padding:2px 5px;color:var(--rose-d);flex-shrink:0}
 .ad-inline{background:var(--gold-l);border:1.5px dashed rgba(192,144,80,0.35);border-radius:var(--rs);padding:9px 14px;margin:4px 0 12px;display:flex;align-items:center;justify-content:space-between}
 .ad-inline span{font-size:11px;color:var(--gold-d)}
@@ -274,7 +270,7 @@ body{overscroll-behavior:none}
 .photo-preview{width:100%;height:100px;object-fit:cover;border-radius:var(--rxs);display:none}
 
 /* ── TOAST ── */
-#toast{position:fixed;bottom:calc(var(--ad-bot) + var(--tab) + 10px);left:50%;transform:translateX(-50%) translateY(14px);background:var(--txt);color:white;padding:9px 16px;border-radius:20px;font-size:12.5px;font-weight:500;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;pointer-events:none;max-width:85%;overflow:hidden;text-overflow:ellipsis}
+#toast{position:fixed;bottom:calc(var(--tab) + 10px);left:50%;transform:translateX(-50%) translateY(14px);background:var(--txt);color:white;padding:9px 16px;border-radius:20px;font-size:12.5px;font-weight:500;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;pointer-events:none;max-width:85%;overflow:hidden;text-overflow:ellipsis}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ── DETAIL VIEW ── */
@@ -474,18 +470,6 @@ body{overscroll-behavior:none}
     </div>
   </header>
 
-  <div class="ad-top">
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-4049798836230099"
-         data-ad-slot="REPLACE_WITH_TOP_AD_SLOT"
-         data-ad-format="horizontal"
-         data-full-width-responsive="true"></ins>
-    <script>
-      (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
-  </div>
-
   <div class="scroll" id="main-scroll">
     <!-- EVENTS -->
     <div id="scr-events" class="screen active pad"></div>
@@ -499,18 +483,6 @@ body{overscroll-behavior:none}
     <div id="scr-rooms" class="screen pad"></div>
     <!-- GUEST PORTAL -->
     <div id="scr-guest-portal" class="screen pad"></div>
-  </div>
-
-  <div class="ad-bot">
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-4049798836230099"
-         data-ad-slot="REPLACE_WITH_BOTTOM_AD_SLOT"
-         data-ad-format="horizontal"
-         data-full-width-responsive="true"></ins>
-    <script>
-      (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
   </div>
 
   <nav class="tabs">

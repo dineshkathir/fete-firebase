@@ -559,6 +559,9 @@ const Auth = (() => {
           photoURL: user.photoURL || ''
         };
         setSession(sess);
+        DB.profile.name=sess.name||DB.profile.name||'';
+        DB.profile.email=sess.email||DB.profile.email||'';
+        save();
         _onLogin(sess, false);
       } else {
         clearSession();
@@ -1322,7 +1325,7 @@ function renderGifts(){
       </div>`;
     }
 
-    body+=`<button class="fab" style="background:var(--gold-d);margin-bottom:12px" onclick="App.openAddMoi()">ï¼‹ Add Cash Gift Entry</button>`;
+    body+=`<button class="fab" style="background:var(--gold-d);margin-bottom:12px" onclick="App.openAddMoi()">+ Add Cash Gift Entry</button>`;
     if(moiGifts.length===0){
       body+=`<div class="empty"><div class="empty-ico">ðŸª™</div><div class="empty-t">No entries yet</div><div class="empty-s">Record cash received from guests â€” tap above to start</div></div>`;
     } else {
@@ -1346,7 +1349,11 @@ function renderGifts(){
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderSettings(){
   const el=document.getElementById('scr-settings');
-  const p=DB.profile;
+  const sess=Auth.currentSession();
+  const p={
+    name:(sess&&sess.name)||DB.profile.name||'',
+    email:(sess&&sess.email)||DB.profile.email||''
+  };
   el.innerHTML=`
   <div class="ph"><div class="ph-title">Settings</div></div>
   ${!DB.premium?`<div class="prem-banner">
@@ -1359,7 +1366,7 @@ function renderSettings(){
   </div>`}
   <div class="set-sec">
     <div class="set-sec-t">Account</div>
-    <div class="set-item" onclick="App.openModal('profile')">
+    <div class="set-item" onclick="App.openProfileModal()">
       <div class="set-left">
         <div class="set-ico" style="background:var(--rose-l)">ðŸ‘¤</div>
         <div><div class="set-lbl">Profile</div><div class="set-sub">${p.name||'Set your name'} ${p.email?'Â· '+p.email:''}</div></div>
@@ -2424,6 +2431,24 @@ function saveProfile(){
   save();closeModal('profile');render();toast('âœ… Profile saved');
 }
 
+function openProfileModal(){
+  const sess=Auth.currentSession();
+  const name=(sess&&sess.name)||DB.profile.name||'';
+  const email=(sess&&sess.email)||DB.profile.email||'';
+  const avatar=((name||email||'P').trim()[0]||'P').toUpperCase();
+  const nameEl=document.getElementById('profile-name');
+  const emailEl=document.getElementById('profile-email');
+  const avatarEl=document.getElementById('profile-av');
+  const inputName=document.getElementById('prof-name');
+  const inputEmail=document.getElementById('prof-email');
+  if(nameEl) nameEl.textContent=name||'Guest Host';
+  if(emailEl) emailEl.textContent=email||'Sign in to sync across devices';
+  if(avatarEl) avatarEl.textContent=avatar;
+  if(inputName) inputName.value=name;
+  if(inputEmail) inputEmail.value=email;
+  openModal('profile');
+}
+
 function toggleSetting(key,btn){
   DB.settings[key]=!DB.settings[key];
   btn.classList.toggle('on',DB.settings[key]);
@@ -2660,7 +2685,7 @@ async function sendTeamInvite(){
 
 function openUserMenu(){
   const sess=Auth.currentSession();
-  if(!sess){openModal('profile');return;}
+  if(!sess){openProfileModal();return;}
   const role=Auth.currentRole(DB.activeEvent);
   const roleLabel=role==='organizer'?'ðŸ‘‘ Organizer':role==='cash'?'ðŸ’µ Cash Collector':role==='room'?'ðŸ¨ Room Coordinator':'â€”';
   openConfirm(
@@ -2726,7 +2751,7 @@ window.App={
   openGuestRequestModal,
   submitGuestRoomRequest,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
   pickEvent,pickExportEvent,exportGuests,exportGifts,
-  saveProfile,toggleSetting,unlockPremium,clearAllData,
+  saveProfile,openProfileModal,toggleSetting,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,
   addRoomLocation:addRoomLocationGated,_updateLocName,_removeLocation,_addRoom,_removeRoom,
@@ -2748,8 +2773,8 @@ window.setMoiFilter=setMoiFilter;
 // INIT
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Pre-populate profile modal
-document.getElementById('prof-name').value=DB.profile.name||'';
-document.getElementById('prof-email').value=DB.profile.email||'';
+openProfileModal();
+closeModal('profile');
 
 // Hide ads if premium
 if(DB.premium){

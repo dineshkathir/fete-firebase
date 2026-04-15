@@ -6,7 +6,7 @@
 6
 7    <uses-sdk
 8        android:minSdkVersion="21"
-9        android:targetSdkVersion="34" />
+9        android:targetSdkVersion="35" />
 10
 11    <queries>
 11-->[com.google.androidbrowserhelper:androidbrowserhelper:2.4.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\32b51df433d1e76c8652e92c4555094a\transformed\androidbrowserhelper-2.4.0\AndroidManifest.xml:26:5-34:15

@@ -50,8 +50,9 @@ body{overscroll-behavior:none}
 .tabs{height:var(--tab);background:var(--surf);border-top:1px solid var(--bord2);display:flex;align-items:flex-start;justify-content:space-around;padding:10px 4px 0;flex-shrink:0;position:relative;z-index:20}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 2px;border:none;background:transparent;border-radius:var(--rs);transition:background .15s;position:relative}
 .tab:hover{background:var(--surf2)}
-.tab-ico{font-size:19px;line-height:1;transition:transform .2s}
-.tab.active .tab-ico{transform:scale(1.15)}
+.tab-ico{width:21px;height:21px;display:flex;align-items:center;justify-content:center;color:var(--txt3);transition:transform .2s,color .15s}
+.tab-ico svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.tab.active .tab-ico{transform:scale(1.15);color:var(--rose-d)}
 .tab-lbl{font-size:10px;font-weight:500;color:var(--txt3);letter-spacing:0.2px;transition:color .15s}
 .tab.active .tab-lbl{color:var(--rose-d);font-weight:600}
 .tab-dot{width:5px;height:5px;border-radius:50%;background:var(--rose-d);opacity:0;transition:opacity .15s;position:absolute;top:2px}
@@ -492,22 +493,22 @@ body{overscroll-behavior:none}
   <nav class="tabs">
     <button class="tab active" id="tab-events" onclick="App.switchTab('events')">
       <span class="tab-dot"></span>
-      <span class="tab-ico">🎉</span>
+      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 12 5l7 7.5"/><path d="M7 11.5V19h10v-7.5"/><path d="M10 19v-4h4v4"/></svg></span>
       <span class="tab-lbl">Events</span>
     </button>
     <button class="tab" id="tab-guests" onclick="App.switchTab('guests')">
       <span class="tab-dot"></span>
-      <span class="tab-ico">👥</span>
+      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="2.5"/><circle cx="16" cy="9" r="2"/><path d="M4.5 18c.6-2.7 2.5-4 4.5-4s3.9 1.3 4.5 4"/><path d="M13.5 18c.4-2 1.8-3.1 3.5-3.1 1.4 0 2.7.8 3.4 2.4"/></svg></span>
       <span class="tab-lbl">Guests</span>
     </button>
     <button class="tab" id="tab-gifts" onclick="App.switchTab('gifts')">
       <span class="tab-dot"></span>
-      <span class="tab-ico">🎁</span>
+      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10h16v10H4z"/><path d="M12 10v10"/><path d="M4 14h16"/><path d="M12 10s-3.8-1.5-3.8-3.9c0-1.3 1-2.2 2.2-2.2 1.1 0 1.9.6 2.6 2 .7-1.4 1.5-2 2.6-2 1.2 0 2.2.9 2.2 2.2C15.8 8.5 12 10 12 10Z"/></svg></span>
       <span class="tab-lbl">Gifts</span>
     </button>
     <button class="tab" id="tab-rooms" onclick="App.switchTab('rooms')">
       <span class="tab-dot"></span>
-      <span class="tab-ico">🏨</span>
+      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19V8.5A1.5 1.5 0 0 1 6.5 7h11A1.5 1.5 0 0 1 19 8.5V19"/><path d="M3 19h18"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7"/><path d="M9 11h2v2H9zM13 11h2v2h-2z"/></svg></span>
       <span class="tab-lbl">Rooms</span>
     </button>
   </nav>

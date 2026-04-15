@@ -61,6 +61,17 @@ service cloud.firestore {
             'roomRequestUpdatedAt'
           ]) &&
           (request.resource.data.roomRequestStatus == 'pending' || request.resource.data.roomRequestStatus == 'none')
+        ) ||
+        (
+          isGuestSelf(resource.data) &&
+          eventDoc(resource.data.eventId).data.get('feedbackEnabled', false) == true &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly([
+            'feedbackFoodRating',
+            'feedbackEventRating',
+            'feedbackRoomRating',
+            'feedbackMessage',
+            'feedbackUpdatedAt'
+          ])
         )
       );
       allow delete: if signedIn() && isEventMember(resource.data.eventId);

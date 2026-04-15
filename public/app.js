@@ -83,6 +83,7 @@ const Cloud = (() => {
       color: event.color || 'rose',
       roomLocs: Array.isArray(event.roomLocs) ? event.roomLocs : [],
       roomRequestsEnabled: event.roomRequestsEnabled !== false,
+      feedbackEnabled: event.feedbackEnabled === true,
       createdAt: event.createdAt || Date.now(),
       updatedAt: Date.now(),
       team: normalizedTeam,
@@ -255,6 +256,7 @@ const Cloud = (() => {
       color: event.color || 'rose',
       roomLocs: Array.isArray(event.roomLocs) ? event.roomLocs : [],
       roomRequestsEnabled: event.roomRequestsEnabled !== false,
+      feedbackEnabled: event.feedbackEnabled === true,
       createdAt: event.createdAt || Date.now()
     }));
     for (const event of events) {
@@ -727,6 +729,53 @@ function isRoomRequestEnabled(ev){
   return !!ev && ev.roomRequestsEnabled!==false;
 }
 
+function isFeedbackEnabled(ev){
+  return !!ev && ev.feedbackEnabled===true;
+}
+
+function ensureGuestFeedbackDefaults(guest){
+  if(!guest) return guest;
+  if(guest.feedbackFoodRating==null) guest.feedbackFoodRating=0;
+  if(guest.feedbackEventRating==null) guest.feedbackEventRating=0;
+  if(guest.feedbackRoomRating==null) guest.feedbackRoomRating=0;
+  if(!('feedbackMessage' in guest)) guest.feedbackMessage='';
+  return guest;
+}
+
+function renderFeedbackStars(value){
+  const current=Math.max(0,Math.min(5,parseInt(value)||0));
+  return `${current}/5 ${'&#9733;'.repeat(current)}${'&#9734;'.repeat(5-current)}`;
+}
+
+function renderGuestFeedbackSection(ev, guest, prefix='gf'){
+  ensureGuestFeedbackDefaults(guest);
+  const feedbackEnabled=isFeedbackEnabled(ev);
+  const foodRating=Math.max(0,Math.min(5,parseInt(guest.feedbackFoodRating)||0));
+  const eventRating=Math.max(0,Math.min(5,parseInt(guest.feedbackEventRating)||0));
+  const roomRating=Math.max(0,Math.min(5,parseInt(guest.feedbackRoomRating)||0));
+  const submittedAt=guest.feedbackUpdatedAt?new Date(guest.feedbackUpdatedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'';
+  const starPicker=(field,label,current)=>`<div class="fg" style="margin-bottom:12px">
+      <label class="fl">${label}</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${[1,2,3,4,5].map(val=>`<button type="button" data-feedback-prefix="${prefix}" data-feedback-field="${field}" data-feedback-value="${val}" onclick="App.setGuestFeedbackRating('${field}',${val},'${prefix}')" style="min-width:38px;padding:8px 10px;border-radius:999px;border:1px solid ${current>=val?'var(--gold-d)':'var(--bord)'};background:${current>=val?'var(--gold-l)':'var(--surf)'};color:${current>=val?'var(--gold-d)':'var(--txt3)'};font-size:13px;font-weight:600;cursor:pointer">${val} &#9733;</button>`).join('')}
+      </div>
+      <input type="hidden" id="${prefix}-${field}" value="${current}" />
+    </div>`;
+  return `<div class="guest-card anim">
+      <div class="guest-card-title">Event Feedback</div>
+      <div style="font-size:13px;color:var(--txt2);line-height:1.6;margin-bottom:12px">${feedbackEnabled?'Share your wishes and rate your experience for the organiser.':'Feedback is currently turned off for this event.'}</div>
+      ${feedbackEnabled?`${starPicker('food-rating','Food Rating',foodRating)}
+      ${starPicker('event-rating','Event Rating',eventRating)}
+      ${starPicker('room-rating','Room Rating',roomRating)}
+      <div class="fg">
+        <label class="fl">Wishes and Feedback</label>
+        <textarea class="fi" id="${prefix}-message" rows="4" style="resize:vertical" placeholder="Share your wishes, feedback, and suggestions...">${guest.feedbackMessage||''}</textarea>
+      </div>
+      <button class="btn-p" style="background:var(--sage-d)" onclick="App.submitGuestFeedback('${prefix}')">Send Feedback</button>`
+      : `${submittedAt||guest.feedbackMessage||foodRating||eventRating||roomRating?`<div style="font-size:12px;color:var(--txt3);line-height:1.6">Your earlier feedback is saved${submittedAt?` from ${submittedAt}`:''}.</div>`:''}`}
+    </div>`;
+}
+
 let _toastTimer;
 function toast(msg){
   const el=document.getElementById('toast');
@@ -1003,6 +1052,7 @@ function renderGuestPortal(){
     el.innerHTML=`<div class="empty"><div class="empty-ico">ðŸ“©</div><div class="empty-t">Invitation not found</div><div class="empty-s">We couldn't find your guest record for this event yet.</div></div>`;
     return;
   }
+  ensureGuestFeedbackDefaults(me);
   const statusClass=me.roomRequestStatus==='fulfilled'?'fulfilled':me.roomRequestStatus==='pending'?'pending':'none';
   const assignedRoom=formatGuestRooms(me);
   const requestType=me.roomRequestType||'undecided';
@@ -1066,7 +1116,8 @@ function renderGuestPortal(){
       </div>
       <button class="btn-p" style="background:var(--slate-d)" onclick="App.submitGuestRoomRequest()">Send Room Request</button>`
       : `<div style="font-size:12px;color:var(--txt3);line-height:1.6;margin-top:12px">Room requests are currently closed. Any room assignment made by the organiser or room coordinator will still appear above.</div>`}
-    </div>`;
+    </div>`+
+    renderGuestFeedbackSection(ev, me, 'gp-feedback');
 }
 
 function openGuestRequestModal(eventId){
@@ -1357,35 +1408,35 @@ function renderSettings(){
   el.innerHTML=`
   <div class="ph"><div class="ph-title">Settings</div></div>
   ${!DB.premium?`<div class="prem-banner">
-    <div class="prem-t">Go Ad-Free âœ¨</div>
-    <div class="prem-s">Enjoy fÃªte without interruptions. Unlock premium features coming soon.</div>
-    <button class="prem-cta" onclick="App.openModal('premium')">Upgrade â€” â‚¹499 / year</button>
+    <div class="prem-t">Go Ad-Free</div>
+    <div class="prem-s">Enjoy Plan with Flow without interruptions. Unlock premium features coming soon.</div>
+    <button class="prem-cta" onclick="App.openModal('premium')">Upgrade - Rs 499 / year</button>
   </div>`:`<div class="prem-banner" style="background:linear-gradient(135deg,var(--sage-d) 0%,#2A5038 100%)">
-    <div class="prem-t">âœ¨ Premium Active</div>
-    <div class="prem-s">You're enjoying fÃªte ad-free. Thank you for your support!</div>
+    <div class="prem-t">Premium Active</div>
+    <div class="prem-s">You're enjoying Plan with Flow ad-free. Thank you for your support!</div>
   </div>`}
   <div class="set-sec">
     <div class="set-sec-t">Account</div>
     <div class="set-item" onclick="App.openProfileModal()">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--rose-l)">ðŸ‘¤</div>
-        <div><div class="set-lbl">Profile</div><div class="set-sub">${p.name||'Set your name'} ${p.email?'Â· '+p.email:''}</div></div>
+        <div class="set-ico" style="background:var(--rose-l)">PR</div>
+        <div><div class="set-lbl">Profile</div><div class="set-sub">${p.name||'Set your name'} ${p.email?' - '+p.email:''}</div></div>
       </div>
-      <span class="chev">â€º</span>
+      <span class="chev">></span>
     </div>
   </div>
   <div class="set-sec">
     <div class="set-sec-t">Notifications</div>
     <div class="set-item">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--gold-l)">ðŸ””</div>
+        <div class="set-ico" style="background:var(--gold-l)">RS</div>
         <div><div class="set-lbl">RSVP Reminders</div><div class="set-sub">7 days before event</div></div>
       </div>
       <button class="tog ${DB.settings.rsvpReminders?'on':''}" onclick="App.toggleSetting('rsvpReminders',this)"></button>
     </div>
     <div class="set-item">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--rose-l)">ðŸ’Œ</div>
+        <div class="set-ico" style="background:var(--rose-l)">TY</div>
         <div><div class="set-lbl">Thank-You Reminders</div><div class="set-sub">After each gift is logged</div></div>
       </div>
       <button class="tog ${DB.settings.tyReminders?'on':''}" onclick="App.toggleSetting('tyReminders',this)"></button>
@@ -1395,44 +1446,44 @@ function renderSettings(){
     <div class="set-sec-t">Data & Export</div>
     <div class="set-item" onclick="App.openModal('export')">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--sage-l)">ðŸ“Š</div>
+        <div class="set-ico" style="background:var(--sage-l)">EX</div>
         <div><div class="set-lbl">Export Data</div><div class="set-sub">Guest list & gift tracker as CSV</div></div>
       </div>
-      <span class="chev">â€º</span>
+      <span class="chev">></span>
     </div>
     <div class="set-item" onclick="App.clearAllData()">
       <div class="set-left">
-        <div class="set-ico" style="background:#FEE8E8">ðŸ—‘ï¸</div>
+        <div class="set-ico" style="background:#FEE8E8">DL</div>
         <div><div class="set-lbl">Clear All Data</div><div class="set-sub">Remove all events and data</div></div>
       </div>
-      <span class="chev" style="color:#932B2B">â€º</span>
+      <span class="chev" style="color:#932B2B">></span>
     </div>
   </div>
   <div class="set-sec">
     <div class="set-sec-t">Coming Soon</div>
     <div class="set-item" style="cursor:default;opacity:.7">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--slate-l)">ðŸ”—</div>
+        <div class="set-ico" style="background:var(--slate-l)">RS</div>
         <div><div class="set-lbl">Digital RSVP Links</div><div class="set-sub">Let guests RSVP via a unique link</div></div>
       </div>
       <span class="soon-badge">v2.0</span>
     </div>
     <div class="set-item" style="cursor:default;opacity:.7">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--sage-l)">ðŸ‘¥</div>
+        <div class="set-ico" style="background:var(--sage-l)">CO</div>
         <div><div class="set-lbl">Collaborator Mode</div><div class="set-sub">Co-host can edit simultaneously</div></div>
       </div>
       <span class="soon-badge">v2.0</span>
     </div>
     <div class="set-item" style="cursor:default;opacity:.7">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--gold-l)">ðŸ“±</div>
+        <div class="set-ico" style="background:var(--gold-l)">CT</div>
         <div><div class="set-lbl">Import from Contacts</div><div class="set-sub">Bulk add guests from phone</div></div>
       </div>
       <span class="soon-badge">v1.5</span>
     </div>
   </div>
-  <div style="text-align:center;padding:10px 0 20px;font-size:11.5px;color:var(--txt4)">fÃªte v1.0 Â· Made with â™¡</div>`;
+  <div style="text-align:center;padding:10px 0 20px;font-size:11.5px;color:var(--txt4)">Plan with Flow v1.0</div>`;
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1496,6 +1547,9 @@ function openAddEvent(){
   document.getElementById('ev-room-requests-enabled').checked=true;
   document.getElementById('ev-room-requests-enabled').disabled=false;
   document.getElementById('ev-room-requests-enabled').closest('label').style.opacity='1';
+  document.getElementById('ev-feedback-enabled').checked=false;
+  document.getElementById('ev-feedback-enabled').disabled=false;
+  document.getElementById('ev-feedback-enabled').closest('label').style.opacity='1';
   document.getElementById('del-event-btn').style.display='none';
   _roomLocsTemp=[];
   renderRoomLocsEditor();
@@ -1519,6 +1573,12 @@ function openEditEvent(id){
     reqToggle.checked=isRoomRequestEnabled(ev);
     reqToggle.disabled=!isOrg;
     reqToggle.closest('label').style.opacity=isOrg?'1':'0.6';
+  }
+  const feedbackToggle=document.getElementById('ev-feedback-enabled');
+  if(feedbackToggle){
+    feedbackToggle.checked=isFeedbackEnabled(ev);
+    feedbackToggle.disabled=!isOrg;
+    feedbackToggle.closest('label').style.opacity=isOrg?'1':'0.6';
   }
   
   // Disable core fields for non-organizers
@@ -1559,6 +1619,7 @@ async function saveEvent(){
   const locLat=locInp?parseFloat(locInp.dataset.lat)||null:null;
   const locLon=locInp?parseFloat(locInp.dataset.lon)||null:null;
   const roomRequestsEnabledEl=document.getElementById('ev-room-requests-enabled');
+  const feedbackEnabledEl=document.getElementById('ev-feedback-enabled');
   let savedEvent=null;
   if(_editing.event){
     const ev=DB.events.find(e=>e.id===_editing.event);
@@ -1573,6 +1634,7 @@ async function saveEvent(){
       ev.color=document.getElementById('ev-color').value;
       ev.roomLocs=JSON.parse(JSON.stringify(_roomLocsTemp));
       if(isOrg&&roomRequestsEnabledEl) ev.roomRequestsEnabled=roomRequestsEnabledEl.checked;
+      if(isOrg&&feedbackEnabledEl) ev.feedbackEnabled=feedbackEnabledEl.checked;
       savedEvent=ev;
     }
     toast('âœ… Event updated');
@@ -1586,6 +1648,7 @@ async function saveEvent(){
       color:document.getElementById('ev-color').value,
       roomLocs:JSON.parse(JSON.stringify(_roomLocsTemp)),
       roomRequestsEnabled:roomRequestsEnabledEl?roomRequestsEnabledEl.checked:true,
+      feedbackEnabled:feedbackEnabledEl?feedbackEnabledEl.checked:false,
       createdAt:Date.now()
     };
     DB.events.push(ev);
@@ -1714,6 +1777,10 @@ function saveGuest(){
       requestedStayCount:parseInt(document.getElementById('g-party').value)||1,
       roomRequestNote:'',
       roomRequestStatus:roomLoc&&roomNo?'fulfilled':'none',
+      feedbackFoodRating:0,
+      feedbackEventRating:0,
+      feedbackRoomRating:0,
+      feedbackMessage:'',
       createdAt:Date.now()
     });
     toast(`ðŸ‘¤ ${first} added!`);
@@ -1743,6 +1810,8 @@ function openGuestDetail(id){
   const g=DB.guests.find(x=>x.id===id);
   if(!g)return;
   ensureGuestRequestDefaults(g);
+  ensureGuestFeedbackDefaults(g);
+  const hasGuestFeedback=!!(g.feedbackMessage||g.feedbackUpdatedAt||g.feedbackFoodRating||g.feedbackEventRating||g.feedbackRoomRating);
   const linkedGifts=DB.gifts.filter(gi=>gi.eventId===DB.activeEvent&&gi.from&&gi.from.toLowerCase().includes((g.first+' '+g.last).toLowerCase().trim()));
   const rsvpOpts=['invited','attending','declined','pending'];
   const el=document.getElementById('guest-detail-content');
@@ -1765,6 +1834,10 @@ function openGuestDetail(id){
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Rooms Requested</div><div class="info-val">${Math.max(1,parseInt(g.requestedRoomCount)||1)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Guests Staying</div><div class="info-val">${Math.max(1,parseInt(g.requestedStayCount)||g.party||1)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestNote?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Room Request Note</div><div class="info-val">${g.roomRequestNote}</div></div>`:''}
+      ${hasGuestFeedback?`<div class="info-cell"><div class="info-lbl">Food Rating</div><div class="info-val">${renderFeedbackStars(g.feedbackFoodRating)}</div></div>`:''}
+      ${hasGuestFeedback?`<div class="info-cell"><div class="info-lbl">Event Rating</div><div class="info-val">${renderFeedbackStars(g.feedbackEventRating)}</div></div>`:''}
+      ${hasGuestFeedback?`<div class="info-cell"><div class="info-lbl">Room Rating</div><div class="info-val">${renderFeedbackStars(g.feedbackRoomRating)}</div></div>`:''}
+      ${g.feedbackMessage?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Wishes and Feedback</div><div class="info-val">${g.feedbackMessage}</div></div>`:''}
       ${g.notes?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Notes</div><div class="info-val">${g.notes}</div></div>`:''}
     </div>
     ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Room Request Actions</div>
@@ -1931,6 +2004,7 @@ function renderRooms(){
       el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">ðŸ¨</div><div class="empty-t">Room details unavailable</div><div class="empty-s">We couldn't find your guest record for this invitation.</div></div>`;
       return;
     }
+    ensureGuestFeedbackDefaults(me);
     const rooms=getGuestRoomAssignments(me);
     const requestsEnabled=isRoomRequestEnabled(ev);
     el.innerHTML=evSelHtml+
@@ -1953,7 +2027,8 @@ function renderRooms(){
       </div>`+
       `${requestsEnabled
         ? `<button class="fab" style="background:var(--slate-d)" onclick="App.openGuestRequestModal('${ev.id}')">Update Room Request</button>`
-        : `<div class="guest-card"><div class="guest-card-title">Room Requests Closed</div><div style="font-size:13px;color:var(--txt2);line-height:1.6">The organiser has turned off guest room requests for this event. You can still view any room allocation shown above.</div></div>`}`;
+        : `<div class="guest-card"><div class="guest-card-title">Room Requests Closed</div><div style="font-size:13px;color:var(--txt2);line-height:1.6">The organiser has turned off guest room requests for this event. You can still view any room allocation shown above.</div></div>`}`+
+      renderGuestFeedbackSection(ev, me, 'room-feedback');
     return;
   }
   if(!Auth.isRoom(DB.activeEvent)){
@@ -2204,6 +2279,38 @@ function submitGuestRoomRequest(){
   me.roomRequestStatus=me.roomRequestType==='undecided'?'none':'pending';
   save();syncActiveEventData();closeModal('guest-request');renderGuestPortal();render();
   toast('âœ… Room request sent');
+}
+
+function setGuestFeedbackRating(field,value,prefix='gf'){
+  const input=document.getElementById(`${prefix}-${field}`);
+  const current=Math.max(1,Math.min(5,parseInt(value)||1));
+  if(input) input.value=current;
+  document.querySelectorAll(`[data-feedback-prefix="${prefix}"][data-feedback-field="${field}"]`).forEach(btn=>{
+    const btnVal=parseInt(btn.dataset.feedbackValue)||0;
+    btn.style.borderColor=btnVal<=current?'var(--gold-d)':'var(--bord)';
+    btn.style.background=btnVal<=current?'var(--gold-l)':'var(--surf)';
+    btn.style.color=btnVal<=current?'var(--gold-d)':'var(--txt3)';
+  });
+}
+
+function submitGuestFeedback(prefix='gf'){
+  const ev=DB.events.find(e=>e.id===DB.activeEvent);
+  if(!ev||!ev._isGuestOnly){toast('âš ï¸ Guest feedback not available');return;}
+  if(!isFeedbackEnabled(ev)){toast('ℹ️ Feedback is turned off for this event');render();return;}
+  const me=getCurrentGuestInvite(ev.id);
+  if(!me){toast('âš ï¸ Guest record not found');return;}
+  ensureGuestFeedbackDefaults(me);
+  const foodEl=document.getElementById(`${prefix}-food-rating`);
+  const eventEl=document.getElementById(`${prefix}-event-rating`);
+  const roomEl=document.getElementById(`${prefix}-room-rating`);
+  const messageEl=document.getElementById(`${prefix}-message`);
+  me.feedbackFoodRating=Math.max(0,Math.min(5,parseInt(foodEl?.value)||0));
+  me.feedbackEventRating=Math.max(0,Math.min(5,parseInt(eventEl?.value)||0));
+  me.feedbackRoomRating=Math.max(0,Math.min(5,parseInt(roomEl?.value)||0));
+  me.feedbackMessage=(messageEl?.value||'').trim();
+  me.feedbackUpdatedAt=Date.now();
+  save();syncActiveEventData();renderGuestPortal();render();
+  toast('âœ… Feedback sent');
 }
 
 function setRsvpDirect(id,status){
@@ -2749,7 +2856,7 @@ window.App={
   openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,filterMoi,setMoiFilter,setMoiTy,
   _editingGift:()=>_editing.gift,
   openGuestRequestModal,
-  submitGuestRoomRequest,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
+  submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   saveProfile,openProfileModal,toggleSetting,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,

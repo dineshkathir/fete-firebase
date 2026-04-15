@@ -201,13 +201,27 @@ const Cloud = (() => {
     }
   }
 
+  async function syncGuestSelf(eventId) {
+    const sessionEmail = normalizeEmail(Auth.currentSession()?.email);
+    if (!sessionEmail) return;
+    const guest = DB.guests.find(item => item.eventId === eventId && (
+      normalizeEmail(item.email) === sessionEmail || normalizeEmail(item.contact) === sessionEmail
+    ));
+    if (!guest) return;
+    await setDoc(doc(_fbDb, 'guests', guest.id), cleanData(guest), { merge: true });
+  }
+
   async function syncEventData(eventId) {
     if (!eventId) return;
+    const ev = DB.events.find(e => e.id === eventId);
+    if (ev && ev._isGuestOnly) {
+      await syncGuestSelf(eventId);
+      return;
+    }
     const guests = DB.guests.filter(guest => guest.eventId === eventId);
     await syncCollectionForEvent('guests', eventId, guests);
     
     // Gifts and Events updates should only be performed by actual team members, not guests handling their own room requests.
-    const ev = DB.events.find(e => e.id === eventId);
     if (ev && !ev._isGuestOnly) {
       await syncCollectionForEvent('gifts', eventId, DB.gifts.filter(gift => gift.eventId === eventId));
       const guestEmails = [...new Set(
@@ -759,7 +773,7 @@ function renderEvents(){
     const attending=gc.filter(g=>g.rsvp==='attending').length;
     const days=daysUntil(ae.date);
     const col=COLORS[ae.color]||COLORS.rose;
-    heroHtml=`<div class="dash-hero anim" onclick="App.setActive('${ae.id}');App.switchTab('guests')">
+    heroHtml=`<div class="dash-hero anim" onclick="App.setActive('${ae.id}');App.switchTab('${ae._isGuestOnly?'guest-portal':'guests'}')">
       <div class="dash-hero-event">${TYPE_LABEL[ae.type]||ae.type}</div>
       <div class="dash-hero-title">${ae.name}</div>
       <div class="dash-hero-stats">
@@ -801,8 +815,10 @@ function renderEvents(){
         <div class="ev-footer">
           ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?'⏳ '+days+' days':days===0?'🎉 Today!':'✅ Past'}</span>`:'<span></span>'}
           <div class="ev-actions">
-            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
-            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>
+            ${ev._isGuestOnly
+              ?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guest-portal')">Request Room</button>`
+              :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
+            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>`}
             ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openEditEvent('${ev.id}')">✏️</button>`:''}
           </div>
         </div>

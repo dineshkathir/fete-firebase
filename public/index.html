@@ -27,10 +27,9 @@ body{overscroll-behavior:none}
 
 /* ── HEADER ── */
 .hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;position:relative;z-index:20}
-.logo{display:flex;align-items:center;gap:10px;color:var(--txt)}
-.brand-mark{width:42px;height:42px;display:block;flex-shrink:0}
-.brand-mark svg{width:100%;height:100%;display:block}
-.brand-word{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;letter-spacing:-0.5px;color:var(--rose-d);line-height:1}
+.logo{display:flex;align-items:center;color:var(--txt)}
+.brand-lockup{display:block;height:38px;width:auto}
+.brand-lockup.auth{height:78px}
 .hdr-right{display:flex;gap:6px}
 .ib{width:34px;height:34px;border-radius:50%;border:1px solid var(--bord);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--txt2);transition:background .15s}
 .ib:hover{background:var(--surf2)}
@@ -385,8 +384,6 @@ body{overscroll-behavior:none}
 #auth-screen{position:fixed;inset:0;background:linear-gradient(145deg,#FAF0F3 0%,#FBF6EC 50%,#EEF5F0 100%);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
 .auth-card{width:100%;max-width:360px;background:var(--surf);border-radius:20px;padding:36px 28px 30px;box-shadow:var(--sh3);text-align:center}
 .auth-logo{display:flex;align-items:center;justify-content:center;margin-bottom:8px}
-.auth-logo .brand-mark{width:92px;height:92px}
-.auth-logo-text{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:600;color:var(--rose-d);margin-bottom:4px}
 .auth-tagline{font-size:13px;color:var(--txt3);margin-bottom:32px}
 .auth-divider{display:flex;align-items:center;gap:10px;margin:20px 0;color:var(--txt4);font-size:12px}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--bord)}
@@ -429,13 +426,8 @@ body{overscroll-behavior:none}
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50,30 Q60,10 75,30 Q90,50 75,70 Q60,90 50,70 Q40,90 25,70 Q10,50 25,30 Q40,10 50,30 Z M50,30 Q55,20 50,15 Q45,20 50,30 Z" stroke="#1E2228" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
+      <img class="brand-lockup auth" src="./eventise-logo.svg" alt="eventise" />
     </div>
-    <div class="auth-logo-text">eventise</div>
     <div class="auth-tagline">Event & Gift Tracker</div>
 
     <button class="btn-google" onclick="Auth.googleLogin()">
@@ -479,12 +471,7 @@ body{overscroll-behavior:none}
 <div id="app">
   <header class="hdr">
     <div class="logo">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50,30 Q60,10 75,30 Q90,50 75,70 Q60,90 50,70 Q40,90 25,70 Q10,50 25,30 Q40,10 50,30 Z M50,30 Q55,20 50,15 Q45,20 50,30 Z" stroke="#1E2228" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
-      <span class="brand-word">eventise</span>
+      <img class="brand-lockup" src="./eventise-logo.svg" alt="eventise" />
     </div>
     <div class="hdr-right">
       <button class="ib" id="hdr-team-btn" onclick="App.openTeamModal()" title="Team" style="display:none"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="9" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4.5 18c.6-2.7 2.5-4 4.5-4s3.9 1.3 4.5 4M13.5 18c.4-2 1.8-3.1 3.5-3.1 1.4 0 2.7.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>

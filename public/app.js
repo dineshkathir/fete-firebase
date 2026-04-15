@@ -1,6 +1,6 @@
-// ═══════════════════════════════════════════════
-// FIREBASE — real Google OAuth only
-// ═══════════════════════════════════════════════
+﻿// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// FIREBASE â€” real Google OAuth only
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut as fbSignOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { collection, deleteDoc, doc, getDocs, getFirestore, query, setDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -82,6 +82,7 @@ const Cloud = (() => {
       locLon: event.locLon ?? null,
       color: event.color || 'rose',
       roomLocs: Array.isArray(event.roomLocs) ? event.roomLocs : [],
+      roomRequestsEnabled: event.roomRequestsEnabled !== false,
       createdAt: event.createdAt || Date.now(),
       updatedAt: Date.now(),
       team: normalizedTeam,
@@ -253,6 +254,7 @@ const Cloud = (() => {
       locLon: event.locLon ?? null,
       color: event.color || 'rose',
       roomLocs: Array.isArray(event.roomLocs) ? event.roomLocs : [],
+      roomRequestsEnabled: event.roomRequestsEnabled !== false,
       createdAt: event.createdAt || Date.now()
     }));
     for (const event of events) {
@@ -347,9 +349,9 @@ const Cloud = (() => {
   return { unsubscribeAll, loadEventsForSession, saveEvent, deleteEvent, migrateLocalEvents, hydrateTeamForSession, syncEventData, clearAllCloudData };
 })();
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // AUTH SYSTEM
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const Auth = (() => {
   let _mode = 'signin'; // 'signin' | 'signup'
 
@@ -432,14 +434,14 @@ const Auth = (() => {
   }
 
   function _onLogin(sess, isFirstUser) {
-    // If first ever user — make them organizer of all events automatically
+    // If first ever user â€” make them organizer of all events automatically
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='flex';
     // Show team btn only for organizers (checked per event later)
     document.getElementById('hdr-team-btn').style.display='block';
     Cloud.migrateLocalEvents(sess).catch(()=>Cloud.loadEventsForSession(sess).catch(()=>{}));
     render();
-    toast(`👋 Welcome, ${sess.name}!`);
+    toast(`ðŸ‘‹ Welcome, ${sess.name}!`);
   }
 
   // Role resolution: returns 'organizer'|'cash'|'room'|null for current user + active event
@@ -483,11 +485,11 @@ const Auth = (() => {
     saveTeam(eventId, team);
     const el = document.getElementById('team-member-list');
     if(!el) return;
-    if(team.length===0){el.innerHTML=`<div class="empty" style="padding:20px 0"><div class="empty-ico">👥</div><div class="empty-t" style="font-size:16px">No team members yet</div></div>`;return;}
+    if(team.length===0){el.innerHTML=`<div class="empty" style="padding:20px 0"><div class="empty-ico">ðŸ‘¥</div><div class="empty-t" style="font-size:16px">No team members yet</div></div>`;return;}
     el.innerHTML = team.map(m=>{
       const memberEmail = (m.email||'').trim().toLowerCase();
       const isMe = m.userId===sess?.id || memberEmail===((sess?.email||'').trim().toLowerCase());
-      const roleLabel = m.role==='organizer'?'👑 Organizer':m.role==='cash'?'💵 Cash Collector':'🏨 Room Coord.';
+      const roleLabel = m.role==='organizer'?'ðŸ‘‘ Organizer':m.role==='cash'?'ðŸ’µ Cash Collector':'ðŸ¨ Room Coord.';
       const roleCls = m.role==='organizer'?'organizer':m.role==='cash'?'cash':'room';
       const ini = (m.name||m.email||'?')[0].toUpperCase();
       return `<div class="team-member-row">
@@ -502,7 +504,7 @@ const Auth = (() => {
               <option value="cash" ${m.role==='cash'?'selected':''}>Cash</option>
               <option value="room" ${m.role==='room'?'selected':''}>Room</option>
             </select>
-            <button onclick="Auth._removeMember('${eventId}','${m.userId}')" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--txt4);padding:0 4px">✕</button>`
+            <button onclick="Auth._removeMember('${eventId}','${m.userId}')" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--txt4);padding:0 4px">âœ•</button>`
           :`<span class="role-badge role-${roleCls}">${roleLabel}</span>`}
       </div>`;
     }).join('');
@@ -516,7 +518,7 @@ const Auth = (() => {
       m.role=role;
       saveTeam(eventId, team);
       const ev = DB.events.find(e=>e.id===eventId);
-      if(ev) Cloud.saveEvent(ev, team, getSession()).catch(()=>toast('⚠️ Could not sync team changes'));
+      if(ev) Cloud.saveEvent(ev, team, getSession()).catch(()=>toast('âš ï¸ Could not sync team changes'));
       renderTeamModal(eventId);
       render();
     }
@@ -527,7 +529,7 @@ const Auth = (() => {
     let team = getTeam(eventId).filter(m=>m.userId!==userId && ((m.email||'').trim().toLowerCase()!==key));
     saveTeam(eventId, team);
     const ev = DB.events.find(e=>e.id===eventId);
-    if(ev) Cloud.saveEvent(ev, team, getSession()).catch(()=>toast('⚠️ Could not sync team changes'));
+    if(ev) Cloud.saveEvent(ev, team, getSession()).catch(()=>toast('âš ï¸ Could not sync team changes'));
     renderTeamModal(eventId);
     render();
   }
@@ -540,7 +542,7 @@ const Auth = (() => {
     team.push({userId:'', email:normalizedEmail, name:normalizedEmail.split('@')[0], role, addedAt:Date.now()});
     saveTeam(eventId, team);
     const ev = DB.events.find(e=>e.id===eventId);
-    if(ev) Cloud.saveEvent(ev, team, getSession()).catch(()=>toast('⚠️ Could not sync invite'));
+    if(ev) Cloud.saveEvent(ev, team, getSession()).catch(()=>toast('âš ï¸ Could not sync invite'));
     renderTeamModal(eventId);
     render();
     return true;
@@ -586,7 +588,7 @@ const STORE = {
 function syncActiveEventData(){
   const sess = Auth.currentSession();
   if(!sess || !DB.activeEvent) return Promise.resolve();
-  return Cloud.syncEventData(DB.activeEvent).catch(()=>toast('⚠️ Cloud sync failed'));
+  return Cloud.syncEventData(DB.activeEvent).catch(()=>toast('âš ï¸ Cloud sync failed'));
 }
 
 let DB = {
@@ -611,16 +613,16 @@ function save(){
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // HELPERS
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const COLORS={
   rose:{accent:'#C4637A',light:'#FAF0F3',chip:'background:var(--rose-l);color:var(--rose-d)'},
   sage:{accent:'#6B9B7E',light:'#EEF5F0',chip:'background:var(--sage-l);color:var(--sage-d)'},
   gold:{accent:'#C09050',light:'#FBF6EC',chip:'background:var(--gold-l);color:var(--gold-d)'},
   slate:{accent:'#5B7FA6',light:'#EBF2F9',chip:'background:var(--slate-l);color:var(--slate-d)'},
 };
-const TYPE_LABEL={wedding:'💍 Wedding',birthday:'🎂 Birthday',babyshower:'🍼 Baby Shower',party:'🎊 Party',other:'✨ Other'};
+const TYPE_LABEL={wedding:'ðŸ’ Wedding',birthday:'ðŸŽ‚ Birthday',babyshower:'ðŸ¼ Baby Shower',party:'ðŸŽŠ Party',other:'âœ¨ Other'};
 const AV_BG=['#FFEAEE','#E8F5E9','#E3EEF9','#FFF6E1','#F4EAF5','#E1F4F0'];
 const AV_C=['#8B3A52','#3D6B50','#2F5380','#8A6020','#6A2B8A','#1A6B5A'];
 
@@ -634,8 +636,8 @@ function fmtDate(dateStr){
   return new Date(dateStr+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
 }
 function fmtVal(v){
-  if(!v||isNaN(v))return '—';
-  return '₹'+Number(v).toLocaleString('en-IN');
+  if(!v||isNaN(v))return 'â€”';
+  return 'â‚¹'+Number(v).toLocaleString('en-IN');
 }
 function initials(first,last){return((first||'')[0]||(last||'')[0]||'?').toUpperCase()+((last||'')[0]||'').toUpperCase()}
 function avStyle(id){const i=Math.abs(id.charCodeAt?[...id].reduce((a,c)=>a+c.charCodeAt(0),0):0)%6;return`background:${AV_BG[i]};color:${AV_C[i]}`}
@@ -678,13 +680,13 @@ function syncGuestPrimaryRoom(guest){
 function formatGuestRooms(guest){
   const rooms=getGuestRoomAssignments(guest);
   if(!rooms.length) return 'Not assigned yet';
-  return rooms.map(room=>`${room.loc} · Room ${room.no}`).join(', ');
+  return rooms.map(room=>`${room.loc} Â· Room ${room.no}`).join(', ');
 }
 function myManagedEvents(){
   return DB.events.filter(ev=>!ev._isGuestOnly);
 }
 function renderCreateEventState(title,message){
-  return `<div class="empty"><div class="empty-ico">🎉</div><div class="empty-t">${title}</div><div class="empty-s">${message}</div><button class="fab" style="margin-top:16px" onclick="App.openAddEvent()">＋ Create New Event</button></div>`;
+  return `<div class="empty"><div class="empty-ico">ðŸŽ‰</div><div class="empty-t">${title}</div><div class="empty-s">${message}</div><button class="fab" style="margin-top:16px" onclick="App.openAddEvent()">ï¼‹ Create New Event</button></div>`;
 }
 function addGuestRoomAssignment(guest,loc,no){
   const rooms=getGuestRoomAssignments(guest);
@@ -718,6 +720,10 @@ function ensureGuestRequestDefaults(guest){
   return guest;
 }
 
+function isRoomRequestEnabled(ev){
+  return !!ev && ev.roomRequestsEnabled!==false;
+}
+
 let _toastTimer;
 function toast(msg){
   const el=document.getElementById('toast');
@@ -727,12 +733,13 @@ function toast(msg){
   _toastTimer=setTimeout(()=>el.classList.remove('show'),2600);
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // MODAL SYSTEM
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 let _editing={event:null,guest:null,gift:null};
 let _roomLocsTemp=[];
 let _giftPhotoData=null;
+let _showPastEvents=false;
 
 function openModal(id){document.getElementById('mo-'+id)?.classList.add('open')}
 function closeModal(id){document.getElementById('mo-'+id)?.classList.remove('open')}
@@ -741,9 +748,9 @@ document.querySelectorAll('.mo').forEach(el=>{
   el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')});
 });
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // CONFIRM SYSTEM
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 let _confirmCb=null;
 function openConfirm(title,sub,cb){
   document.getElementById('confirm-t').textContent=title;
@@ -755,9 +762,9 @@ function openConfirm(title,sub,cb){
 function closeConfirm(){document.getElementById('confirm-overlay').classList.remove('open')}
 document.getElementById('confirm-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('confirm-overlay'))closeConfirm()});
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // TAB SWITCHING
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 let _tab='events';
 let _guestFilter='all';
 let _guestSearch='';
@@ -791,26 +798,42 @@ function switchTab(tab) {
   render();
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // EVENTS SCREEN
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderEvents(){
   const el=document.getElementById('scr-events');
   const sess=Auth.currentSession();
   // Only show events where the current user is a team member
-  const myEvents=DB.events.filter(ev=>{
-    const days=daysUntil(ev.date);
-    if(days!==null && days<0) return false;
+  const accessibleEvents=DB.events.filter(ev=>{
     if (ev._isGuestOnly) return true;
     const team=Cloud.hydrateTeamForSession(Auth.getTeam(ev.id), sess);
     return team.some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase()));
   });
-  if(myEvents.length===0){
+  const upcomingEvents=accessibleEvents.filter(ev=>{
+    const days=daysUntil(ev.date);
+    return days===null || days>=0;
+  });
+  const pastEvents=accessibleEvents.filter(ev=>{
+    const days=daysUntil(ev.date);
+    return days!==null && days<0;
+  });
+  const myEvents=_showPastEvents ? [...upcomingEvents, ...pastEvents] : upcomingEvents;
+  if(accessibleEvents.length===0){
     el.innerHTML=`<div class="no-events">
-      <div class="no-events-ico">🎊</div>
-      <div class="no-events-t">Welcome to fête!</div>
+      <div class="no-events-ico">ðŸŽŠ</div>
+      <div class="no-events-t">Welcome to fÃªte!</div>
       <p class="no-events-s">Manage guest lists and track gifts for all your special events in one beautiful place.</p>
-      <button class="fab" onclick="App.openAddEvent()">＋ Create Your First Event</button>
+      <button class="fab" onclick="App.openAddEvent()">ï¼‹ Create Your First Event</button>
+    </div>`;
+    return;
+  }
+  if(myEvents.length===0&&pastEvents.length){
+    el.innerHTML=`<div class="no-events">
+      <div class="no-events-ico">ðŸ“…</div>
+      <div class="no-events-t">No upcoming events</div>
+      <p class="no-events-s">Your past events are still available whenever you need to look back at them.</p>
+      <button class="fab" onclick="App.togglePastEvents(true)">View Past Events</button>
     </div>`;
     return;
   }
@@ -828,7 +851,7 @@ function renderEvents(){
     const attending=gc.filter(g=>g.rsvp==='attending').length;
     const days=daysUntil(ae.date);
     const col=COLORS[ae.color]||COLORS.rose;
-    heroHtml=`<div class="dash-hero anim" onclick="${ae._isGuestOnly?`App.setActive('${ae.id}');App.openGuestRequestModal('${ae.id}')`:`App.setActive('${ae.id}');App.switchTab('guests')`}">
+    heroHtml=`<div class="dash-hero anim" onclick="${ae._isGuestOnly?(isRoomRequestEnabled(ae)?`App.setActive('${ae.id}');App.openGuestRequestModal('${ae.id}')`:`App.setActive('${ae.id}');App.switchTab('rooms')`):`App.setActive('${ae.id}');App.switchTab('guests')`}">
       <div class="dash-hero-event">${TYPE_LABEL[ae.type]||ae.type}</div>
       <div class="dash-hero-title">${ae.name}</div>
       <div class="dash-hero-stats">
@@ -837,7 +860,7 @@ function renderEvents(){
         <div class="dash-stat"><span class="dash-stat-n">${attending}</span><span class="dash-stat-l">Attending</span></div>
         <div class="dash-stat"><span class="dash-stat-n">${giftc.length}</span><span class="dash-stat-l">Gifts</span></div>`}
       </div>
-      ${days!==null?`<div class="dash-cd">${days>0?'⏳ '+days+' days away':days===0?'🎉 Today!':'✅ Past event'}</div>`:''}
+      ${days!==null?`<div class="dash-cd">${days>0?'â³ '+days+' days away':days===0?'ðŸŽ‰ Today!':'âœ… Past event'}</div>`:''}
     </div>`;
   }
   const cards=myEvents.map(ev=>{
@@ -849,7 +872,7 @@ function renderEvents(){
     const isAct=ev.id===DB.activeEvent;
     const team=Auth.getTeam(ev.id);
     const myRole=team.find(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase()))?.role||'';
-    const roleLbl=myRole==='organizer'?'👑':myRole==='cash'?'💵':myRole==='room'?'🏨':'';
+    const roleLbl=myRole==='organizer'?'ðŸ‘‘':myRole==='cash'?'ðŸ’µ':myRole==='room'?'ðŸ¨':'';
     return`<div class="ev-card anim ${isAct?'':''}">
       <div class="ev-accent" style="background:${col.accent}"></div>
       <div class="ev-body">
@@ -858,8 +881,8 @@ function renderEvents(){
           <span class="type-chip" style="${col.chip}">${TYPE_LABEL[ev.type]||ev.type} ${roleLbl}</span>
         </div>
         <div class="ev-meta">
-          ${ev.date?`<span class="ev-meta-item">📅 ${fmtDate(ev.date)}</span>`:''}
-          ${ev.location?`<span class="ev-meta-item"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.location)}" target="_blank" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">📍 ${ev.location}</a></span>`:''}
+          ${ev.date?`<span class="ev-meta-item">ðŸ“… ${fmtDate(ev.date)}</span>`:''}
+          ${ev.location?`<span class="ev-meta-item"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.location)}" target="_blank" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">ðŸ“ ${ev.location}</a></span>`:''}
         </div>
         <div class="ev-stats">
           ${ev._isGuestOnly ? `<div class="ev-stat"><span class="ev-stat-l">My Invitation Access</span></div>` : 
@@ -868,27 +891,31 @@ function renderEvents(){
           <div class="ev-stat"><span class="ev-stat-n">${giftc.length}</span><span class="ev-stat-l">Gifts</span></div>`}
         </div>
         <div class="ev-footer">
-          ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?'⏳ '+days+' days':days===0?'🎉 Today!':'✅ Past'}</span>`:'<span></span>'}
+          ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?'â³ '+days+' days':days===0?'ðŸŽ‰ Today!':'âœ… Past'}</span>`:'<span></span>'}
           <div class="ev-actions">
             ${ev._isGuestOnly
-              ?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestRequestModal('${ev.id}')">Request Room</button>`
+              ?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
               :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>`}
-            ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openEditEvent('${ev.id}')">✏️</button>`:''}
+            ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openEditEvent('${ev.id}')">âœï¸</button>`:''}
           </div>
         </div>
       </div>
     </div>`;
   }).join('');
+  const pastToggle=pastEvents.length
+    ? `<button class="chip ${_showPastEvents?'active':''}" onclick="App.togglePastEvents(${_showPastEvents?'false':'true'})">${_showPastEvents?'Hide Past Events':'View Past Events'} (${pastEvents.length})</button>`
+    : '';
   el.innerHTML=heroHtml+
     `<div class="ph"><div class="ph-title">My Events</div><div class="ph-sub">${myEvents.length} event${myEvents.length!==1?'s':''}</div></div>`+
-    `<button class="fab" onclick="App.openAddEvent()">＋ Create New Event</button>`+
+    `<button class="fab" onclick="App.openAddEvent()">ï¼‹ Create New Event</button>`+
+    pastToggle+
     cards;
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // GUESTS SCREEN
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderGuests(){
   const el=document.getElementById('scr-guests');
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
@@ -907,7 +934,7 @@ function renderGuests(){
   if(_guestSearch) guests=guests.filter(g=>(g.first+' '+g.last+' '+(g.contact||'')+' '+(g.email||'')+' '+(g.table||'')).toLowerCase().includes(_guestSearch.toLowerCase()));
   const evSelHtml=`<div class="ev-sel" onclick="App.openModal('event-pick')">
     <div><div class="ev-sel-lbl">Current Event</div><div class="ev-sel-val">${ev?ev.name:'Select an event'}</div></div>
-    <span class="chev">▼</span>
+    <span class="chev">â–¼</span>
   </div>`;
   const statsHtml=`<div class="stats-row">
     <div class="s-card"><span class="s-n">${total}</span><span class="s-l">Total</span></div>
@@ -916,31 +943,31 @@ function renderGuests(){
   </div>`;
   const filtersHtml=`<div class="filters">
     <span class="fchip ${_guestFilter==='all'?'on':''}" onclick="App.setGFilter('all')">All (${total})</span>
-    <span class="fchip ${_guestFilter==='attending'?'on':''}" onclick="App.setGFilter('attending')">✅ Attending</span>
-    <span class="fchip ${_guestFilter==='pending'?'on':''}" onclick="App.setGFilter('pending')">⏳ Pending</span>
-    <span class="fchip ${_guestFilter==='declined'?'on':''}" onclick="App.setGFilter('declined')">❌ Declined</span>
-    <span class="fchip ${_guestFilter==='invited'?'on':''}" onclick="App.setGFilter('invited')">📬 Invited</span>
+    <span class="fchip ${_guestFilter==='attending'?'on':''}" onclick="App.setGFilter('attending')">âœ… Attending</span>
+    <span class="fchip ${_guestFilter==='pending'?'on':''}" onclick="App.setGFilter('pending')">â³ Pending</span>
+    <span class="fchip ${_guestFilter==='declined'?'on':''}" onclick="App.setGFilter('declined')">âŒ Declined</span>
+    <span class="fchip ${_guestFilter==='invited'?'on':''}" onclick="App.setGFilter('invited')">ðŸ“¬ Invited</span>
   </div>`;
   let listHtml='';
   if(!DB.activeEvent){
-    listHtml=`<div class="empty"><div class="empty-ico">📋</div><div class="empty-t">No event selected</div><div class="empty-s">Select one of your events to manage guests</div></div>`;
+    listHtml=`<div class="empty"><div class="empty-ico">ðŸ“‹</div><div class="empty-t">No event selected</div><div class="empty-s">Select one of your events to manage guests</div></div>`;
   } else if(guests.length===0){
-    listHtml=`<div class="empty"><div class="empty-ico">👥</div><div class="empty-t">No guests yet</div><div class="empty-s">${_guestSearch||_guestFilter!=='all'?'Try clearing filters':'Add your first guest to get started'}</div></div>`;
+    listHtml=`<div class="empty"><div class="empty-ico">ðŸ‘¥</div><div class="empty-t">No guests yet</div><div class="empty-s">${_guestSearch||_guestFilter!=='all'?'Try clearing filters':'Add your first guest to get started'}</div></div>`;
   } else {
     guests.forEach((g,i)=>{
       if(i>0&&i%15===0&&!DB.premium){
-        listHtml+=`<div class="ad-inline"><span>🎂 Order a custom cake at <strong>FNP</strong> – Free delivery</span><span class="adlbl" style="font-size:9px">AD</span></div>`;
+        listHtml+=`<div class="ad-inline"><span>ðŸŽ‚ Order a custom cake at <strong>FNP</strong> â€“ Free delivery</span><span class="adlbl" style="font-size:9px">AD</span></div>`;
       }
       const ini=initials(g.first,g.last);
       listHtml+=`<div class="g-row anim" onclick="App.openGuestDetail('${g.id}')">
         <div class="g-av" style="${avStyle(g.id)}">${ini}</div>
         <div class="g-info">
           <div class="g-name">${g.first} ${g.last}</div>
-          <div class="g-detail">Peoples: ${g.party||1}${g.contact?' · '+g.contact:''}${g.email?' · '+g.email:''}${g.table?' · '+g.table:''}${getGuestRoomAssignments(g).length?` · 🏨 ${formatGuestRooms(g)}`:''}${g.notes?' · '+g.notes:''}</div>
+          <div class="g-detail">Peoples: ${g.party||1}${g.contact?' Â· '+g.contact:''}${g.email?' Â· '+g.email:''}${g.table?' Â· '+g.table:''}${getGuestRoomAssignments(g).length?` Â· ðŸ¨ ${formatGuestRooms(g)}`:''}${g.notes?' Â· '+g.notes:''}</div>
         </div>
         <div class="g-actions">
           <button class="rsvp-btn r-${g.rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${g.rsvp.charAt(0).toUpperCase()+g.rsvp.slice(1)}</button>
-          <button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">✕</button>
+          <button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">âœ•</button>
         </div>
       </div>`;
     });
@@ -949,8 +976,8 @@ function renderGuests(){
   el.innerHTML=evSelHtml+
     `<div class="ph"><div class="ph-title">Guest List</div></div>`+
     statsHtml+
-    (isOrg?`<button class="fab" onclick="App.openAddGuest()">＋ Add Guest</button>`:'')+
-    `<div class="search-wrap"><span class="search-ico">🔍</span><input class="search-inp" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
+    (isOrg?`<button class="fab" onclick="App.openAddGuest()">ï¼‹ Add Guest</button>`:'')+
+    `<div class="search-wrap"><span class="search-ico">ðŸ”</span><input class="search-inp" type="text" placeholder="Search guestsâ€¦" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
     filtersHtml+listHtml;
   // Hide delete buttons for non-organisers
   if(!isOrg){
@@ -958,25 +985,28 @@ function renderGuests(){
   }
 }
 
-// ═══════════════════════════════════════════════
-// GIFTS SCREEN  (Gifts tab | Moi tab)
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// GIFTS SCREEN  (Gifts tab | Cash Gift tab)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderGuestPortal(){
   const el=document.getElementById('scr-guest-portal');
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
   if(!ev){
-    el.innerHTML=`<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">No invitation selected</div><div class="empty-s">Choose an event to view your stay details.</div></div>`;
+    el.innerHTML=`<div class="empty"><div class="empty-ico">ðŸ¨</div><div class="empty-t">No invitation selected</div><div class="empty-s">Choose an event to view your stay details.</div></div>`;
     return;
   }
   const me=ensureGuestRequestDefaults(getCurrentGuestInvite(ev.id));
   if(!me){
-    el.innerHTML=`<div class="empty"><div class="empty-ico">📩</div><div class="empty-t">Invitation not found</div><div class="empty-s">We couldn't find your guest record for this event yet.</div></div>`;
+    el.innerHTML=`<div class="empty"><div class="empty-ico">ðŸ“©</div><div class="empty-t">Invitation not found</div><div class="empty-s">We couldn't find your guest record for this event yet.</div></div>`;
     return;
   }
   const statusClass=me.roomRequestStatus==='fulfilled'?'fulfilled':me.roomRequestStatus==='pending'?'pending':'none';
   const assignedRoom=formatGuestRooms(me);
   const requestType=me.roomRequestType||'undecided';
-  const requestHelp=requestType==='needs_room'
+  const requestsEnabled=isRoomRequestEnabled(ev);
+  const requestHelp=!requestsEnabled
+    ?'The organiser has turned off guest room requests for this event.'
+    :requestType==='needs_room'
     ?'Your request is visible to the organiser and room coordinator.'
     :requestType==='no_room_needed'
       ?'We will keep your stay marked as not required unless you update it.'
@@ -986,9 +1016,9 @@ function renderGuestPortal(){
       <div class="guest-kicker">Guest Portal</div>
       <div class="guest-title">${ev.name}</div>
       <div class="guest-sub">
-        ${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}
-        ${ev.location?`📍 ${ev.location}<br>`:''}
-        👤 ${me.first} ${me.last}
+        ${ev.date?`ðŸ“… ${fmtDate(ev.date)}<br>`:''}
+        ${ev.location?`ðŸ“ ${ev.location}<br>`:''}
+        ðŸ‘¤ ${me.first} ${me.last}
       </div>
     </div>`+
     `<div class="guest-card anim">
@@ -1009,7 +1039,7 @@ function renderGuestPortal(){
         <span class="request-chip">${Math.max(1,parseInt(me.requestedRoomCount)||1)} room(s) requested</span>
         <span class="request-chip">${Math.max(1,parseInt(me.requestedStayCount)||me.party||1)} guest(s) staying</span>
       </div>
-      <div class="fg" style="margin-top:14px">
+      ${requestsEnabled?`<div class="fg" style="margin-top:14px">
         <label class="fl">Stay Requirement</label>
         <select class="fi" id="gp-room-request-type">
           <option value="needs_room" ${requestType==='needs_room'?'selected':''}>Room required</option>
@@ -1031,21 +1061,29 @@ function renderGuestPortal(){
         <label class="fl">Note for Room Team</label>
         <textarea class="fi" id="gp-room-request-note" rows="3" style="resize:vertical">${me.roomRequestNote||''}</textarea>
       </div>
-      <button class="btn-p" style="background:var(--slate-d)" onclick="App.submitGuestRoomRequest()">Send Room Request</button>
+      <button class="btn-p" style="background:var(--slate-d)" onclick="App.submitGuestRoomRequest()">Send Room Request</button>`
+      : `<div style="font-size:12px;color:var(--txt3);line-height:1.6;margin-top:12px">Room requests are currently closed. Any room assignment made by the organiser or room coordinator will still appear above.</div>`}
     </div>`;
 }
 
 function openGuestRequestModal(eventId){
   const targetId=eventId||DB.activeEvent;
   const ev=DB.events.find(e=>e.id===targetId);
-  if(!ev||!ev._isGuestOnly){toast('⚠️ Guest request not available');return;}
+  if(!ev||!ev._isGuestOnly){toast('âš ï¸ Guest request not available');return;}
+  if(!isRoomRequestEnabled(ev)){
+    DB.activeEvent=targetId;
+    save();
+    toast('ℹ️ Room requests are turned off for this event');
+    switchTab('rooms');
+    return;
+  }
   DB.activeEvent=targetId;
   save();
   const me=ensureGuestRequestDefaults(getCurrentGuestInvite(targetId));
-  if(!me){toast('⚠️ Guest record not found');return;}
+  if(!me){toast('âš ï¸ Guest record not found');return;}
   document.getElementById('gr-title').textContent='Request Room';
   document.getElementById('gr-event-name').textContent=ev.name;
-  document.getElementById('gr-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
+  document.getElementById('gr-event-meta').innerHTML=`${ev.date?`ðŸ“… ${fmtDate(ev.date)}<br>`:''}${ev.location?`ðŸ“ ${ev.location}<br>`:''}ðŸ‘¤ ${me.first} ${me.last}`;
   document.getElementById('gr-room-status').textContent=formatGuestRooms(me);
   document.getElementById('gr-room-request-type').value=me.roomRequestType||'undecided';
   document.getElementById('gr-requested-rooms').value=Math.max(1,parseInt(me.requestedRoomCount)||1);
@@ -1058,12 +1096,12 @@ let _giftTab='gifts';
 let _giftCatFilter='all';
 
 const CAT_META={
-  '💝':{label:'Personal',  stripe:'#C4637A',bg:'#FAF0F3',chip:'background:#FAF0F3;color:#8B3A52'},
-  '🏠':{label:'Home',      stripe:'#5B7FA6',bg:'#EBF2F9',chip:'background:#EBF2F9;color:#2F5380'},
-  '💳':{label:'Cash/Card', stripe:'#C09050',bg:'#FBF6EC',chip:'background:#FBF6EC;color:#8A6020'},
-  '👗':{label:'Clothing',  stripe:'#9B6BC4',bg:'#F5EEFA',chip:'background:#F5EEFA;color:#6A2B9A'},
-  '🍽️':{label:'Kitchen',  stripe:'#6B9B7E',bg:'#EEF5F0',chip:'background:#EEF5F0;color:#3D6B50'},
-  '📦':{label:'Other',     stripe:'#888780',bg:'#F5F0E8',chip:'background:#F5F0E8;color:#5F5E5A'},
+  'ðŸ’':{label:'Personal',  stripe:'#C4637A',bg:'#FAF0F3',chip:'background:#FAF0F3;color:#8B3A52'},
+  'ðŸ ':{label:'Home',      stripe:'#5B7FA6',bg:'#EBF2F9',chip:'background:#EBF2F9;color:#2F5380'},
+  'ðŸ’³':{label:'Cash/Card', stripe:'#C09050',bg:'#FBF6EC',chip:'background:#FBF6EC;color:#8A6020'},
+  'ðŸ‘—':{label:'Clothing',  stripe:'#9B6BC4',bg:'#F5EEFA',chip:'background:#F5EEFA;color:#6A2B9A'},
+  'ðŸ½ï¸':{label:'Kitchen',  stripe:'#6B9B7E',bg:'#EEF5F0',chip:'background:#EEF5F0;color:#3D6B50'},
+  'ðŸ“¦':{label:'Other',     stripe:'#888780',bg:'#F5F0E8',chip:'background:#F5F0E8;color:#5F5E5A'},
 };
 
 function renderGifts(){
@@ -1083,15 +1121,15 @@ function renderGifts(){
 
   const evSelHtml=`<div class="ev-sel" onclick="App.openModal('event-pick')">
     <div><div class="ev-sel-lbl">Current Event</div><div class="ev-sel-val">${ev?ev.name:'Select an event'}</div></div>
-    <span class="chev">▼</span>
+    <span class="chev">â–¼</span>
   </div>`;
 
   const tabBar=`<div style="display:flex;background:var(--surf2);border-radius:var(--rs);padding:3px;margin-bottom:14px;gap:3px">
     <button onclick="App.setGiftTab('gifts')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;background:${_giftTab==='gifts'?'var(--surf)':'transparent'};color:${_giftTab==='gifts'?'var(--rose-d)':'var(--txt3)'};box-shadow:${_giftTab==='gifts'?'var(--sh1)':'none'}">
-      🎁 Gifts${physGifts.length?` <span style="background:${_giftTab==='gifts'?'var(--rose-l)':'rgba(0,0,0,.06)'};color:${_giftTab==='gifts'?'var(--rose-d)':'var(--txt3)'};border-radius:10px;padding:1px 6px;font-size:10px">${allGifts.filter(g=>!g.isMoi).length}</span>`:''}
+      ðŸŽ Gifts${physGifts.length?` <span style="background:${_giftTab==='gifts'?'var(--rose-l)':'rgba(0,0,0,.06)'};color:${_giftTab==='gifts'?'var(--rose-d)':'var(--txt3)'};border-radius:10px;padding:1px 6px;font-size:10px">${allGifts.filter(g=>!g.isMoi).length}</span>`:''}
     </button>
     <button onclick="App.setGiftTab('moi')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;background:${_giftTab==='moi'?'var(--surf)':'transparent'};color:${_giftTab==='moi'?'var(--gold-d)':'var(--txt3)'};box-shadow:${_giftTab==='moi'?'var(--sh1)':'none'}">
-      💵 Moi${moiGifts.length?` <span style="background:${_giftTab==='moi'?'var(--gold-l)':'rgba(0,0,0,.06)'};color:${_giftTab==='moi'?'var(--gold-d)':'var(--txt3)'};border-radius:10px;padding:1px 6px;font-size:10px">${moiGifts.length}</span>`:''}
+      ðŸ’µ Cash Gift${moiGifts.length?` <span style="background:${_giftTab==='moi'?'var(--gold-l)':'rgba(0,0,0,.06)'};color:${_giftTab==='moi'?'var(--gold-d)':'var(--txt3)'};border-radius:10px;padding:1px 6px;font-size:10px">${moiGifts.length}</span>`:''}
     </button>
   </div>`;
 
@@ -1105,17 +1143,17 @@ function renderGifts(){
   }
 
   function giftCard(g){
-    const meta=CAT_META[g.cat]||CAT_META['📦'];
+    const meta=CAT_META[g.cat]||CAT_META['ðŸ“¦'];
     const gm=DB.guests.find(gu=>gu.eventId===DB.activeEvent&&(gu.first+' '+gu.last).toLowerCase().trim()===(g.from||'').toLowerCase().trim());
     const avS=gm?avStyle(gm.id):'background:var(--surf3);color:var(--txt3)';
     const ini=gm?initials(gm.first,gm.last):(g.from||'?').charAt(0).toUpperCase();
-    const tyLabel=g.ty==='sent'?'✓ TY Sent':g.ty==='drafted'?'✏ Drafted':'⏳ Pending';
+    const tyLabel=g.ty==='sent'?'âœ“ TY Sent':g.ty==='drafted'?'âœ Drafted':'â³ Pending';
     const tyDot=g.ty==='sent'?'var(--sage-d)':g.ty==='drafted'?'var(--slate-d)':'var(--gold-d)';
     return`<div class="gift-card anim" onclick="App.openEditGift('${g.id}')">
       <div class="gift-stripe" style="background:${meta.stripe}"></div>
       <div class="gift-inner">
         <div class="gift-top">
-          <div class="gift-ico" style="background:${meta.bg}">${g.cat||'📦'}</div>
+          <div class="gift-ico" style="background:${meta.bg}">${g.cat||'ðŸ“¦'}</div>
           <div class="gift-body">
             <div class="gift-title">${g.desc}</div>
             <div class="gift-from-row">
@@ -1129,7 +1167,7 @@ function renderGifts(){
         <div style="height:1px;background:var(--bord2);margin-bottom:10px"></div>
         <div class="gift-bot">
           <div>
-            <div class="gift-val">${g.value?fmtVal(g.value):'—'}</div>
+            <div class="gift-val">${g.value?fmtVal(g.value):'â€”'}</div>
             ${g.value?`<div style="font-size:9.5px;color:var(--txt4);text-transform:uppercase;letter-spacing:.5px;margin-top:1px">Est. value</div>`:''}
           </div>
           <div class="gift-actions">
@@ -1141,7 +1179,7 @@ function renderGifts(){
         </div>
         ${g.photo?`<img class="gift-photo-thumb" src="${g.photo}" alt="Gift" />`:''}
       </div>
-      <button class="gift-del" onclick="event.stopPropagation();App.confirmDeleteGift('${g.id}')">✕</button>
+      <button class="gift-del" onclick="event.stopPropagation();App.confirmDeleteGift('${g.id}')">âœ•</button>
     </div>`;
   }
 
@@ -1152,8 +1190,8 @@ function renderGifts(){
     const medalColor=rank===1?'#C09050':rank===2?'#9E9E9E':rank===3?'#9C6B3A':null;
     const tyBg=g.ty==='sent'?'var(--sage-l)':g.ty==='drafted'?'var(--slate-l)':'var(--gold-l)';
     const tyColor=g.ty==='sent'?'var(--sage-d)':g.ty==='drafted'?'var(--slate-d)':'var(--gold-d)';
-    const tyLabel=g.ty==='sent'?'✓ TY Sent':g.ty==='drafted'?'✏ Draft':'⏳ Pending';
-    const modeIcon=g.notes==='UPI / GPay'?'📲':g.notes==='Bank Transfer'?'🏦':g.notes==='Cheque'?'📄':g.notes==='Gold / Jewellery'?'💛':'💵';
+    const tyLabel=g.ty==='sent'?'âœ“ TY Sent':g.ty==='drafted'?'âœ Draft':'â³ Pending';
+    const modeIcon=g.notes==='UPI / GPay'?'ðŸ“²':g.notes==='Bank Transfer'?'ðŸ¦':g.notes==='Cheque'?'ðŸ“„':g.notes==='Gold / Jewellery'?'ðŸ’›':'ðŸ’µ';
     const modeLabel=g.notes||'Cash';
     return`<div class="moi-row anim" data-moi="1" data-name="${(g.from||'').replace(/"/g,'')}" data-ty="${g.ty||'pending'}" onclick="App.openEditMoi('${g.id}')">
       <div style="position:relative;flex-shrink:0">
@@ -1176,7 +1214,7 @@ function renderGifts(){
 
   let body='';
   if(!DB.activeEvent){
-    body=`<div class="empty"><div class="empty-ico">🎁</div><div class="empty-t">No event selected</div><div class="empty-s">Select one of your events to track gifts</div></div>`;
+    body=`<div class="empty"><div class="empty-ico">ðŸŽ</div><div class="empty-t">No event selected</div><div class="empty-s">Select one of your events to track gifts</div></div>`;
     el.innerHTML=evSelHtml+body; return;
   }
 
@@ -1188,7 +1226,7 @@ function renderGifts(){
         <span class="gsl">Gifts</span>
       </div>
       <div class="gift-strip-cell">
-        <span class="gsn" style="font-size:${physVal>=100000?'15px':'21px'};color:var(--sage-d)">${physVal>0?fmtVal(physVal):'—'}</span>
+        <span class="gsn" style="font-size:${physVal>=100000?'15px':'21px'};color:var(--sage-d)">${physVal>0?fmtVal(physVal):'â€”'}</span>
         <span class="gsl">Est. Value</span>
       </div>
       <div class="gift-strip-cell">
@@ -1202,7 +1240,7 @@ function renderGifts(){
       body+=`<div class="ty-bar-wrap">
         <div class="ty-bar-top">
           <span class="ty-bar-label">Thank-you notes</span>
-          <span class="ty-bar-pct" style="color:${fillColor}">${tyPct===100?'All done! 🎉':tyPct+'% done'}</span>
+          <span class="ty-bar-pct" style="color:${fillColor}">${tyPct===100?'All done! ðŸŽ‰':tyPct+'% done'}</span>
         </div>
         <div class="ty-track"><div class="ty-fill" style="width:${tyPct}%;background:${fillColor}"></div></div>
       </div>`;
@@ -1212,23 +1250,23 @@ function renderGifts(){
     if(cats.length>1){
       body+=`<div class="cat-filters">
         <span class="cat-chip ${_giftCatFilter==='all'?'on':''}" style="${_giftCatFilter==='all'?'background:var(--txt);color:white;border-color:var(--txt)':''}" onclick="App.setGiftCatFilter('all')">All</span>
-        ${cats.map(c=>{const m=CAT_META[c]||CAT_META['📦'];return`<span class="cat-chip ${_giftCatFilter===c?'on':''}" style="${_giftCatFilter===c?m.chip+';border-color:transparent':''}" onclick="App.setGiftCatFilter('${c}')">${c} ${m.label}</span>`;}).join('')}
+        ${cats.map(c=>{const m=CAT_META[c]||CAT_META['ðŸ“¦'];return`<span class="cat-chip ${_giftCatFilter===c?'on':''}" style="${_giftCatFilter===c?m.chip+';border-color:transparent':''}" onclick="App.setGiftCatFilter('${c}')">${c} ${m.label}</span>`;}).join('')}
       </div>`;
     }
     const filtered=_giftCatFilter==='all'?physGifts:physGifts.filter(g=>g.cat===_giftCatFilter);
-    body+=`<button class="fab" onclick="App.openAddGift()">＋ Log a Gift</button>`;
+    body+=`<button class="fab" onclick="App.openAddGift()">ï¼‹ Log a Gift</button>`;
     if(physGifts.length===0){
-      body+=`<div class="empty"><div class="empty-ico">🎁</div><div class="empty-t">No gifts yet</div><div class="empty-s">Tap above to log your first gift</div></div>`;
+      body+=`<div class="empty"><div class="empty-ico">ðŸŽ</div><div class="empty-t">No gifts yet</div><div class="empty-s">Tap above to log your first gift</div></div>`;
     } else if(filtered.length===0){
-      body+=`<div class="empty"><div class="empty-ico">🔍</div><div class="empty-t">None in this category</div></div>`;
+      body+=`<div class="empty"><div class="empty-ico">ðŸ”</div><div class="empty-t">None in this category</div></div>`;
     } else {
       filtered.forEach((g,i)=>{
-        if(i>0&&i%8===0&&!DB.premium) body+=`<div class="ad-inline"><span>✍️ Send cards at <strong>Hallmark</strong></span><span class="adlbl" style="font-size:9px">AD</span></div>`;
+        if(i>0&&i%8===0&&!DB.premium) body+=`<div class="ad-inline"><span>âœï¸ Send cards at <strong>Hallmark</strong></span><span class="adlbl" style="font-size:9px">AD</span></div>`;
         body+=giftCard(g);
       });
     }
   } else {
-    // ── MOI TAB ──
+    // â”€â”€ MOI TAB â”€â”€
     const moiPend=moiGifts.filter(g=>g.ty==='pending').length;
     const moiSent=moiGifts.filter(g=>g.ty==='sent').length;
     const moiDrafted=moiGifts.filter(g=>g.ty==='drafted').length;
@@ -1242,8 +1280,8 @@ function renderGifts(){
       <div class="moi-hero-orb" style="width:40px;height:40px;left:10%;top:20px"></div>
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
         <div>
-          <div style="font-size:9.5px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:5px">மொய் · Total Collected</div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;color:white;line-height:1">${moiTotal>0?fmtVal(moiTotal):'₹0'}</div>
+          <div style="font-size:9.5px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:5px">à®®à¯Šà®¯à¯ Â· Total Collected</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;color:white;line-height:1">${moiTotal>0?fmtVal(moiTotal):'â‚¹0'}</div>
         </div>
         <div style="background:rgba(255,255,255,.12);border-radius:var(--rs);padding:6px 10px;text-align:center">
           <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:white;line-height:1">${moiGifts.length}</div>
@@ -1264,17 +1302,17 @@ function renderGifts(){
           <div style="font-size:9px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Pending</div>
         </div>
       </div>
-      ${moiGifts.length>0?`<div><div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:rgba(255,255,255,.5);margin-bottom:5px"><span>Thank-you progress</span><span style="font-weight:600;color:${moiPct===100?'#A5E5B8':'rgba(255,255,255,.7)'}">${moiPct===100?'All done! 🎉':moiPct+'%'}</span></div><div style="height:6px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden"><div style="height:100%;width:${moiPct}%;background:linear-gradient(90deg,#FFD07A,#A5E5B8);border-radius:3px;transition:width .6s ease"></div></div></div>`:''}
+      ${moiGifts.length>0?`<div><div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:rgba(255,255,255,.5);margin-bottom:5px"><span>Thank-you progress</span><span style="font-weight:600;color:${moiPct===100?'#A5E5B8':'rgba(255,255,255,.7)'}">${moiPct===100?'All done! ðŸŽ‰':moiPct+'%'}</span></div><div style="height:6px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden"><div style="height:100%;width:${moiPct}%;background:linear-gradient(90deg,#FFD07A,#A5E5B8);border-radius:3px;transition:width .6s ease"></div></div></div>`:''}
     </div>`;
 
     if(moiGifts.length>0){
       body+=`<div class="moi-avg-strip">
         <div class="moi-avg-cell">
-          <span class="moi-avg-n">${moiAvg>0?fmtVal(moiAvg):'—'}</span>
+          <span class="moi-avg-n">${moiAvg>0?fmtVal(moiAvg):'â€”'}</span>
           <span class="moi-avg-l">Avg Gift</span>
         </div>
         <div class="moi-avg-cell">
-          <span class="moi-avg-n">${moiMax>0?fmtVal(moiMax):'—'}</span>
+          <span class="moi-avg-n">${moiMax>0?fmtVal(moiMax):'â€”'}</span>
           <span class="moi-avg-l">Highest</span>
         </div>
         <div class="moi-avg-cell">
@@ -1284,16 +1322,16 @@ function renderGifts(){
       </div>`;
     }
 
-    body+=`<button class="fab" style="background:var(--gold-d);margin-bottom:12px" onclick="App.openAddMoi()">＋ Add Moi Entry</button>`;
+    body+=`<button class="fab" style="background:var(--gold-d);margin-bottom:12px" onclick="App.openAddMoi()">ï¼‹ Add Cash Gift Entry</button>`;
     if(moiGifts.length===0){
-      body+=`<div class="empty"><div class="empty-ico">🪙</div><div class="empty-t">No entries yet</div><div class="empty-s">Record cash received from guests — tap above to start</div></div>`;
+      body+=`<div class="empty"><div class="empty-ico">ðŸª™</div><div class="empty-t">No entries yet</div><div class="empty-s">Record cash received from guests â€” tap above to start</div></div>`;
     } else {
-      body+=`<div class="search-wrap" style="margin-bottom:10px"><span class="search-ico">🔍</span><input class="search-inp" type="text" placeholder="Search by name…" oninput="App.filterMoi(this.value)" id="moi-search-inp" /></div>`;
+      body+=`<div class="search-wrap" style="margin-bottom:10px"><span class="search-ico">ðŸ”</span><input class="search-inp" type="text" placeholder="Search by nameâ€¦" oninput="App.filterMoi(this.value)" id="moi-search-inp" /></div>`;
       body+=`<div class="moi-filter-row" id="moi-ty-filter">
         <span class="moi-fchip on" onclick="App.setMoiFilter('all',this)">All (${moiGifts.length})</span>
-        <span class="moi-fchip" onclick="App.setMoiFilter('pending',this)">⏳ Pending (${moiPend})</span>
-        <span class="moi-fchip" onclick="App.setMoiFilter('drafted',this)">✏️ Drafted (${moiDrafted})</span>
-        <span class="moi-fchip" onclick="App.setMoiFilter('sent',this)">✅ Sent (${moiSent})</span>
+        <span class="moi-fchip" onclick="App.setMoiFilter('pending',this)">â³ Pending (${moiPend})</span>
+        <span class="moi-fchip" onclick="App.setMoiFilter('drafted',this)">âœï¸ Drafted (${moiDrafted})</span>
+        <span class="moi-fchip" onclick="App.setMoiFilter('sent',this)">âœ… Sent (${moiSent})</span>
       </div>`;
       const sorted=[...moiGifts].sort((a,b)=>(parseFloat(b.value)||0)-(parseFloat(a.value)||0));
       body+=`<div id="moi-list">${sorted.map((g,i)=>moiRow(g,i+1)).join('')}</div>`;
@@ -1303,44 +1341,44 @@ function renderGifts(){
   el.innerHTML=evSelHtml+`<div class="ph" style="margin-bottom:12px"><div class="ph-title">Gift Tracker</div></div>`+tabBar+body;
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SETTINGS SCREEN
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderSettings(){
   const el=document.getElementById('scr-settings');
   const p=DB.profile;
   el.innerHTML=`
   <div class="ph"><div class="ph-title">Settings</div></div>
   ${!DB.premium?`<div class="prem-banner">
-    <div class="prem-t">Go Ad-Free ✨</div>
-    <div class="prem-s">Enjoy fête without interruptions. Unlock premium features coming soon.</div>
-    <button class="prem-cta" onclick="App.openModal('premium')">Upgrade — ₹499 / year</button>
+    <div class="prem-t">Go Ad-Free âœ¨</div>
+    <div class="prem-s">Enjoy fÃªte without interruptions. Unlock premium features coming soon.</div>
+    <button class="prem-cta" onclick="App.openModal('premium')">Upgrade â€” â‚¹499 / year</button>
   </div>`:`<div class="prem-banner" style="background:linear-gradient(135deg,var(--sage-d) 0%,#2A5038 100%)">
-    <div class="prem-t">✨ Premium Active</div>
-    <div class="prem-s">You're enjoying fête ad-free. Thank you for your support!</div>
+    <div class="prem-t">âœ¨ Premium Active</div>
+    <div class="prem-s">You're enjoying fÃªte ad-free. Thank you for your support!</div>
   </div>`}
   <div class="set-sec">
     <div class="set-sec-t">Account</div>
     <div class="set-item" onclick="App.openModal('profile')">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--rose-l)">👤</div>
-        <div><div class="set-lbl">Profile</div><div class="set-sub">${p.name||'Set your name'} ${p.email?'· '+p.email:''}</div></div>
+        <div class="set-ico" style="background:var(--rose-l)">ðŸ‘¤</div>
+        <div><div class="set-lbl">Profile</div><div class="set-sub">${p.name||'Set your name'} ${p.email?'Â· '+p.email:''}</div></div>
       </div>
-      <span class="chev">›</span>
+      <span class="chev">â€º</span>
     </div>
   </div>
   <div class="set-sec">
     <div class="set-sec-t">Notifications</div>
     <div class="set-item">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--gold-l)">🔔</div>
+        <div class="set-ico" style="background:var(--gold-l)">ðŸ””</div>
         <div><div class="set-lbl">RSVP Reminders</div><div class="set-sub">7 days before event</div></div>
       </div>
       <button class="tog ${DB.settings.rsvpReminders?'on':''}" onclick="App.toggleSetting('rsvpReminders',this)"></button>
     </div>
     <div class="set-item">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--rose-l)">💌</div>
+        <div class="set-ico" style="background:var(--rose-l)">ðŸ’Œ</div>
         <div><div class="set-lbl">Thank-You Reminders</div><div class="set-sub">After each gift is logged</div></div>
       </div>
       <button class="tog ${DB.settings.tyReminders?'on':''}" onclick="App.toggleSetting('tyReminders',this)"></button>
@@ -1350,49 +1388,49 @@ function renderSettings(){
     <div class="set-sec-t">Data & Export</div>
     <div class="set-item" onclick="App.openModal('export')">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--sage-l)">📊</div>
+        <div class="set-ico" style="background:var(--sage-l)">ðŸ“Š</div>
         <div><div class="set-lbl">Export Data</div><div class="set-sub">Guest list & gift tracker as CSV</div></div>
       </div>
-      <span class="chev">›</span>
+      <span class="chev">â€º</span>
     </div>
     <div class="set-item" onclick="App.clearAllData()">
       <div class="set-left">
-        <div class="set-ico" style="background:#FEE8E8">🗑️</div>
+        <div class="set-ico" style="background:#FEE8E8">ðŸ—‘ï¸</div>
         <div><div class="set-lbl">Clear All Data</div><div class="set-sub">Remove all events and data</div></div>
       </div>
-      <span class="chev" style="color:#932B2B">›</span>
+      <span class="chev" style="color:#932B2B">â€º</span>
     </div>
   </div>
   <div class="set-sec">
     <div class="set-sec-t">Coming Soon</div>
     <div class="set-item" style="cursor:default;opacity:.7">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--slate-l)">🔗</div>
+        <div class="set-ico" style="background:var(--slate-l)">ðŸ”—</div>
         <div><div class="set-lbl">Digital RSVP Links</div><div class="set-sub">Let guests RSVP via a unique link</div></div>
       </div>
       <span class="soon-badge">v2.0</span>
     </div>
     <div class="set-item" style="cursor:default;opacity:.7">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--sage-l)">👥</div>
+        <div class="set-ico" style="background:var(--sage-l)">ðŸ‘¥</div>
         <div><div class="set-lbl">Collaborator Mode</div><div class="set-sub">Co-host can edit simultaneously</div></div>
       </div>
       <span class="soon-badge">v2.0</span>
     </div>
     <div class="set-item" style="cursor:default;opacity:.7">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--gold-l)">📱</div>
+        <div class="set-ico" style="background:var(--gold-l)">ðŸ“±</div>
         <div><div class="set-lbl">Import from Contacts</div><div class="set-sub">Bulk add guests from phone</div></div>
       </div>
       <span class="soon-badge">v1.5</span>
     </div>
   </div>
-  <div style="text-align:center;padding:10px 0 20px;font-size:11.5px;color:var(--txt4)">fête v1.0 · Made with ♡</div>`;
+  <div style="text-align:center;padding:10px 0 20px;font-size:11.5px;color:var(--txt4)">fÃªte v1.0 Â· Made with â™¡</div>`;
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // MAIN RENDER
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function render(){
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
   const teamBtn=document.getElementById('hdr-team-btn');
@@ -1432,9 +1470,9 @@ function updateBadges(){
   }
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // EVENT CRUD
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function openAddEvent(){
   _editing.event=null;
   document.getElementById('mo-event-title').textContent='New Event';
@@ -1448,6 +1486,9 @@ function openAddEvent(){
   const preview=document.getElementById('loc-map-preview');
   if(preview)preview.style.display='none';
   document.getElementById('ev-color').value='rose';
+  document.getElementById('ev-room-requests-enabled').checked=true;
+  document.getElementById('ev-room-requests-enabled').disabled=false;
+  document.getElementById('ev-room-requests-enabled').closest('label').style.opacity='1';
   document.getElementById('del-event-btn').style.display='none';
   _roomLocsTemp=[];
   renderRoomLocsEditor();
@@ -1466,6 +1507,12 @@ function openEditEvent(id){
   const locInp=document.getElementById('ev-loc');
   if(locInp){locInp.value=ev.location||'';}
   document.getElementById('ev-color').value=ev.color||'rose';
+  const reqToggle=document.getElementById('ev-room-requests-enabled');
+  if(reqToggle){
+    reqToggle.checked=isRoomRequestEnabled(ev);
+    reqToggle.disabled=!isOrg;
+    reqToggle.closest('label').style.opacity=isOrg?'1':'0.6';
+  }
   
   // Disable core fields for non-organizers
   ['ev-name', 'ev-date', 'ev-type', 'ev-loc', 'ev-color'].forEach(fid => {
@@ -1499,15 +1546,17 @@ function openEditEvent(id){
 
 async function saveEvent(){
   const name=document.getElementById('ev-name').value.trim();
-  if(!name){toast('⚠️ Please enter an event name');return;}
+  if(!name){toast('âš ï¸ Please enter an event name');return;}
   const locInp=document.getElementById('ev-loc');
   const locVal=locInp?locInp.value.trim():'';
   const locLat=locInp?parseFloat(locInp.dataset.lat)||null:null;
   const locLon=locInp?parseFloat(locInp.dataset.lon)||null:null;
+  const roomRequestsEnabledEl=document.getElementById('ev-room-requests-enabled');
   let savedEvent=null;
   if(_editing.event){
     const ev=DB.events.find(e=>e.id===_editing.event);
     if(ev){
+      const isOrg=Auth.isOrganizer(ev.id);
       ev.name=name;
       ev.date=document.getElementById('ev-date').value;
       ev.type=document.getElementById('ev-type').value;
@@ -1516,9 +1565,10 @@ async function saveEvent(){
       if(locLon)ev.locLon=locLon;
       ev.color=document.getElementById('ev-color').value;
       ev.roomLocs=JSON.parse(JSON.stringify(_roomLocsTemp));
+      if(isOrg&&roomRequestsEnabledEl) ev.roomRequestsEnabled=roomRequestsEnabledEl.checked;
       savedEvent=ev;
     }
-    toast('✅ Event updated');
+    toast('âœ… Event updated');
   } else {
     const ev={
       id:uid(),name,
@@ -1528,13 +1578,14 @@ async function saveEvent(){
       locLat,locLon,
       color:document.getElementById('ev-color').value,
       roomLocs:JSON.parse(JSON.stringify(_roomLocsTemp)),
+      roomRequestsEnabled:roomRequestsEnabledEl?roomRequestsEnabledEl.checked:true,
       createdAt:Date.now()
     };
     DB.events.push(ev);
     if(!DB.activeEvent)DB.activeEvent=ev.id;
     Auth.addCreatorAsOrganizer(ev.id);
     savedEvent=ev;
-    toast('🎉 Event created!');
+    toast('ðŸŽ‰ Event created!');
   }
   save();
   if(savedEvent){
@@ -1542,7 +1593,7 @@ async function saveEvent(){
       await Cloud.saveEvent(savedEvent, Auth.getTeam(savedEvent.id), Auth.currentSession());
       await Cloud.loadEventsForSession(Auth.currentSession());
     }catch(e){
-      toast('⚠️ Event saved locally, but cloud sync failed');
+      toast('âš ï¸ Event saved locally, but cloud sync failed');
     }
   }
   closeModal('add-event');render();
@@ -1557,8 +1608,8 @@ function confirmDeleteEvent(){
     DB.gifts=DB.gifts.filter(g=>g.eventId!==ev.id);
     if(DB.activeEvent===ev.id)DB.activeEvent=DB.events[0]?.id||null;
     save();
-    Cloud.deleteEvent(ev.id).catch(()=>toast('⚠️ Could not delete cloud event'));
-    closeModal('add-event');render();toast('🗑️ Event deleted');
+    Cloud.deleteEvent(ev.id).catch(()=>toast('âš ï¸ Could not delete cloud event'));
+    closeModal('add-event');render();toast('ðŸ—‘ï¸ Event deleted');
   });
 }
 
@@ -1566,11 +1617,11 @@ function setActive(id){
   DB.activeEvent=id;save();
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // GUEST CRUD
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function openAddGuest(){
-  if(!DB.activeEvent){toast('⚠️ Please select an event first');return;}
+  if(!DB.activeEvent){toast('âš ï¸ Please select an event first');return;}
   _editing.guest=null;
   document.getElementById('mo-guest-title').textContent='Add Guest';
   ['g-first','g-last','g-contact','g-email','g-notes','g-table'].forEach(id=>document.getElementById(id).value='');
@@ -1607,7 +1658,7 @@ function openEditGuest(id){
 
 function saveGuest(){
   const first=document.getElementById('g-first').value.trim();
-  if(!first){toast('⚠️ Please enter a first name');return;}
+  if(!first){toast('âš ï¸ Please enter a first name');return;}
   const last=document.getElementById('g-last').value.trim();
   const gContact=document.getElementById('g-contact').value.trim();
   const gEmail=document.getElementById('g-email').value.trim().toLowerCase();
@@ -1638,7 +1689,7 @@ function saveGuest(){
       syncGuestPrimaryRoom(g);
       recomputeGuestRoomRequestStatus(g);
     }
-    toast('✅ Guest updated');
+    toast('âœ… Guest updated');
   } else {
     DB.guests.push({
       id:uid(),eventId:DB.activeEvent,
@@ -1658,7 +1709,7 @@ function saveGuest(){
       roomRequestStatus:roomLoc&&roomNo?'fulfilled':'none',
       createdAt:Date.now()
     });
-    toast(`👤 ${first} added!`);
+    toast(`ðŸ‘¤ ${first} added!`);
   }
   save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();
 }
@@ -1677,7 +1728,7 @@ function confirmDeleteGuest(id){
   if(!g)return;
   openConfirm(`Remove ${g.first} ${g.last}?`,'This guest will be removed from the list.',()=>{
     DB.guests=DB.guests.filter(x=>x.id!==gid);
-    save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();toast('🗑️ Guest removed');
+    save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();toast('ðŸ—‘ï¸ Guest removed');
   });
 }
 
@@ -1694,14 +1745,14 @@ function openGuestDetail(id){
     <div class="detail-header">
       <div class="g-av" style="${avStyle(g.id)};width:44px;height:44px;font-size:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials(g.first,g.last)}</div>
       <div class="detail-title">${g.first} ${g.last}</div>
-      <button class="ib" onclick="App.openEditGuest('${g.id}');App.closeModal('guest-detail')">✏️</button>
+      <button class="ib" onclick="App.openEditGuest('${g.id}');App.closeModal('guest-detail')">âœï¸</button>
     </div>
     <div class="info-grid">
       ${g.contact?`<div class="info-cell"><div class="info-lbl">Phone</div><div class="info-val">${g.contact}</div></div>`:''}
       ${g.email?`<div class="info-cell"><div class="info-lbl">Email</div><div class="info-val">${g.email}</div></div>`:''}
       <div class="info-cell"><div class="info-lbl">Peoples</div><div class="info-val">${g.party||1}</div></div>
       ${g.table?`<div class="info-cell"><div class="info-lbl">Table / Group</div><div class="info-val">${g.table}</div></div>`:''}
-      ${getGuestRoomAssignments(g).length?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">🏨 Assigned Rooms</div><div class="info-val">${formatGuestRooms(g)}</div></div>`:''}
+      ${getGuestRoomAssignments(g).length?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">ðŸ¨ Assigned Rooms</div><div class="info-val">${formatGuestRooms(g)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Stay Request</div><div class="info-val">${roomRequestTypeLabel(g.roomRequestType)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Request Status</div><div class="info-val">${roomRequestStatusLabel(g.roomRequestStatus)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Rooms Requested</div><div class="info-val">${Math.max(1,parseInt(g.requestedRoomCount)||1)}</div></div>`:''}
@@ -1725,16 +1776,16 @@ function openGuestDetail(id){
     ${hasPhone?`<button onclick="App.sendGuestInvite('${g.id}')" style="width:100%;padding:11px;background:#25D366;color:white;border:none;border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;transition:opacity .15s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> Send WhatsApp Invite</button>`:''}
     ${linkedGifts.length>0?`<div class="linked-gifts">
       <div class="lg-title">Linked Gifts (${linkedGifts.length})</div>
-      ${linkedGifts.map(gi=>`<div class="lg-item"><span>${gi.cat||'📦'} ${gi.desc}</span><span style="color:var(--sage-d);font-weight:500">${gi.value?fmtVal(gi.value):''}</span></div>`).join('')}
+      ${linkedGifts.map(gi=>`<div class="lg-item"><span>${gi.cat||'ðŸ“¦'} ${gi.desc}</span><span style="color:var(--sage-d);font-weight:500">${gi.value?fmtVal(gi.value):''}</span></div>`).join('')}
     </div>`:''}
     <button class="btn-s btn-danger" style="margin-top:16px" onclick="App.confirmDeleteGuest('${g.id}')">Remove Guest</button>
   `;
   openModal('guest-detail');
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // ROOM LOCATION MANAGEMENT
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 function renderRoomLocsEditor(){
   const container=document.getElementById('ev-room-locs');
@@ -1744,14 +1795,14 @@ function renderRoomLocsEditor(){
     <div class="room-loc-block">
       <div class="room-loc-name">
         <input style="flex:1;background:transparent;border:none;outline:none;font-size:12.5px;font-weight:600;color:var(--txt2);font-family:'Plus Jakarta Sans',sans-serif" value="${loc.name}" placeholder="Location name (e.g. Block A, Hall 1)" oninput="App._updateLocName(${li},this.value)" />
-        <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 0 0 6px" onclick="App._removeLocation(${li})" title="Remove location">✕</button>
+        <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 0 0 6px" onclick="App._removeLocation(${li})" title="Remove location">âœ•</button>
       </div>
       <div class="room-list" id="room-list-${li}">
-        ${loc.rooms.map((r,ri)=>`<span class="room-tag">${r}<button class="room-tag-del" onclick="App._removeRoom(${li},${ri})">✕</button></span>`).join('')}
+        ${loc.rooms.map((r,ri)=>`<span class="room-tag">${r}<button class="room-tag-del" onclick="App._removeRoom(${li},${ri})">âœ•</button></span>`).join('')}
       </div>
       <div class="room-add-row">
         <input class="room-add-inp" id="room-inp-${li}" type="text" placeholder="e.g. 101 or 101,102 or 101-110" onkeydown="if(event.key==='Enter'){event.preventDefault();App._addRoom(${li})}" />
-        <button class="room-add-btn" onclick="App._addRoom(${li})">＋ Add</button>
+        <button class="room-add-btn" onclick="App._addRoom(${li})">ï¼‹ Add</button>
       </div>
     </div>`).join('');
 }
@@ -1775,7 +1826,7 @@ function _addRoom(li){
   const inp=document.getElementById(`room-inp-${li}`);
   if(!inp)return;
   const raw=inp.value.trim();
-  if(!raw){toast('⚠️ Enter a room number or range');return;}
+  if(!raw){toast('âš ï¸ Enter a room number or range');return;}
   // parse: "101,102,105" or "506-515" or "101, 102-105, 110"
   const parts=raw.split(',').map(s=>s.trim()).filter(Boolean);
   const toAdd=[];
@@ -1784,7 +1835,7 @@ function _addRoom(li){
       const [a,b]=part.split('-').map(s=>s.trim());
       const na=parseInt(a),nb=parseInt(b);
       if(!isNaN(na)&&!isNaN(nb)&&nb>=na){
-        if(nb-na>200){toast('⚠️ Range too large (max 200)');return;}
+        if(nb-na>200){toast('âš ï¸ Range too large (max 200)');return;}
         for(let i=na;i<=nb;i++)toAdd.push(String(i));
       } else {
         toAdd.push(part);
@@ -1800,9 +1851,9 @@ function _addRoom(li){
   }
   inp.value='';
   renderRoomLocsEditor();
-  if(added>0&&skipped>0) toast(`✅ Added ${added} rooms · ${skipped} already existed`);
-  else if(added>0) toast(`✅ ${added} room${added>1?'s':''} added`);
-  else toast('⚠️ All rooms already added');
+  if(added>0&&skipped>0) toast(`âœ… Added ${added} rooms Â· ${skipped} already existed`);
+  else if(added>0) toast(`âœ… ${added} room${added>1?'s':''} added`);
+  else toast('âš ï¸ All rooms already added');
   // re-focus the input for this block
   const newInp=document.getElementById(`room-inp-${li}`);
   if(newInp)newInp.focus();
@@ -1819,10 +1870,10 @@ function populateRoomSelects(selLoc='',selRoom=''){
   const locSel=document.getElementById('g-room-loc');
   const roomSel=document.getElementById('g-room-no');
   if(!locSel||!roomSel)return;
-  locSel.innerHTML='<option value="">— None —</option>'+locs.map(l=>`<option value="${l.name}" ${l.name===selLoc?'selected':''}>${l.name}</option>`).join('');
+  locSel.innerHTML='<option value="">â€” None â€”</option>'+locs.map(l=>`<option value="${l.name}" ${l.name===selLoc?'selected':''}>${l.name}</option>`).join('');
   // populate rooms for selected loc
   const matchLoc=locs.find(l=>l.name===selLoc);
-  roomSel.innerHTML='<option value="">— None —</option>'+(matchLoc?matchLoc.rooms.map(r=>`<option value="${r}" ${r===selRoom?'selected':''}>${r}</option>`).join(''):'');
+  roomSel.innerHTML='<option value="">â€” None â€”</option>'+(matchLoc?matchLoc.rooms.map(r=>`<option value="${r}" ${r===selRoom?'selected':''}>${r}</option>`).join(''):'');
 }
 
 function refreshRoomNumbers(){
@@ -1831,7 +1882,7 @@ function refreshRoomNumbers(){
   const locVal=document.getElementById('g-room-loc').value;
   const roomSel=document.getElementById('g-room-no');
   const matchLoc=locs.find(l=>l.name===locVal);
-  roomSel.innerHTML='<option value="">— None —</option>'+(matchLoc?matchLoc.rooms.map(r=>`<option value="${r}">${r}</option>`).join(''):'');
+  roomSel.innerHTML='<option value="">â€” None â€”</option>'+(matchLoc?matchLoc.rooms.map(r=>`<option value="${r}">${r}</option>`).join(''):'');
   checkRoomConflict();
 }
 
@@ -1850,30 +1901,31 @@ function checkRoomConflict(){
   if(occupied.length===0){ind.style.display='none';return;}
   const names=occupied.map(g=>`${g.first} ${g.last}`).join(', ');
   ind.style.display='block';
-  ind.innerHTML=`<div class="room-conflict">⚠️ Already allocated to: <span class="room-conflict-name">${names}</span></div>`;
+  ind.innerHTML=`<div class="room-conflict">âš ï¸ Already allocated to: <span class="room-conflict-name">${names}</span></div>`;
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // ROOMS SCREEN
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderRooms(){
   const el=document.getElementById('scr-rooms');
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
   const evSelHtml=`<div class="ev-sel" onclick="App.openModal('event-pick')">
     <div><div class="ev-sel-lbl">Current Event</div><div class="ev-sel-val">${ev?ev.name:'Select an event'}</div></div>
-    <span class="chev">▼</span>
+    <span class="chev">â–¼</span>
   </div>`;
   if(!ev){
-    el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">No event selected</div><div class="empty-s">Select an event to manage rooms</div></div>`;
+    el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">ðŸ¨</div><div class="empty-t">No event selected</div><div class="empty-s">Select an event to manage rooms</div></div>`;
     return;
   }
   if(ev._isGuestOnly){
     const me=ensureGuestRequestDefaults(getCurrentGuestInvite(ev.id));
     if(!me){
-      el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">Room details unavailable</div><div class="empty-s">We couldn't find your guest record for this invitation.</div></div>`;
+      el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">ðŸ¨</div><div class="empty-t">Room details unavailable</div><div class="empty-s">We couldn't find your guest record for this invitation.</div></div>`;
       return;
     }
     const rooms=getGuestRoomAssignments(me);
+    const requestsEnabled=isRoomRequestEnabled(ev);
     el.innerHTML=evSelHtml+
       `<div class="ph"><div class="ph-title">My Rooms</div><div class="ph-sub">${ev.name}</div></div>`+
       `<div class="guest-card">
@@ -1886,24 +1938,26 @@ function renderRooms(){
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
           <div>
             <div style="font-size:14px;font-weight:600;color:var(--txt)">${roomRequestTypeLabel(me.roomRequestType)}</div>
-            <div style="font-size:12px;color:var(--txt3);margin-top:4px">${Math.max(1,parseInt(me.requestedRoomCount)||1)} room(s) requested · ${Math.max(1,parseInt(me.requestedStayCount)||me.party||1)} guest(s) staying</div>
+            <div style="font-size:12px;color:var(--txt3);margin-top:4px">${Math.max(1,parseInt(me.requestedRoomCount)||1)} room(s) requested Â· ${Math.max(1,parseInt(me.requestedStayCount)||me.party||1)} guest(s) staying</div>
             ${me.roomRequestNote?`<div style="font-size:12px;color:var(--txt2);margin-top:8px;line-height:1.5">${me.roomRequestNote}</div>`:''}
           </div>
           <span class="guest-room-status ${me.roomRequestStatus==='fulfilled'?'fulfilled':me.roomRequestStatus==='pending'?'pending':'none'}">${roomRequestStatusLabel(me.roomRequestStatus)}</span>
         </div>
       </div>`+
-      `<button class="fab" style="background:var(--slate-d)" onclick="App.openGuestRequestModal('${ev.id}')">Update Room Request</button>`;
+      `${requestsEnabled
+        ? `<button class="fab" style="background:var(--slate-d)" onclick="App.openGuestRequestModal('${ev.id}')">Update Room Request</button>`
+        : `<div class="guest-card"><div class="guest-card-title">Room Requests Closed</div><div style="font-size:13px;color:var(--txt2);line-height:1.6">The organiser has turned off guest room requests for this event. You can still view any room allocation shown above.</div></div>`}`;
     return;
   }
   if(!Auth.isRoom(DB.activeEvent)){
-    el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">🔐</div><div class="empty-t">Room access required</div><div class="empty-s">Only organisers and room coordinators can fulfill stay requests and allocate rooms.</div></div>`;
+    el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">ðŸ”</div><div class="empty-t">Room access required</div><div class="empty-s">Only organisers and room coordinators can fulfill stay requests and allocate rooms.</div></div>`;
     return;
   }
   const locs=(ev.roomLocs)||[];
   if(locs.length===0){
     el.innerHTML=evSelHtml+
       `<div class="ph"><div class="ph-title">Room Management</div></div>`+
-      `<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">No rooms configured</div><div class="empty-s">Add room locations in the Event settings to manage guest room allocation.</div><button class="fab" style="margin-top:16px" onclick="App.openEditEvent('${ev.id}')">⚙️ Configure Rooms</button></div>`;
+      `<div class="empty"><div class="empty-ico">ðŸ¨</div><div class="empty-t">No rooms configured</div><div class="empty-s">Add room locations in the Event settings to manage guest room allocation.</div><button class="fab" style="margin-top:16px" onclick="App.openEditEvent('${ev.id}')">âš™ï¸ Configure Rooms</button></div>`;
     return;
   }
   // build stats
@@ -1913,7 +1967,7 @@ function renderRooms(){
   const occupiedRooms=new Set(guests.flatMap(g=>getGuestRoomAssignments(g).map(room=>room.loc+'||'+room.no))).size;
   const vacantRooms=totalRooms-occupiedRooms;
   let html=evSelHtml+
-    `<div class="ph"><div class="ph-title">Room Management</div><div class="ph-sub">${totalRooms} rooms · ${occupiedRooms} occupied · ${vacantRooms} vacant</div></div>`+
+    `<div class="ph"><div class="ph-title">Room Management</div><div class="ph-sub">${totalRooms} rooms Â· ${occupiedRooms} occupied Â· ${vacantRooms} vacant</div></div>`+
     `<div class="stats-row">
       <div class="s-card"><span class="s-n">${totalRooms}</span><span class="s-l">Total</span></div>
       <div class="s-card"><span class="s-n" style="color:var(--rose-d)">${occupiedRooms}</span><span class="s-l">Occupied</span></div>
@@ -1934,7 +1988,7 @@ function renderRooms(){
               <div>
                 <div class="request-row-name">${g.first} ${g.last}</div>
                 <div class="request-row-meta">
-                  ${roomRequestTypeLabel(g.roomRequestType)} · ${Math.max(1,parseInt(g.requestedRoomCount)||1)} room(s) · ${Math.max(1,parseInt(g.requestedStayCount)||g.party||1)} guest(s)
+                  ${roomRequestTypeLabel(g.roomRequestType)} Â· ${Math.max(1,parseInt(g.requestedRoomCount)||1)} room(s) Â· ${Math.max(1,parseInt(g.requestedStayCount)||g.party||1)} guest(s)
                   ${getGuestRoomAssignments(g).length?`<br>Currently assigned: ${formatGuestRooms(g)}`:''}
                 </div>
               </div>
@@ -1975,7 +2029,7 @@ function renderRooms(){
     });
     html+=`</div></div>`;
   });
-  html+=`<button class="fab fab-outline" style="margin-top:8px" onclick="App.openEditEvent('${ev.id}')">⚙️ Edit Room Configuration</button>`;
+  html+=`<button class="fab fab-outline" style="margin-top:8px" onclick="App.openEditEvent('${ev.id}')">âš™ï¸ Edit Room Configuration</button>`;
   el.innerHTML=html;
 }
 
@@ -1991,7 +2045,7 @@ function openRoomDetail(locName,roomNo){
   const roomGuests=allGuests.filter(g=>getGuestRoomAssignments(g).some(room=>room.loc===locName&&room.no===roomNo));
 
   document.getElementById('mo-room-alloc-title').textContent=`Room ${roomNo}`;
-  document.getElementById('mo-room-alloc-loc').textContent=`📍 ${locName}`;
+  document.getElementById('mo-room-alloc-loc').textContent=`ðŸ“ ${locName}`;
 
   // Occupants section
   const occEl=document.getElementById('mo-room-occupants');
@@ -2002,23 +2056,23 @@ function openRoomDetail(locName,roomNo){
           <div style="${avStyle(g.id)};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">${initials(g.first,g.last)}</div>
           <div>
             <div style="font-size:13px;font-weight:500;color:var(--txt)">${g.first} ${g.last}</div>
-            <div style="font-size:11px;color:var(--txt3)">Peoples: ${g.party||1}${g.contact?' · '+g.contact:''}${getGuestRoomAssignments(g).length>1?` · ${getGuestRoomAssignments(g).length} rooms`:''}</div>
+            <div style="font-size:11px;color:var(--txt3)">Peoples: ${g.party||1}${g.contact?' Â· '+g.contact:''}${getGuestRoomAssignments(g).length>1?` Â· ${getGuestRoomAssignments(g).length} rooms`:''}</div>
           </div>
         </div>
         <button onclick="App.unassignGuestRoom('${g.id}')" style="background:#FEE8E8;color:#932B2B;border:1px solid #FABCBC;border-radius:var(--rxs);padding:4px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">Remove This Room</button>
       </div>`).join('');
   } else {
-    occEl.innerHTML=`<div style="background:var(--sage-l);border:1px solid var(--sage-m);border-radius:var(--rs);padding:10px 13px;margin-bottom:12px;font-size:12px;color:var(--sage-d)">🟢 Vacant — no guests assigned</div>`;
+    occEl.innerHTML=`<div style="background:var(--sage-l);border:1px solid var(--sage-m);border-radius:var(--rs);padding:10px 13px;margin-bottom:12px;font-size:12px;color:var(--sage-d)">ðŸŸ¢ Vacant â€” no guests assigned</div>`;
   }
 
-  // Guest dropdown — show all guests, mark already-in-room ones
+  // Guest dropdown â€” show all guests, mark already-in-room ones
   const sel=document.getElementById('room-alloc-guest-sel');
-  sel.innerHTML='<option value="">— Select a guest —</option>'+
+  sel.innerHTML='<option value="">â€” Select a guest â€”</option>'+
     allGuests.map(g=>{
       const rooms=getGuestRoomAssignments(g);
       const inThisRoom=rooms.some(room=>room.loc===locName&&room.no===roomNo);
       const otherRooms=rooms.filter(room=>!(room.loc===locName&&room.no===roomNo));
-      const label=`${g.first} ${g.last}`+(inThisRoom?' ✓ (this room)':otherRooms.length?` (${otherRooms.map(room=>room.loc+' #'+room.no).join(', ')})`:'');
+      const label=`${g.first} ${g.last}`+(inThisRoom?' âœ“ (this room)':otherRooms.length?` (${otherRooms.map(room=>room.loc+' #'+room.no).join(', ')})`:'');
       return`<option value="${g.id}" ${inThisRoom?'disabled':''}>${label}</option>`;
     }).join('');
   document.getElementById('room-alloc-conflict').style.display='none';
@@ -2037,7 +2091,7 @@ function onRoomAllocGuestChange(){
   const rooms=getGuestRoomAssignments(g);
   if(g&&rooms.length){
     conflictEl.style.display='block';
-    conflictEl.innerHTML=`<div class="room-conflict">⚠️ Already assigned to ${rooms.map(room=>room.loc+' Room '+room.no).join(', ')} — this room will be added too</div>`;
+    conflictEl.innerHTML=`<div class="room-conflict">âš ï¸ Already assigned to ${rooms.map(room=>room.loc+' Room '+room.no).join(', ')} â€” this room will be added too</div>`;
   } else {
     conflictEl.style.display='none';
   }
@@ -2045,7 +2099,7 @@ function onRoomAllocGuestChange(){
 
 function assignGuestToRoom(){
   const gid=document.getElementById('room-alloc-guest-sel').value;
-  if(!gid){toast('⚠️ Select a guest');return;}
+  if(!gid){toast('âš ï¸ Select a guest');return;}
   const g=DB.guests.find(x=>x.id===gid);
   if(!g)return;
   ensureGuestRequestDefaults(g);
@@ -2053,7 +2107,7 @@ function assignGuestToRoom(){
   recomputeGuestRoomRequestStatus(g);
   save();syncActiveEventData();
   _preferredRoomGuestId='';
-  toast(`✅ ${g.first} assigned to ${_roomAllocLoc} Room ${_roomAllocNo}`);
+  toast(`âœ… ${g.first} assigned to ${_roomAllocLoc} Room ${_roomAllocNo}`);
   closeModal('room-alloc');
   renderRooms();
 }
@@ -2066,7 +2120,7 @@ function unassignGuestRoom(gid){
   removeGuestRoomAssignment(g,_roomAllocLoc,_roomAllocNo);
   recomputeGuestRoomRequestStatus(g);
   save();syncActiveEventData();
-  toast(`🗑️ ${name} unassigned from ${_roomAllocLoc} Room ${_roomAllocNo}`);
+  toast(`ðŸ—‘ï¸ ${name} unassigned from ${_roomAllocLoc} Room ${_roomAllocNo}`);
   // re-open to refresh
   openRoomDetail(_roomAllocLoc,_roomAllocNo);
   renderRooms();
@@ -2080,12 +2134,12 @@ function clearGuestRooms(gid){
   syncGuestPrimaryRoom(g);
   recomputeGuestRoomRequestStatus(g);
   save();syncActiveEventData();render();
-  toast(`🗑️ Cleared all rooms for ${g.first}`);
+  toast(`ðŸ—‘ï¸ Cleared all rooms for ${g.first}`);
 }
 
 function prepareGuestRoomAssignment(gid){
   const g=DB.guests.find(x=>x.id===gid);
-  if(!g){toast('⚠️ Guest not found');return;}
+  if(!g){toast('âš ï¸ Guest not found');return;}
   _preferredRoomGuestId=gid;
   switchTab('rooms');
   toast(`Choose a room for ${g.first} ${g.last}`);
@@ -2102,33 +2156,34 @@ function resolveGuestRoomRequest(gid,outcome){
     g.roomRequestStatus='fulfilled';
   }
   save();syncActiveEventData();renderRooms();
-  toast(`✅ ${g.first}'s request updated`);
+  toast(`âœ… ${g.first}'s request updated`);
 }
 
 function sendGuestInvite(guestId){
   const gid=guestId||(_editing.guest);
   const g=DB.guests.find(x=>x.id===gid);
-  if(!g){toast('⚠️ Save guest first');return;}
+  if(!g){toast('âš ï¸ Save guest first');return;}
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
-  if(!ev){toast('⚠️ No event selected');return;}
+  if(!ev){toast('âš ï¸ No event selected');return;}
   const phone=(g.contact||'').replace(/\D/g,'');
-  if(phone.length<10){toast('⚠️ No valid phone number');return;}
+  if(phone.length<10){toast('âš ï¸ No valid phone number');return;}
   const intlPhone=phone.startsWith('91')?phone:'91'+phone;
   const evDate=ev.date?fmtDate(ev.date):'';
   const venue=ev.location||'';
   const rooms=getGuestRoomAssignments(g);
-  const roomPart=rooms.length?`\n🏨 Rooms: ${rooms.map(room=>`${room.loc} Room ${room.no}`).join(', ')}`:'';
-  const msg=`🎉 *You're Invited!*\n\nDear ${g.first},\n\nWe joyfully invite you to *${ev.name}*\n\n📅 Date: ${evDate}\n📍 Venue: ${venue}${roomPart}\n\nYour presence will make this celebration truly special. We look forward to seeing you!\n\nWith warm regards 🙏`;
+  const roomPart=rooms.length?`\nðŸ¨ Rooms: ${rooms.map(room=>`${room.loc} Room ${room.no}`).join(', ')}`:'';
+  const msg=`ðŸŽ‰ *You're Invited!*\n\nDear ${g.first},\n\nWe joyfully invite you to *${ev.name}*\n\nðŸ“… Date: ${evDate}\nðŸ“ Venue: ${venue}${roomPart}\n\nYour presence will make this celebration truly special. We look forward to seeing you!\n\nWith warm regards ðŸ™`;
   const url=`https://wa.me/${intlPhone}?text=${encodeURIComponent(msg)}`;
   window.open(url,'_blank');
-  toast('📲 WhatsApp invite opened!');
+  toast('ðŸ“² WhatsApp invite opened!');
 }
 
 function submitGuestRoomRequest(){
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
-  if(!ev||!ev._isGuestOnly){toast('⚠️ Guest portal only');return;}
+  if(!ev||!ev._isGuestOnly){toast('âš ï¸ Guest portal only');return;}
+  if(!isRoomRequestEnabled(ev)){toast('ℹ️ Room requests are turned off for this event');closeModal('guest-request');render();return;}
   const me=getCurrentGuestInvite(ev.id);
-  if(!me){toast('⚠️ Guest record not found');return;}
+  if(!me){toast('âš ï¸ Guest record not found');return;}
   ensureGuestRequestDefaults(me);
   const typeEl=document.getElementById('gr-room-request-type')||document.getElementById('gp-room-request-type');
   const roomsEl=document.getElementById('gr-requested-rooms')||document.getElementById('gp-requested-rooms');
@@ -2141,7 +2196,7 @@ function submitGuestRoomRequest(){
   me.roomRequestUpdatedAt=Date.now();
   me.roomRequestStatus=me.roomRequestType==='undecided'?'none':'pending';
   save();syncActiveEventData();closeModal('guest-request');renderGuestPortal();render();
-  toast('✅ Room request sent');
+  toast('âœ… Room request sent');
 }
 
 function setRsvpDirect(id,status){
@@ -2154,17 +2209,17 @@ function setRsvpDirect(id,status){
   toast(`${g.first}: ${status}`);
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // GIFT CRUD
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function openAddGift(){
-  if(!DB.activeEvent){toast('⚠️ Please select an event first');return;}
+  if(!DB.activeEvent){toast('âš ï¸ Please select an event first');return;}
   _editing.gift=null;
   _giftPhotoData=null;
   document.getElementById('mo-gift-title').textContent='Log a Gift';
   ['gi-desc','gi-from','gi-val','gi-notes'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('gi-cat').value='💝';
-  document.querySelectorAll('#gi-cat-picker .cat-opt').forEach(o=>o.classList.toggle('sel',o.dataset.cat==='💝'));
+  document.getElementById('gi-cat').value='ðŸ’';
+  document.querySelectorAll('#gi-cat-picker .cat-opt').forEach(o=>o.classList.toggle('sel',o.dataset.cat==='ðŸ’'));
   document.getElementById('gi-ty').value='pending';
   document.getElementById('gift-photo-img').style.display='none';
   document.getElementById('gift-photo-label').style.display='block';
@@ -2183,7 +2238,7 @@ function openEditGift(id){
   document.getElementById('gi-desc').value=g.desc||'';
   document.getElementById('gi-from').value=g.from||'';
   document.getElementById('gi-val').value=g.value||'';
-  const cat=g.cat||'📦';
+  const cat=g.cat||'ðŸ“¦';
   document.getElementById('gi-cat').value=cat;
   document.querySelectorAll('#gi-cat-picker .cat-opt').forEach(o=>o.classList.toggle('sel',o.dataset.cat===cat));
   document.getElementById('gi-ty').value=g.ty||'pending';
@@ -2217,7 +2272,7 @@ function handleGiftPhoto(input){
 
 function saveGift(){
   const desc=document.getElementById('gi-desc').value.trim();
-  if(!desc){toast('⚠️ Please describe the gift');return;}
+  if(!desc){toast('âš ï¸ Please describe the gift');return;}
   if(_editing.gift){
     const g=DB.gifts.find(x=>x.id===_editing.gift);
     if(g){
@@ -2228,7 +2283,7 @@ function saveGift(){
       g.notes=document.getElementById('gi-notes').value.trim();
       g.photo=_giftPhotoData||null;
     }
-    toast('✅ Gift updated');
+    toast('âœ… Gift updated');
   } else {
     DB.gifts.push({
       id:uid(),eventId:DB.activeEvent,
@@ -2240,7 +2295,7 @@ function saveGift(){
       photo:_giftPhotoData||null,
       createdAt:Date.now()
     });
-    toast('🎁 Gift logged!');
+    toast('ðŸŽ Gift logged!');
   }
   save();syncActiveEventData();closeModal('add-gift');render();
 }
@@ -2259,23 +2314,23 @@ function confirmDeleteGift(id){
   if(!g)return;
   openConfirm('Delete this gift?','This gift record will be permanently removed.',()=>{
     DB.gifts=DB.gifts.filter(x=>x.id!==gid);
-    save();syncActiveEventData();closeModal('add-gift');closeModal('add-moi');render();toast('🗑️ Gift deleted');
+    save();syncActiveEventData();closeModal('add-gift');closeModal('add-moi');render();toast('ðŸ—‘ï¸ Gift deleted');
   });
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // EVENT PICKER
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderEventPicker(){
   const el=document.getElementById('ep-list');
   const sess=Auth.currentSession();
   const myEvents=DB.events.filter(ev=>Auth.getTeam(ev.id).some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase())));
-  if(myEvents.length===0){el.innerHTML=`<div class="empty"><div class="empty-ico">🎉</div><div class="empty-t">No events yet</div></div>`;return;}
+  if(myEvents.length===0){el.innerHTML=`<div class="empty"><div class="empty-ico">ðŸŽ‰</div><div class="empty-t">No events yet</div></div>`;return;}
   el.innerHTML=myEvents.map(ev=>{
     const col=COLORS[ev.color]||COLORS.rose;
     return`<div class="ep-item ${ev.id===DB.activeEvent?'sel':''}" onclick="App.pickEvent('${ev.id}')">
       <div class="ep-dot" style="background:${col.accent}"></div>
-      <div><div style="font-size:13.5px;font-weight:500">${ev.name}</div><div style="font-size:11.5px;color:var(--txt3)">${TYPE_LABEL[ev.type]} ${ev.date?'· '+fmtDate(ev.date):''}</div></div>
+      <div><div style="font-size:13.5px;font-weight:500">${ev.name}</div><div style="font-size:11.5px;color:var(--txt3)">${TYPE_LABEL[ev.type]} ${ev.date?'Â· '+fmtDate(ev.date):''}</div></div>
     </div>`;
   }).join('');
 }
@@ -2322,9 +2377,9 @@ function pickExportEvent(id){
   renderExportPicker();
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // EXPORT
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function downloadCSV(filename,rows){
   const csv=rows.map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
@@ -2336,37 +2391,37 @@ function downloadCSV(filename,rows){
 
 function exportGuests(){
   const evId=_exportEventId||DB.activeEvent;
-  if(!evId){toast('⚠️ Select an event first');return;}
+  if(!evId){toast('âš ï¸ Select an event first');return;}
   const ev=DB.events.find(e=>e.id===evId);
   const guests=DB.guests.filter(g=>g.eventId===evId);
-  if(guests.length===0){toast('⚠️ No guests to export');return;}
+  if(guests.length===0){toast('âš ï¸ No guests to export');return;}
   const rows=[['First Name','Last Name','Phone','Email','Peoples','RSVP Status','Table/Group','Notes']];
   guests.forEach(g=>rows.push([g.first,g.last,g.contact,g.email,g.party,g.rsvp,g.table,g.notes]));
   downloadCSV(`${(ev?.name||'event').replace(/\s+/g,'_')}_guests.csv`,rows);
-  toast('📊 Guest list exported!');
+  toast('ðŸ“Š Guest list exported!');
   closeModal('export');
 }
 
 function exportGifts(){
   const evId=_exportEventId||DB.activeEvent;
-  if(!evId){toast('⚠️ Select an event first');return;}
+  if(!evId){toast('âš ï¸ Select an event first');return;}
   const ev=DB.events.find(e=>e.id===evId);
   const gifts=DB.gifts.filter(g=>g.eventId===evId);
-  if(gifts.length===0){toast('⚠️ No gifts to export');return;}
-  const rows=[['Description','From','Category','Estimated Value (₹)','Thank-You Status','Notes']];
+  if(gifts.length===0){toast('âš ï¸ No gifts to export');return;}
+  const rows=[['Description','From','Category','Estimated Value (â‚¹)','Thank-You Status','Notes']];
   gifts.forEach(g=>rows.push([g.desc,g.from,g.cat,g.value,g.ty,g.notes]));
   downloadCSV(`${(ev?.name||'event').replace(/\s+/g,'_')}_gifts.csv`,rows);
-  toast('🎁 Gift tracker exported!');
+  toast('ðŸŽ Gift tracker exported!');
   closeModal('export');
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // PROFILE & SETTINGS
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function saveProfile(){
   DB.profile.name=document.getElementById('prof-name').value.trim();
   DB.profile.email=document.getElementById('prof-email').value.trim();
-  save();closeModal('profile');render();toast('✅ Profile saved');
+  save();closeModal('profile');render();toast('âœ… Profile saved');
 }
 
 function toggleSetting(key,btn){
@@ -2377,7 +2432,7 @@ function toggleSetting(key,btn){
 
 function unlockPremium(){
   DB.premium=true;save();closeModal('premium');render();
-  toast('🎉 Premium unlocked! Ads removed.');
+  toast('ðŸŽ‰ Premium unlocked! Ads removed.');
   if(!DB.premium) return;
   document.querySelector('.ad-top').style.display='none';
   document.querySelector('.ad-bot').style.display='none';
@@ -2388,14 +2443,14 @@ function clearAllData(){
     const eventIds = DB.events.map(event => event.id);
     DB.events=[];DB.guests=[];DB.gifts=[];DB.activeEvent=null;
     save();
-    Cloud.clearAllCloudData(eventIds).catch(()=>toast('⚠️ Could not delete cloud data'));
-    render();toast('🗑️ All data cleared');
+    Cloud.clearAllCloudData(eventIds).catch(()=>toast('âš ï¸ Could not delete cloud data'));
+    render();toast('ðŸ—‘ï¸ All data cleared');
   });
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // LOCATION SEARCH (OpenStreetMap Nominatim)
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 let _locTimer=null;
 function locSearch(val){
   const sug=document.getElementById('loc-suggestions');
@@ -2407,7 +2462,7 @@ function locSearch(val){
       const data=await r.json();
       if(!sug)return;
       if(!data.length){sug.style.display='none';return;}
-      sug.innerHTML=data.map((p,i)=>`<div onclick="App.pickLoc('${encodeURIComponent(p.display_name)}','${p.lat}','${p.lon}')" style="padding:10px 13px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--bord2);transition:background .12s" onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background=''">📍 ${p.display_name}</div>`).join('');
+      sug.innerHTML=data.map((p,i)=>`<div onclick="App.pickLoc('${encodeURIComponent(p.display_name)}','${p.lat}','${p.lon}')" style="padding:10px 13px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--bord2);transition:background .12s" onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background=''">ðŸ“ ${p.display_name}</div>`).join('');
       sug.style.display='block';
     }catch(e){if(sug)sug.style.display='none';}
   },400);
@@ -2434,21 +2489,21 @@ function pickLoc(name,lat,lon){
   document.getElementById('ev-loc').dataset.lon=lon;
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // WHATSAPP THANK YOU
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 let _waGiftId=null;
 function openWhatsApp(giftId){
   const g=DB.gifts.find(x=>x.id===giftId);
   if(!g)return;
   const guestMatch=DB.guests.find(gu=>gu.eventId===DB.activeEvent&&(gu.first+' '+gu.last).toLowerCase().trim()===(g.from||'').toLowerCase().trim());
-  if(!guestMatch||!guestMatch.contact){toast('⚠️ No phone number for this guest');return;}
+  if(!guestMatch||!guestMatch.contact){toast('âš ï¸ No phone number for this guest');return;}
   const phone=guestMatch.contact.replace(/\D/g,'');
-  if(phone.length<10){toast('⚠️ Invalid phone number');return;}
+  if(phone.length<10){toast('âš ï¸ Invalid phone number');return;}
   _waGiftId=giftId;
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
   const evName=ev?ev.name:'our event';
-  const defaultMsg=`Dear ${g.from},\n\nThank you so much for the wonderful ${g.desc}${g.value?' (worth '+fmtVal(g.value)+')':''}. Your thoughtfulness means the world to us. We are truly grateful for your presence and generosity at ${evName}.\n\nWith love & gratitude 🙏`;
+  const defaultMsg=`Dear ${g.from},\n\nThank you so much for the wonderful ${g.desc}${g.value?' (worth '+fmtVal(g.value)+')':''}. Your thoughtfulness means the world to us. We are truly grateful for your presence and generosity at ${evName}.\n\nWith love & gratitude ðŸ™`;
   document.getElementById('wa-to-name').textContent=g.from||'Guest';
   document.getElementById('wa-to-phone').textContent=guestMatch.contact;
   document.getElementById('wa-msg').value=defaultMsg;
@@ -2462,7 +2517,7 @@ function sendWhatsApp(){
   const guestMatch=DB.guests.find(gu=>gu.eventId===DB.activeEvent&&(gu.first+' '+gu.last).toLowerCase().trim()===(g.from||'').toLowerCase().trim());
   const phone=(guestMatch?.contact||'').replace(/\D/g,'');
   const msg=document.getElementById('wa-msg').value.trim();
-  if(!msg){toast('⚠️ Please enter a message');return;}
+  if(!msg){toast('âš ï¸ Please enter a message');return;}
   // Add country code if needed
   const intlPhone=phone.startsWith('91')?phone:'91'+phone;
   const url=`https://wa.me/${intlPhone}?text=${encodeURIComponent(msg)}`;
@@ -2471,7 +2526,7 @@ function sendWhatsApp(){
   g.ty='sent';save();syncActiveEventData();
   closeModal('whatsapp');
   render();
-  toast('✅ WhatsApp opened · Marked as TY Sent');
+  toast('âœ… WhatsApp opened Â· Marked as TY Sent');
 }
 function setMoiTy(val,btn){
   document.getElementById('moi-ty').value=val;
@@ -2514,9 +2569,9 @@ function setGiftCatFilter(cat){_giftCatFilter=cat;renderGifts();}
 function setGiftTab(t){_giftTab=t;_giftCatFilter='all';renderGifts();}
 
 function openAddMoi(){
-  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
+  if(!DB.activeEvent){toast('âš ï¸ Select an event first');return;}
   _editing.gift=null;
-  document.getElementById('mo-moi-title').textContent='Add Moi Entry';
+  document.getElementById('mo-moi-title').textContent='Add Cash Gift Entry';
   document.getElementById('moi-from').value='';
   document.getElementById('moi-amount').value='';
   const notesEl=document.getElementById('moi-notes');
@@ -2539,7 +2594,7 @@ function openEditMoi(id){
   const g=DB.gifts.find(x=>x.id===id);
   if(!g)return;
   _editing.gift=id;
-  document.getElementById('mo-moi-title').textContent='Edit Moi Entry';
+  document.getElementById('mo-moi-title').textContent='Edit Cash Gift Entry';
   document.getElementById('moi-from').value=g.from||'';
   document.getElementById('moi-amount').value=g.value||'';
   const notesEl=document.getElementById('moi-notes');
@@ -2562,25 +2617,25 @@ function openEditMoi(id){
 function saveMoi(){
   const from=document.getElementById('moi-from').value.trim();
   const amount=parseFloat(document.getElementById('moi-amount').value)||0;
-  if(!from){toast('⚠️ Please enter a name');return;}
-  if(!amount){toast('⚠️ Please enter the amount');return;}
+  if(!from){toast('âš ï¸ Please enter a name');return;}
+  if(!amount){toast('âš ï¸ Please enter the amount');return;}
   if(_editing.gift){
     const g=DB.gifts.find(x=>x.id===_editing.gift);
     if(g){g.from=from;g.value=amount;g.notes=document.getElementById('moi-notes').value.trim();g.ty=document.getElementById('moi-ty').value;}
-    toast('✅ Moi entry updated');
+    toast('âœ… Cash gift entry updated');
   } else {
-    DB.gifts.push({id:uid(),eventId:DB.activeEvent,isMoi:true,desc:'Moi',from,value:amount,cat:'💵',ty:document.getElementById('moi-ty').value,notes:document.getElementById('moi-notes').value.trim(),createdAt:Date.now()});
-    toast(`💵 ₹${amount.toLocaleString('en-IN')} from ${from} recorded`);
+    DB.gifts.push({id:uid(),eventId:DB.activeEvent,isMoi:true,desc:'Cash Gift',from,value:amount,cat:'ðŸ’µ',ty:document.getElementById('moi-ty').value,notes:document.getElementById('moi-notes').value.trim(),createdAt:Date.now()});
+    toast(`ðŸ’µ â‚¹${amount.toLocaleString('en-IN')} from ${from} recorded`);
   }
   save();syncActiveEventData();closeModal('add-moi');renderGifts();
 }
 
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // TEAM & AUTH UI
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function openTeamModal(){
-  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
+  if(!DB.activeEvent){toast('âš ï¸ Select an event first');return;}
   if(!Auth.isOrganizer(DB.activeEvent)){
     // Non-organizers can view team but not edit
   }
@@ -2589,17 +2644,17 @@ function openTeamModal(){
 }
 
 async function sendTeamInvite(){
-  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
-  if(!Auth.isOrganizer(DB.activeEvent)){toast('⚠️ Only organisers can invite members');return;}
+  if(!DB.activeEvent){toast('âš ï¸ Select an event first');return;}
+  if(!Auth.isOrganizer(DB.activeEvent)){toast('âš ï¸ Only organisers can invite members');return;}
   const email=document.getElementById('team-invite-email').value.trim().toLowerCase();
   const role=document.getElementById('team-invite-role').value;
-  if(!email){toast('⚠️ Enter an email');return;}
+  if(!email){toast('âš ï¸ Enter an email');return;}
   const result=Auth.sendInvite(DB.activeEvent,email,role);
-  if(result==='exists'){toast('⚠️ Already a team member');return;}
-  if(result===false){toast('⚠️ Invalid email');return;}
+  if(result==='exists'){toast('âš ï¸ Already a team member');return;}
+  if(result===false){toast('âš ï¸ Invalid email');return;}
   document.getElementById('team-invite-email').value='';
   const roleLabel=role==='organizer'?'Organizer':role==='cash'?'Cash Collector':'Room Coordinator';
-  toast(`✅ ${email} added as ${roleLabel}`);
+  toast(`âœ… ${email} added as ${roleLabel}`);
   try{ await Cloud.loadEventsForSession(Auth.currentSession()); }catch(e){}
 }
 
@@ -2607,32 +2662,32 @@ function openUserMenu(){
   const sess=Auth.currentSession();
   if(!sess){openModal('profile');return;}
   const role=Auth.currentRole(DB.activeEvent);
-  const roleLabel=role==='organizer'?'👑 Organizer':role==='cash'?'💵 Cash Collector':role==='room'?'🏨 Room Coordinator':'—';
+  const roleLabel=role==='organizer'?'ðŸ‘‘ Organizer':role==='cash'?'ðŸ’µ Cash Collector':role==='room'?'ðŸ¨ Room Coordinator':'â€”';
   openConfirm(
     sess.name||sess.email,
-    `${sess.email}\nRole: ${roleLabel}\n\nSign out of fête?`,
+    `${sess.email}\nRole: ${roleLabel}\n\nSign out of fÃªte?`,
     ()=>{ Auth.logout(); }
   );
   document.getElementById('confirm-ok').textContent='Sign Out';
   document.getElementById('confirm-ok').style.background='var(--rose-d)';
 }
 
-// Role-gate wrappers — show toast if insufficient permission
+// Role-gate wrappers â€” show toast if insufficient permission
 function _requireOrganizer(fn){
   return function(...args){
-    if(!Auth.isOrganizer(DB.activeEvent)){toast('⚠️ Only Organisers can do this');return;}
+    if(!Auth.isOrganizer(DB.activeEvent)){toast('âš ï¸ Only Organisers can do this');return;}
     return fn(...args);
   };
 }
 function _requireCash(fn){
   return function(...args){
-    if(!Auth.isCash(DB.activeEvent)){toast('⚠️ Only Organisers or Cash Collectors can do this');return;}
+    if(!Auth.isCash(DB.activeEvent)){toast('âš ï¸ Only Organisers or Cash Collectors can do this');return;}
     return fn(...args);
   };
 }
 function _requireRoom(fn){
   return function(...args){
-    if(!Auth.isRoom(DB.activeEvent)){toast('⚠️ Only Organisers or Room Coordinators can do this');return;}
+    if(!Auth.isRoom(DB.activeEvent)){toast('âš ï¸ Only Organisers or Room Coordinators can do this');return;}
     return fn(...args);
   };
 }
@@ -2653,10 +2708,11 @@ const addRoomLocationGated=_requireRoom(addRoomLocation);
 const assignGuestToRoomGated=_requireRoom(assignGuestToRoom);
 const unassignGuestRoomGated=_requireRoom(unassignGuestRoom);
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // PUBLIC API
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 window.App={
+  togglePastEvents(show){_showPastEvents=!!show; renderEvents();},
   switchTab,openModal: window.openModal,closeModal,
   openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,saveEvent,confirmDeleteEvent:confirmDeleteEventGated,
   setActive,
@@ -2688,9 +2744,9 @@ window.App={
 window.setMoiTy=setMoiTy;
 window.setMoiFilter=setMoiFilter;
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // INIT
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Pre-populate profile modal
 document.getElementById('prof-name').value=DB.profile.name||'';
 document.getElementById('prof-email').value=DB.profile.email||'';
@@ -2716,19 +2772,20 @@ if(false && DB.events.length===0){
     {id:gids[5],eventId:eid,first:'Rohan',last:'Gupta',contact:'+91 98600 66666',party:1,rsvp:'declined',notes:'',table:''},
   ];
   DB.gifts=[
-    {id:uid(),eventId:eid,desc:'Silk saree set (Kanjivaram)',from:'Divya Sharma',value:15000,cat:'💝',ty:'sent',notes:''},
-    {id:uid(),eventId:eid,desc:'KitchenAid Stand Mixer',from:'Karthik Nair',value:28000,cat:'🏠',ty:'pending',notes:'Red colour'},
-    {id:uid(),eventId:eid,desc:'Crystal dinner set',from:'Ananya Iyer',value:12000,cat:'🏠',ty:'drafted',notes:'12 piece'},
-    {id:uid(),eventId:eid,isMoi:true,desc:'Moi',from:'Vikram Singh',value:5001,cat:'💵',ty:'sent',notes:'Cash'},
-    {id:uid(),eventId:eid,isMoi:true,desc:'Moi',from:'Rohan Gupta',value:2100,cat:'💵',ty:'pending',notes:''},
-    {id:uid(),eventId:eid,isMoi:true,desc:'Moi',from:'Sneha Patel',value:3000,cat:'💵',ty:'pending',notes:'Online transfer'},
+    {id:uid(),eventId:eid,desc:'Silk saree set (Kanjivaram)',from:'Divya Sharma',value:15000,cat:'ðŸ’',ty:'sent',notes:''},
+    {id:uid(),eventId:eid,desc:'KitchenAid Stand Mixer',from:'Karthik Nair',value:28000,cat:'ðŸ ',ty:'pending',notes:'Red colour'},
+    {id:uid(),eventId:eid,desc:'Crystal dinner set',from:'Ananya Iyer',value:12000,cat:'ðŸ ',ty:'drafted',notes:'12 piece'},
+    {id:uid(),eventId:eid,isMoi:true,desc:'Cash Gift',from:'Vikram Singh',value:5001,cat:'ðŸ’µ',ty:'sent',notes:'Cash'},
+    {id:uid(),eventId:eid,isMoi:true,desc:'Cash Gift',from:'Rohan Gupta',value:2100,cat:'ðŸ’µ',ty:'pending',notes:''},
+    {id:uid(),eventId:eid,isMoi:true,desc:'Cash Gift',from:'Sneha Patel',value:3000,cat:'ðŸ’µ',ty:'pending',notes:'Online transfer'},
   ];
   save();
   // Seed organizer for demo event based on current session
   Auth.addCreatorAsOrganizer(eid);
 }
 
-// Initialize auth — shows login screen or app based on session
+// Initialize auth â€” shows login screen or app based on session
 Auth.init();
 
 render();
+

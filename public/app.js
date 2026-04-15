@@ -1197,15 +1197,24 @@ function renderGuests(){
       if(i>0&&i%15===0&&!DB.premium){
         listHtml+=`<div class="ad-inline"><span>🎂 Order a custom cake at <strong>FNP</strong> – Free delivery</span><span class="adlbl" style="font-size:9px">AD</span></div>`;
       }
-      const ini=initials(g.first,g.last);
+      const first=g.first||'Guest';
+      const last=g.last||'';
+      const party=g.party||1;
+      const contact=g.contact||'';
+      const email=g.email||'';
+      const table=g.table||'';
+      const notes=g.notes||'';
+      const rsvp=(g.rsvp||'invited').toLowerCase();
+      const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
+      const ini=initials(first,last);
       listHtml+=`<div class="g-row anim" onclick="App.openGuestDetail('${g.id}')">
         <div class="g-av" style="${avStyle(g.id)}">${ini}</div>
         <div class="g-info">
-          <div class="g-name">${g.first} ${g.last}</div>
-          <div class="g-detail">Peoples: ${g.party||1}${g.contact?' · '+g.contact:''}${g.email?' · '+g.email:''}${g.table?' · '+g.table:''}${getGuestRoomAssignments(g).length?` · 🏨 ${formatGuestRooms(g)}`:''}${g.notes?' · '+g.notes:''}</div>
+          <div class="g-name">${first} ${last}</div>
+          <div class="g-detail">Peoples: ${party}${contact?' · '+contact:''}${email?' · '+email:''}${table?' · '+table:''}${getGuestRoomAssignments(g).length?` · 🏨 ${formatGuestRooms(g)}`:''}${notes?' · '+notes:''}</div>
         </div>
         <div class="g-actions">
-          <button class="rsvp-btn r-${g.rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${g.rsvp.charAt(0).toUpperCase()+g.rsvp.slice(1)}</button>
+          <button class="rsvp-btn r-${rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${rsvpLabel}</button>
           <button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">✕</button>
         </div>
       </div>`;

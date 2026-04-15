@@ -9,6 +9,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Eventise">
 
+        <meta-data
+            android:name="asset_statements"
+            android:resource="@string/asset_statements" />
+
         <activity
             android:name=".LauncherActivity"
             android:exported="true"
@@ -17,6 +21,16 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- This intent-filter allows the app to handle links to your website -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="eventise.vercel.app" />
             </intent-filter>
 
             <meta-data

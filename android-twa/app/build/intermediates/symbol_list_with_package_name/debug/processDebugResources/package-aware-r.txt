@@ -921,6 +921,7 @@ string abc_shareactionprovider_share_with_application
 string abc_toolbar_collapse_description
 string androidx_startup
 string app_name
+string asset_statements
 string call_notification_answer_action
 string call_notification_answer_video_action
 string call_notification_decline_action

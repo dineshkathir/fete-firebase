@@ -13,16 +13,16 @@
 12        <intent>
 12-->[com.google.androidbrowserhelper:androidbrowserhelper:2.4.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\32b51df433d1e76c8652e92c4555094a\transformed\androidbrowserhelper-2.4.0\AndroidManifest.xml:27:9-33:18
 13            <action android:name="android.intent.action.VIEW" />
-13-->[com.google.androidbrowserhelper:androidbrowserhelper:2.4.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\32b51df433d1e76c8652e92c4555094a\transformed\androidbrowserhelper-2.4.0\AndroidManifest.xml:28:13-65
-13-->[com.google.androidbrowserhelper:androidbrowserhelper:2.4.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\32b51df433d1e76c8652e92c4555094a\transformed\androidbrowserhelper-2.4.0\AndroidManifest.xml:28:21-62
+13-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:28:17-69
+13-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:28:25-66
 14
 15            <category android:name="android.intent.category.BROWSABLE" />
-15-->[com.google.androidbrowserhelper:androidbrowserhelper:2.4.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\32b51df433d1e76c8652e92c4555094a\transformed\androidbrowserhelper-2.4.0\AndroidManifest.xml:30:13-74
-15-->[com.google.androidbrowserhelper:androidbrowserhelper:2.4.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\32b51df433d1e76c8652e92c4555094a\transformed\androidbrowserhelper-2.4.0\AndroidManifest.xml:30:23-71
+15-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:30:17-78
+15-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:30:27-75
 16
 17            <data android:scheme="https" />
-17-->[com.google.androidbrowserhelper:androidbrowserhelper:2.4.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\32b51df433d1e76c8652e92c4555094a\transformed\androidbrowserhelper-2.4.0\AndroidManifest.xml:32:13-44
-17-->[com.google.androidbrowserhelper:androidbrowserhelper:2.4.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\32b51df433d1e76c8652e92c4555094a\transformed\androidbrowserhelper-2.4.0\AndroidManifest.xml:32:19-41
+17-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:31:17-33:58
+17-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:32:21-43
 18        </intent>
 19    </queries>
 20
@@ -38,7 +38,7 @@
 25-->[androidx.core:core:1.13.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\76aef4f9a5fe3f4a692433aadca88359\transformed\core-1.13.0\AndroidManifest.xml:26:22-94
 26
 27    <application
-27-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:4:5-52:19
+27-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:4:5-62:19
 28        android:allowBackup="true"
 28-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:5:9-35
 29        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
@@ -53,142 +53,173 @@
 34-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:8:9-50
 35        android:supportsRtl="true"
 35-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:9:9-35
-36        android:testOnly="true"
-37        android:theme="@style/Theme.Eventise" >
-37-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:10:9-46
-38        <activity
-38-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:12:9-41:20
-39            android:name="com.eventise.twa.LauncherActivity"
-39-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:13:13-45
-40            android:exported="true"
-40-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:14:13-36
-41            android:launchMode="singleTask"
-41-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:15:13-44
-42            android:theme="@style/Theme.Eventise" >
-42-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:16:13-50
-43            <intent-filter>
-43-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:17:13-20:29
-44                <action android:name="android.intent.action.MAIN" />
-44-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:18:17-69
-44-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:18:25-66
-45
-46                <category android:name="android.intent.category.LAUNCHER" />
-46-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:19:17-77
-46-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:19:27-74
-47            </intent-filter>
+36        android:theme="@style/Theme.Eventise" >
+36-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:10:9-46
+37        <meta-data
+37-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:12:9-14:59
+38            android:name="asset_statements"
+38-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:13:13-44
+39            android:resource="@string/asset_statements" />
+39-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:14:13-56
+40
+41        <activity
+41-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:16:9-51:20
+42            android:name="com.eventise.twa.LauncherActivity"
+42-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:17:13-45
+43            android:exported="true"
+43-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:18:13-36
+44            android:launchMode="singleTask"
+44-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:19:13-44
+45            android:theme="@style/Theme.Eventise" >
+45-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:20:13-50
+46            <intent-filter>
+46-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:21:13-24:29
+47                <action android:name="android.intent.action.MAIN" />
+47-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:22:17-69
+47-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:22:25-66
 48
-49            <meta-data
-49-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:22:13-24:54
-50                android:name="android.support.customtabs.trusted.DEFAULT_URL"
-50-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:23:17-78
-51                android:value="@string/launch_url" />
-51-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:24:17-51
-52            <meta-data
-52-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:25:13-27:59
-53                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
-53-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:26:17-83
-54                android:resource="@color/brand_surface" />
-54-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:27:17-56
-55            <meta-data
-55-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:28:13-30:59
-56                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
-56-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:29:17-87
-57                android:resource="@color/brand_surface" />
-57-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:30:17-56
+49                <category android:name="android.intent.category.LAUNCHER" />
+49-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:23:17-77
+49-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:23:27-74
+50            </intent-filter>
+51
+52            <!-- This intent-filter allows the app to handle links to your website -->
+53            <intent-filter android:autoVerify="true" >
+53-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:27:13-34:29
+53-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:27:28-53
+54                <action android:name="android.intent.action.VIEW" />
+54-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:28:17-69
+54-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:28:25-66
+55
+56                <category android:name="android.intent.category.DEFAULT" />
+56-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:29:17-76
+56-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:29:27-73
+57                <category android:name="android.intent.category.BROWSABLE" />
+57-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:30:17-78
+57-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:30:27-75
 58
-59            <!-- Temporarily commented out to check if it launches without splash -->
-60            <!--
-61            <meta-data
-62                android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
-63                android:resource="@drawable/ic_splash" />
+59                <data
+59-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:31:17-33:58
+60                    android:host="eventise.vercel.app"
+60-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:33:21-55
+61                    android:scheme="https" />
+61-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:32:21-43
+62            </intent-filter>
+63
 64            <meta-data
-65                android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
-66                android:value="com.eventise.twa.fileprovider" />
-67            -->
-68        </activity>
-69
-70        <provider
-70-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:43:9-51:20
-71            android:name="androidx.core.content.FileProvider"
-71-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:44:13-62
-72            android:authorities="com.eventise.twa.fileprovider"
-72-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:45:13-64
-73            android:exported="false"
-73-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:46:13-37
-74            android:grantUriPermissions="true" >
-74-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:47:13-47
-75            <meta-data
-75-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:48:13-50:53
-76                android:name="android.support.FILE_PROVIDER_PATHS"
-76-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:49:17-67
-77                android:resource="@xml/filepaths" />
-77-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:50:17-50
-78        </provider>
-79        <provider
-79-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
-80            android:name="androidx.startup.InitializationProvider"
-80-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
-81            android:authorities="com.eventise.twa.debug.androidx-startup"
-81-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
-82            android:exported="false" >
-82-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
-83            <meta-data
-83-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
-84                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-84-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
-85                android:value="androidx.startup" />
-85-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+64-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:36:13-38:54
+65                android:name="android.support.customtabs.trusted.DEFAULT_URL"
+65-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:37:17-78
+66                android:value="@string/launch_url" />
+66-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:38:17-51
+67            <meta-data
+67-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:39:13-41:59
+68                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+68-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:40:17-83
+69                android:resource="@color/brand_surface" />
+69-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:41:17-56
+70            <meta-data
+70-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:42:13-44:59
+71                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
+71-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:43:17-87
+72                android:resource="@color/brand_surface" />
+72-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:44:17-56
+73            <meta-data
+73-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:45:13-47:58
+74                android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
+74-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:46:17-88
+75                android:resource="@drawable/ic_splash" />
+75-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:47:17-55
+76            <meta-data
+76-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:48:13-50:65
+77                android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
+77-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:49:17-90
+78                android:value="com.eventise.twa.fileprovider" />
+78-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:50:17-62
+79        </activity>
+80
+81        <provider
+81-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:53:9-61:20
+82            android:name="androidx.core.content.FileProvider"
+82-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:54:13-62
+83            android:authorities="com.eventise.twa.fileprovider"
+83-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:55:13-64
+84            android:exported="false"
+84-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:56:13-37
+85            android:grantUriPermissions="true" >
+85-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:57:13-47
 86            <meta-data
-86-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\d1229515bb8e591232f9bf3ba05cd66c\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
-87                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-87-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\d1229515bb8e591232f9bf3ba05cd66c\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
-88                android:value="androidx.startup" />
-88-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\d1229515bb8e591232f9bf3ba05cd66c\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
-89            <meta-data
-89-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
-90                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-90-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
-91                android:value="androidx.startup" />
-91-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
-92        </provider>
-93
-94        <receiver
-94-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
-95            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-95-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
-96            android:directBootAware="false"
-96-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
-97            android:enabled="true"
-97-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
-98            android:exported="true"
-98-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
-99            android:permission="android.permission.DUMP" >
-99-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
-100            <intent-filter>
-100-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
-101                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-101-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
-101-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
-102            </intent-filter>
-103            <intent-filter>
-103-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
-104                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-104-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
-104-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
-105            </intent-filter>
-106            <intent-filter>
-106-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
-107                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-107-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
-107-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
-108            </intent-filter>
-109            <intent-filter>
-109-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
-110                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-110-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
-110-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
-111            </intent-filter>
-112        </receiver>
-113    </application>
-114
-115</manifest>
+86-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:58:13-60:53
+87                android:name="android.support.FILE_PROVIDER_PATHS"
+87-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:59:17-67
+88                android:resource="@xml/filepaths" />
+88-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:60:17-50
+89        </provider>
+90        <provider
+90-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+91            android:name="androidx.startup.InitializationProvider"
+91-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+92            android:authorities="com.eventise.twa.debug.androidx-startup"
+92-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+93            android:exported="false" >
+93-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+94            <meta-data
+94-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+95                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+95-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+96                android:value="androidx.startup" />
+96-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\55106b33009ce70c5c8e1a11e9370d24\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+97            <meta-data
+97-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\d1229515bb8e591232f9bf3ba05cd66c\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
+98                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+98-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\d1229515bb8e591232f9bf3ba05cd66c\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
+99                android:value="androidx.startup" />
+99-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\d1229515bb8e591232f9bf3ba05cd66c\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
+100            <meta-data
+100-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+101                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+101-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+102                android:value="androidx.startup" />
+102-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+103        </provider>
+104
+105        <receiver
+105-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+106            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+106-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+107            android:directBootAware="false"
+107-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+108            android:enabled="true"
+108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+109            android:exported="true"
+109-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+110            android:permission="android.permission.DUMP" >
+110-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+111            <intent-filter>
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+112                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+112-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+112-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+113            </intent-filter>
+114            <intent-filter>
+114-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+115                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+115-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+115-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+116            </intent-filter>
+117            <intent-filter>
+117-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+118                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+118-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+118-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+119            </intent-filter>
+120            <intent-filter>
+120-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+121                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+121-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+121-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\e615c73671677aa4e1fac0e7975b84aa\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+122            </intent-filter>
+123        </receiver>
+124    </application>
+125
+126</manifest>

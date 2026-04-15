@@ -1757,7 +1757,7 @@ function updateBadges(){
   const roomsTab=document.getElementById('tab-rooms');
   const roomBadge=roomsTab?.querySelector('.tab-badge');
   if(roomBadge)roomBadge.remove();
-  if(roomsTab&&Auth.isRoom(DB.activeEvent)){
+  if(roomsTab&&Auth.isOrganizer(DB.activeEvent)){
     const roomPend=DB.guests.filter(g=>g.eventId===DB.activeEvent&&ensureGuestRequestDefaults(g).roomRequestStatus==='pending'&&g.roomRequestType!=='undecided').length;
     if(roomPend>0){
       const b=document.createElement('span');
@@ -2082,7 +2082,8 @@ function openGuestDetail(id){
   const rsvpOpts=['invited','attending','declined','pending'];
   const el=document.getElementById('guest-detail-content');
   const hasPhone=g.contact&&g.contact.replace(/\D/g,'').length>=10;
-  const canViewRoomRequest=Auth.isRoom(DB.activeEvent);
+  const canViewRoomRequest=Auth.isOrganizer(DB.activeEvent);
+  const canViewGuestFeedback=Auth.isOrganizer(DB.activeEvent);
   el.innerHTML=`
     <div class="detail-header">
       <div class="g-av" style="${avStyle(g.id)};width:44px;height:44px;font-size:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials(g.first,g.last)}</div>
@@ -2100,10 +2101,10 @@ function openGuestDetail(id){
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Rooms Requested</div><div class="info-val">${Math.max(1,parseInt(g.requestedRoomCount)||1)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Guests Staying</div><div class="info-val">${Math.max(1,parseInt(g.requestedStayCount)||g.party||1)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestNote?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Room Request Note</div><div class="info-val">${g.roomRequestNote}</div></div>`:''}
-      ${hasGuestFeedback?`<div class="info-cell"><div class="info-lbl">Food Rating</div><div class="info-val">${renderFeedbackStars(g.feedbackFoodRating)}</div></div>`:''}
-      ${hasGuestFeedback?`<div class="info-cell"><div class="info-lbl">Event Rating</div><div class="info-val">${renderFeedbackStars(g.feedbackEventRating)}</div></div>`:''}
-      ${hasGuestFeedback?`<div class="info-cell"><div class="info-lbl">Room Rating</div><div class="info-val">${renderFeedbackStars(g.feedbackRoomRating)}</div></div>`:''}
-      ${g.feedbackMessage?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Wishes and Feedback</div><div class="info-val">${g.feedbackMessage}</div></div>`:''}
+      ${canViewGuestFeedback&&hasGuestFeedback?`<div class="info-cell"><div class="info-lbl">Food Rating</div><div class="info-val">${renderFeedbackStars(g.feedbackFoodRating)}</div></div>`:''}
+      ${canViewGuestFeedback&&hasGuestFeedback?`<div class="info-cell"><div class="info-lbl">Event Rating</div><div class="info-val">${renderFeedbackStars(g.feedbackEventRating)}</div></div>`:''}
+      ${canViewGuestFeedback&&hasGuestFeedback?`<div class="info-cell"><div class="info-lbl">Room Rating</div><div class="info-val">${renderFeedbackStars(g.feedbackRoomRating)}</div></div>`:''}
+      ${canViewGuestFeedback&&g.feedbackMessage?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Wishes and Feedback</div><div class="info-val">${g.feedbackMessage}</div></div>`:''}
       ${g.notes?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Notes</div><div class="info-val">${g.notes}</div></div>`:''}
     </div>
     ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Room Request Actions</div>
@@ -2373,7 +2374,8 @@ function renderRooms(){
   }
   // build stats
   const guests=DB.guests.filter(g=>g.eventId===DB.activeEvent).map(g=>ensureGuestRequestDefaults(g));
-  const pendingRequests=guests.filter(g=>g.roomRequestStatus==='pending'&&g.roomRequestType!=='undecided');
+  const canReviewGuestRequests=Auth.isOrganizer(DB.activeEvent);
+  const pendingRequests=canReviewGuestRequests?guests.filter(g=>g.roomRequestStatus==='pending'&&g.roomRequestType!=='undecided'):[];
   const totalRooms=locs.reduce((a,l)=>a+l.rooms.length,0);
   const occupiedRooms=new Set(guests.flatMap(g=>getGuestRoomAssignments(g).map(room=>room.loc+'||'+room.no))).size;
   const vacantRooms=totalRooms-occupiedRooms;
@@ -3262,7 +3264,7 @@ window.App={
   openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,filterMoi,setMoiFilter,setMoiTy,
   _editingGift:()=>_editing.gift,
   openGuestRequestModal,openGuestFeedbackModal,openGuestFoodMenuModal,
-  submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
+  submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireOrganizer(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireOrganizer(resolveGuestRoomRequest),
   toggleGuestFoodLike,toggleGuestFoodSectionLike,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   saveProfile,openProfileModal,toggleSetting,unlockPremium,clearAllData,

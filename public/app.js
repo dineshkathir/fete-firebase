@@ -76,12 +76,14 @@ const Cloud = (() => {
       id: event.id,
       name: event.name || '',
       date: event.date || '',
+      time: event.time || '',
       type: event.type || 'wedding',
       location: event.location || '',
       locLat: event.locLat ?? null,
       locLon: event.locLon ?? null,
       color: event.color || 'rose',
       roomLocs: Array.isArray(event.roomLocs) ? event.roomLocs : [],
+      foodMenus: normalizeEventMenus(event.foodMenus),
       roomRequestsEnabled: event.roomRequestsEnabled !== false,
       feedbackEnabled: event.feedbackEnabled === true,
       createdAt: event.createdAt || Date.now(),
@@ -249,12 +251,14 @@ const Cloud = (() => {
       _isGuestOnly: !!event._isGuestOnly,
       name: event.name || '',
       date: event.date || '',
+      time: event.time || '',
       type: event.type || 'wedding',
       location: event.location || '',
       locLat: event.locLat ?? null,
       locLon: event.locLon ?? null,
       color: event.color || 'rose',
       roomLocs: Array.isArray(event.roomLocs) ? event.roomLocs : [],
+      foodMenus: normalizeEventMenus(event.foodMenus),
       roomRequestsEnabled: event.roomRequestsEnabled !== false,
       feedbackEnabled: event.feedbackEnabled === true,
       createdAt: event.createdAt || Date.now()
@@ -733,6 +737,34 @@ function isFeedbackEnabled(ev){
   return !!ev && ev.feedbackEnabled===true;
 }
 
+function normalizeEventMenus(foodMenus){
+  return Array.isArray(foodMenus)
+    ? foodMenus
+        .map(menu=>({
+          title:(menu?.title||'').trim(),
+          items:(menu?.items||'').trim()
+        }))
+        .filter(menu=>menu.title||menu.items)
+    : [];
+}
+
+function normalizeMenuItems(items){
+  return String(items||'')
+    .split(/\r?\n/)
+    .map(item=>item.trim())
+    .filter(Boolean);
+}
+
+function getFoodMenuLikeKey(menu, itemText){
+  return `${(menu?.title||'menu').trim().toLowerCase()}::${String(itemText||'').trim().toLowerCase()}`;
+}
+
+function ensureGuestFoodLikesDefaults(guest){
+  if(!guest) return guest;
+  if(!Array.isArray(guest.foodMenuLikes)) guest.foodMenuLikes=[];
+  return guest;
+}
+
 function ensureGuestFeedbackDefaults(guest){
   if(!guest) return guest;
   if(guest.feedbackFoodRating==null) guest.feedbackFoodRating=0;
@@ -751,6 +783,7 @@ function renderGuestFeedbackSection(ev, guest, prefix='gf'){
   ensureGuestFeedbackDefaults(guest);
   const feedbackEnabled=isFeedbackEnabled(ev);
   const canRateRoom=getGuestRoomAssignments(guest).length>0;
+  const hasFeedback=!!(guest.feedbackMessage||guest.feedbackUpdatedAt||guest.feedbackFoodRating||guest.feedbackEventRating||guest.feedbackRoomRating);
   const foodRating=Math.max(0,Math.min(5,parseInt(guest.feedbackFoodRating)||0));
   const eventRating=Math.max(0,Math.min(5,parseInt(guest.feedbackEventRating)||0));
   const roomRating=canRateRoom?Math.max(0,Math.min(5,parseInt(guest.feedbackRoomRating)||0)):0;
@@ -772,8 +805,11 @@ function renderGuestFeedbackSection(ev, guest, prefix='gf'){
         <label class="fl">Wishes and Feedback</label>
         <textarea class="fi" id="${prefix}-message" rows="4" style="resize:vertical" placeholder="Share your wishes, feedback, and suggestions...">${guest.feedbackMessage||''}</textarea>
       </div>
-      <button class="btn-p" style="background:var(--sage-d)" onclick="App.submitGuestFeedback('${prefix}')">Send Feedback</button>`
-      : `${submittedAt||guest.feedbackMessage||foodRating||eventRating||roomRating?`<div style="font-size:12px;color:var(--txt3);line-height:1.6">Your earlier feedback is saved${submittedAt?` from ${submittedAt}`:''}.</div>`:''}`}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-p" style="background:var(--sage-d);margin:0" onclick="App.submitGuestFeedback('${prefix}')">Send Feedback</button>
+        ${hasFeedback?`<button class="btn-s btn-danger" style="margin:0" onclick="App.clearGuestFeedback()">Remove Feedback</button>`:''}
+      </div>`
+      : `${hasFeedback?`<div style="font-size:12px;color:var(--txt3);line-height:1.6">Your earlier feedback is saved${submittedAt?` from ${submittedAt}`:''}.</div>`:''}`}
     </div>`;
 }
 
@@ -789,9 +825,62 @@ function openGuestFeedbackModal(eventId){
   ensureGuestFeedbackDefaults(me);
   document.getElementById('gf-title').textContent='Event Feedback';
   document.getElementById('gf-event-name').textContent=ev.name;
-  document.getElementById('gf-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
+  document.getElementById('gf-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.time?`⏰ ${ev.time}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
   document.getElementById('gf-content').innerHTML=renderGuestFeedbackSection(ev, me, 'gf-modal');
   openModal('guest-feedback');
+}
+
+function renderGuestFoodMenuSection(ev, guest, mode='portal'){
+  const menus=normalizeEventMenus(ev?.foodMenus);
+  if(!menus.length) return '';
+  ensureGuestFoodLikesDefaults(guest);
+  const likedKeys=new Set((guest.foodMenuLikes||[]).map(item=>String(item)));
+  return `<div class="guest-card${mode==='portal'?' anim':''}">
+      <div class="guest-card-title">Food Menu</div>
+      <div style="font-size:12px;color:var(--txt3);line-height:1.6;margin-bottom:12px">Tap the heart beside any item you love.</div>
+      <div style="display:grid;gap:10px">
+        ${menus.map((menu,sectionIdx)=>{
+          const items=normalizeMenuItems(menu.items);
+          return `<div style="padding:12px 14px;border-radius:var(--rs);background:var(--surf2);border:1px solid var(--bord2)">
+              <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:${items.length?'8px':'0'}">${menu.title||'Menu'}</div>
+              ${items.length
+                ? `<div style="display:grid;gap:8px">
+                    ${items.map((itemText,itemIdx)=>{
+                      const liked=likedKeys.has(getFoodMenuLikeKey(menu,itemText));
+                      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px;background:var(--surf);border:1px solid ${liked?'rgba(196,99,122,0.25)':'var(--bord2)'}">
+                          <div style="font-size:12.5px;color:var(--txt2);line-height:1.5">${itemText}</div>
+                          <button type="button" onclick="App.toggleGuestFoodLike(${sectionIdx},${itemIdx},'${ev.id}')" style="flex-shrink:0;min-width:40px;height:34px;border-radius:999px;border:1px solid ${liked?'var(--rose-d)':'var(--bord)'};background:${liked?'var(--rose-l)':'var(--surf)'};color:${liked?'var(--rose-d)':'var(--txt3)'};font-size:15px;font-weight:600;cursor:pointer">${liked?'♥':'♡'}</button>
+                        </div>`;
+                    }).join('')}
+                  </div>`
+                : `<div style="font-size:12px;color:var(--txt3);line-height:1.6">Menu details coming soon.</div>`}
+            </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function renderGuestFoodMenuModalContent(eventId){
+  const targetId=eventId||DB.activeEvent;
+  const ev=DB.events.find(e=>e.id===targetId);
+  const me=ensureGuestFoodLikesDefaults(getCurrentGuestInvite(targetId));
+  const contentEl=document.getElementById('gm-content');
+  if(!ev||!ev._isGuestOnly||!me||!contentEl) return;
+  document.getElementById('gm-title').textContent='Food Menu';
+  document.getElementById('gm-event-name').textContent=ev.name;
+  document.getElementById('gm-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.time?`⏰ ${ev.time}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
+  contentEl.innerHTML=renderGuestFoodMenuSection(ev, me, 'modal');
+}
+
+function openGuestFoodMenuModal(eventId){
+  const targetId=eventId||DB.activeEvent;
+  const ev=DB.events.find(e=>e.id===targetId);
+  if(!ev||!ev._isGuestOnly){toast('⚠️ Food menu not available');return;}
+  if(!normalizeEventMenus(ev.foodMenus).length){toast('ℹ️ Food menu not added yet');return;}
+  DB.activeEvent=targetId;
+  save();
+  renderGuestFoodMenuModalContent(targetId);
+  openModal('guest-menu');
 }
 
 let _toastTimer;
@@ -808,6 +897,8 @@ function toast(msg){
 // ═══════════════════════════════════════════════
 let _editing={event:null,guest:null,gift:null};
 let _roomLocsTemp=[];
+let _eventMenusTemp=[];
+let _eventMenuEditorDisabled=false;
 let _giftPhotoData=null;
 let _showPastEvents=false;
 
@@ -934,6 +1025,7 @@ function renderEvents(){
       </div>
       ${days!==null?`<div class="dash-cd">${days>0?'⏳ '+days+' days away':days===0?'🎉 Today!':'✅ Past event'}</div>`:''}
       ${ae._isGuestOnly?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()">
+        ${normalizeEventMenus(ae.foodMenus).length?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFoodMenuModal('${ae.id}')">Food Menu</button>`:''}
         <button class="ev-btn" onclick="App.setActive('${ae.id}');${isRoomRequestEnabled(ae)?`App.openGuestRequestModal('${ae.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ae)?'Request Room':'View Rooms'}</button>
         ${isFeedbackEnabled(ae)?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFeedbackModal('${ae.id}')">Feedback</button>`:''}
       </div>`:''}
@@ -958,6 +1050,7 @@ function renderEvents(){
         </div>
         <div class="ev-meta">
           ${ev.date?`<span class="ev-meta-item">📅 ${fmtDate(ev.date)}</span>`:''}
+          ${ev.time?`<span class="ev-meta-item">⏰ ${ev.time}</span>`:''}
           ${ev.location?`<span class="ev-meta-item"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.location)}" target="_blank" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">📍 ${ev.location}</a></span>`:''}
         </div>
         <div class="ev-stats">
@@ -966,11 +1059,13 @@ function renderEvents(){
           <div class="ev-stat"><span class="ev-stat-n">${att}</span><span class="ev-stat-l">Attending</span></div>
           <div class="ev-stat"><span class="ev-stat-n">${giftc.length}</span><span class="ev-stat-l">Gifts</span></div>`}
         </div>
+        ${normalizeEventMenus(ev.foodMenus).length?`<div style="font-size:11.5px;color:var(--txt3);margin-top:10px">🍽 ${normalizeEventMenus(ev.foodMenus).length} menu section${normalizeEventMenus(ev.foodMenus).length!==1?'s':''} added</div>`:''}
         <div class="ev-footer">
           ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?'⏳ '+days+' days':days===0?'🎉 Today!':'✅ Past'}</span>`:'<span></span>'}
           <div class="ev-actions">
             ${ev._isGuestOnly
-              ?`${isFeedbackEnabled(ev)?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFeedbackModal('${ev.id}')">Feedback</button>`:''}
+              ?`${normalizeEventMenus(ev.foodMenus).length?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFoodMenuModal('${ev.id}')">Food Menu</button>`:''}
+            ${isFeedbackEnabled(ev)?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFeedbackModal('${ev.id}')">Feedback</button>`:''}
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
               :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>`}
@@ -1097,6 +1192,7 @@ function renderGuestPortal(){
     return;
   }
   ensureGuestFeedbackDefaults(me);
+  ensureGuestFoodLikesDefaults(me);
   const statusClass=me.roomRequestStatus==='fulfilled'?'fulfilled':me.roomRequestStatus==='pending'?'pending':'none';
   const assignedRoom=formatGuestRooms(me);
   const requestType=me.roomRequestType||'undecided';
@@ -1114,8 +1210,17 @@ function renderGuestPortal(){
       <div class="guest-title">${ev.name}</div>
       <div class="guest-sub">
         ${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}
+        ${ev.time?`⏰ ${ev.time}<br>`:''}
         ${ev.location?`📍 ${ev.location}<br>`:''}
         👤 ${me.first} ${me.last}
+      </div>
+    </div>`+
+    `<div class="guest-card anim">
+      <div class="guest-card-title">Event Schedule</div>
+      <div style="font-size:13px;color:var(--txt2);line-height:1.7">
+        ${ev.date?`Date: ${fmtDate(ev.date)}<br>`:''}
+        ${ev.time?`Time: ${ev.time}<br>`:''}
+        ${ev.location?`Location: ${ev.location}`:'Location will be shared by the organiser.'}
       </div>
     </div>`+
     `<div class="guest-card anim">
@@ -1160,7 +1265,8 @@ function renderGuestPortal(){
       </div>
       <button class="btn-p" style="background:var(--slate-d)" onclick="App.submitGuestRoomRequest()">Send Room Request</button>`
       : `<div style="font-size:12px;color:var(--txt3);line-height:1.6;margin-top:12px">Room requests are currently closed. Any room assignment made by the organiser or room coordinator will still appear above.</div>`}
-    </div>`;
+    </div>`+
+    renderGuestFoodMenuSection(ev, me, 'portal');
 }
 
 function openGuestRequestModal(eventId){
@@ -1180,7 +1286,7 @@ function openGuestRequestModal(eventId){
   if(!me){toast('⚠️ Guest record not found');return;}
   document.getElementById('gr-title').textContent='Request Room';
   document.getElementById('gr-event-name').textContent=ev.name;
-  document.getElementById('gr-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
+  document.getElementById('gr-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.time?`⏰ ${ev.time}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
   document.getElementById('gr-room-status').textContent=formatGuestRooms(me);
   document.getElementById('gr-room-request-type').value=me.roomRequestType||'undecided';
   document.getElementById('gr-requested-rooms').value=Math.max(1,parseInt(me.requestedRoomCount)||1);
@@ -1576,9 +1682,16 @@ function updateBadges(){
 // ═══════════════════════════════════════════════
 function openAddEvent(){
   _editing.event=null;
+  _eventMenuEditorDisabled=false;
   document.getElementById('mo-event-title').textContent='New Event';
   document.getElementById('ev-name').value='';
   document.getElementById('ev-date').value='';
+  const timeEl=document.getElementById('ev-time');
+  if(timeEl){
+    timeEl.value='';
+    timeEl.disabled=false;
+    timeEl.style.opacity='1';
+  }
   document.getElementById('ev-type').value='wedding';
   const locInp=document.getElementById('ev-loc');
   if(locInp){locInp.value='';locInp.dataset.lat='';locInp.dataset.lon='';}
@@ -1595,7 +1708,9 @@ function openAddEvent(){
   document.getElementById('ev-feedback-enabled').closest('label').style.opacity='1';
   document.getElementById('del-event-btn').style.display='none';
   _roomLocsTemp=[];
+  _eventMenusTemp=[];
   renderRoomLocsEditor();
+  renderEventMenusEditor();
   openModal('add-event');
 }
 
@@ -1607,6 +1722,12 @@ function openEditEvent(id){
   document.getElementById('mo-event-title').textContent=isOrg?'Edit Event':'Configure Rooms';
   document.getElementById('ev-name').value=ev.name||'';
   document.getElementById('ev-date').value=ev.date||'';
+  const timeEl=document.getElementById('ev-time');
+  if(timeEl){
+    timeEl.value=ev.time||'';
+    timeEl.disabled=!isOrg;
+    timeEl.style.opacity=isOrg?'1':'0.6';
+  }
   document.getElementById('ev-type').value=ev.type||'wedding';
   const locInp=document.getElementById('ev-loc');
   if(locInp){locInp.value=ev.location||'';}
@@ -1636,7 +1757,10 @@ function openEditEvent(id){
   document.getElementById('del-event-btn').style.display=isOrg?'block':'none';
   // load room locations
   _roomLocsTemp=JSON.parse(JSON.stringify(ev.roomLocs||[]));
+  _eventMenuEditorDisabled=!isOrg;
+  _eventMenusTemp=JSON.parse(JSON.stringify(normalizeEventMenus(ev.foodMenus)));
   renderRoomLocsEditor();
+  renderEventMenusEditor();
   // restore map preview if coords saved
   if(ev.locLat&&ev.locLon){
     const frame=document.getElementById('loc-map-frame');
@@ -1661,6 +1785,7 @@ async function saveEvent(){
   const locVal=locInp?locInp.value.trim():'';
   const locLat=locInp?parseFloat(locInp.dataset.lat)||null:null;
   const locLon=locInp?parseFloat(locInp.dataset.lon)||null:null;
+  const eventTime=document.getElementById('ev-time').value.trim();
   const roomRequestsEnabledEl=document.getElementById('ev-room-requests-enabled');
   const feedbackEnabledEl=document.getElementById('ev-feedback-enabled');
   let savedEvent=null;
@@ -1668,16 +1793,20 @@ async function saveEvent(){
     const ev=DB.events.find(e=>e.id===_editing.event);
     if(ev){
       const isOrg=Auth.isOrganizer(ev.id);
-      ev.name=name;
-      ev.date=document.getElementById('ev-date').value;
-      ev.type=document.getElementById('ev-type').value;
-      ev.location=locVal;
-      if(locLat)ev.locLat=locLat;
-      if(locLon)ev.locLon=locLon;
-      ev.color=document.getElementById('ev-color').value;
       ev.roomLocs=JSON.parse(JSON.stringify(_roomLocsTemp));
-      if(isOrg&&roomRequestsEnabledEl) ev.roomRequestsEnabled=roomRequestsEnabledEl.checked;
-      if(isOrg&&feedbackEnabledEl) ev.feedbackEnabled=feedbackEnabledEl.checked;
+      if(isOrg){
+        ev.name=name;
+        ev.date=document.getElementById('ev-date').value;
+        ev.time=eventTime;
+        ev.type=document.getElementById('ev-type').value;
+        ev.location=locVal;
+        ev.locLat=locLat;
+        ev.locLon=locLon;
+        ev.color=document.getElementById('ev-color').value;
+        ev.foodMenus=JSON.parse(JSON.stringify(normalizeEventMenus(_eventMenusTemp)));
+        if(roomRequestsEnabledEl) ev.roomRequestsEnabled=roomRequestsEnabledEl.checked;
+        if(feedbackEnabledEl) ev.feedbackEnabled=feedbackEnabledEl.checked;
+      }
       savedEvent=ev;
     }
     toast('✅ Event updated');
@@ -1685,11 +1814,13 @@ async function saveEvent(){
     const ev={
       id:uid(),name,
       date:document.getElementById('ev-date').value,
+      time:eventTime,
       type:document.getElementById('ev-type').value,
       location:locVal,
       locLat,locLon,
       color:document.getElementById('ev-color').value,
       roomLocs:JSON.parse(JSON.stringify(_roomLocsTemp)),
+      foodMenus:JSON.parse(JSON.stringify(normalizeEventMenus(_eventMenusTemp))),
       roomRequestsEnabled:roomRequestsEnabledEl?roomRequestsEnabledEl.checked:true,
       feedbackEnabled:feedbackEnabledEl?feedbackEnabledEl.checked:false,
       createdAt:Date.now()
@@ -1824,6 +1955,7 @@ function saveGuest(){
       feedbackEventRating:0,
       feedbackRoomRating:0,
       feedbackMessage:'',
+      foodMenuLikes:[],
       createdAt:Date.now()
     });
     toast(`👤 ${first} added!`);
@@ -1909,6 +2041,50 @@ function openGuestDetail(id){
 // ═══════════════════════════════════════════════
 // ROOM LOCATION MANAGEMENT
 // ═══════════════════════════════════════════════
+
+function renderEventMenusEditor(){
+  const container=document.getElementById('ev-food-menus');
+  const addBtn=document.getElementById('ev-food-menu-add-btn');
+  if(addBtn) addBtn.style.display=_eventMenuEditorDisabled?'none':'block';
+  if(!container) return;
+  if(_eventMenusTemp.length===0){
+    container.innerHTML=`<div style="font-size:12px;color:var(--txt3);line-height:1.6">Add one or more menu sections like Breakfast, Lunch, or Evening Snacks.</div>`;
+    return;
+  }
+  container.innerHTML=_eventMenusTemp.map((menu,idx)=>`
+    <div class="room-loc-block">
+      <div class="room-loc-name" style="margin-bottom:10px">
+        <input style="flex:1;background:transparent;border:none;outline:none;font-size:12.5px;font-weight:600;color:var(--txt2);font-family:'Plus Jakarta Sans',sans-serif" value="${menu.title||''}" placeholder="Section title (e.g. Breakfast)" oninput="App._updateEventMenuTitle(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''} />
+        ${_eventMenuEditorDisabled?'':`<button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 0 0 6px" onclick="App._removeEventMenu(${idx})" title="Remove menu section">✕</button>`}
+      </div>
+      <textarea class="fi" rows="4" style="resize:vertical" placeholder="Enter each menu item on a new line" oninput="App._updateEventMenuItems(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''}>${menu.items||''}</textarea>
+    </div>`).join('');
+}
+
+function addEventMenu(){
+  _eventMenusTemp.push({title:'',items:''});
+  renderEventMenusEditor();
+}
+function _updateEventMenuTitle(idx,val){ if(_eventMenusTemp[idx]) _eventMenusTemp[idx].title=val; }
+function _updateEventMenuItems(idx,val){ if(_eventMenusTemp[idx]) _eventMenusTemp[idx].items=val; }
+function _removeEventMenu(idx){
+  _eventMenusTemp.splice(idx,1);
+  renderEventMenusEditor();
+}
+
+function renderEventMenusDisplay(ev){
+  const menus=normalizeEventMenus(ev?.foodMenus);
+  if(!menus.length) return '';
+  return `<div class="guest-card">
+      <div class="guest-card-title">Food Menu</div>
+      <div style="display:grid;gap:10px">
+        ${menus.map(menu=>`<div style="padding:12px 14px;border-radius:var(--rs);background:var(--surf2);border:1px solid var(--bord2)">
+            <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:6px">${menu.title||'Menu'}</div>
+            <div style="font-size:12px;color:var(--txt2);line-height:1.7;white-space:pre-line">${menu.items||'Menu details coming soon.'}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
 
 function renderRoomLocsEditor(){
   const container=document.getElementById('ev-room-locs');
@@ -2353,6 +2529,49 @@ function submitGuestFeedback(prefix='gf'){
   me.feedbackUpdatedAt=Date.now();
   save();syncActiveEventData();renderGuestPortal();render();
   toast('✅ Feedback sent');
+}
+
+function clearGuestFeedback(){
+  const ev=DB.events.find(e=>e.id===DB.activeEvent);
+  if(!ev||!ev._isGuestOnly){toast('⚠️ Guest feedback not available');return;}
+  const me=getCurrentGuestInvite(ev.id);
+  if(!me){toast('⚠️ Guest record not found');return;}
+  me.feedbackFoodRating=0;
+  me.feedbackEventRating=0;
+  me.feedbackRoomRating=0;
+  me.feedbackMessage='';
+  me.feedbackUpdatedAt=null;
+  save();syncActiveEventData();renderGuestPortal();render();
+  const content=document.getElementById('gf-content');
+  if(content&&document.getElementById('mo-guest-feedback')?.classList.contains('open')){
+    content.innerHTML=renderGuestFeedbackSection(ev, me, 'gf-modal');
+  }
+  toast('🗑️ Feedback removed');
+}
+
+function toggleGuestFoodLike(sectionIdx,itemIdx,eventId){
+  const targetId=eventId||DB.activeEvent;
+  const ev=DB.events.find(e=>e.id===targetId);
+  if(!ev||!ev._isGuestOnly){toast('⚠️ Food menu not available');return;}
+  const me=ensureGuestFoodLikesDefaults(getCurrentGuestInvite(targetId));
+  if(!me){toast('⚠️ Guest record not found');return;}
+  const menus=normalizeEventMenus(ev.foodMenus);
+  const menu=menus[sectionIdx];
+  const itemText=normalizeMenuItems(menu?.items)[itemIdx];
+  if(!menu||!itemText) return;
+  const key=getFoodMenuLikeKey(menu,itemText);
+  const liked=new Set((me.foodMenuLikes||[]).map(item=>String(item)));
+  if(liked.has(key)) liked.delete(key);
+  else liked.add(key);
+  me.foodMenuLikes=Array.from(liked);
+  me.foodMenuLikesUpdatedAt=Date.now();
+  save();
+  syncActiveEventData();
+  renderGuestPortal();
+  render();
+  if(document.getElementById('mo-guest-menu')?.classList.contains('open')){
+    renderGuestFoodMenuModalContent(targetId);
+  }
 }
 
 function scrollGuestsToFeedback(){
@@ -2903,12 +3122,14 @@ window.App={
   setGiftTab,setGiftCatFilter,selectCat,
   openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,filterMoi,setMoiFilter,setMoiTy,
   _editingGift:()=>_editing.gift,
-  openGuestRequestModal,openGuestFeedbackModal,
-  submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
+  openGuestRequestModal,openGuestFeedbackModal,openGuestFoodMenuModal,
+  submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
+  toggleGuestFoodLike,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   saveProfile,openProfileModal,toggleSetting,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,
+  addEventMenu,_updateEventMenuTitle,_updateEventMenuItems,_removeEventMenu,
   addRoomLocation:addRoomLocationGated,_updateLocName,_removeLocation,_addRoom,_removeRoom,
   populateRoomSelects,refreshRoomNumbers,checkRoomConflict,sendGuestInvite,
   renderRooms,openRoomDetail,

@@ -529,6 +529,12 @@ body{overscroll-behavior:none}
         <input class="fi" type="date" id="ev-date" />
       </div>
       <div class="fg">
+        <label class="fl">Time</label>
+        <input class="fi" type="text" id="ev-time" placeholder="e.g. 10:00 AM - 2:00 PM" />
+      </div>
+    </div>
+    <div class="fr">
+      <div class="fg">
         <label class="fl">Type</label>
         <select class="fi" id="ev-type">
           <option value="wedding">💍 Wedding</option>
@@ -563,6 +569,11 @@ body{overscroll-behavior:none}
       <label class="fl">🏨 Room Locations</label>
       <div id="ev-room-locs"></div>
       <button class="add-loc-btn" onclick="App.addRoomLocation()">＋ Add Location (Hall / Block / Floor)</button>
+    </div>
+    <div class="fg">
+      <label class="fl">Food Menu</label>
+      <div id="ev-food-menus"></div>
+      <button class="add-loc-btn" id="ev-food-menu-add-btn" onclick="App.addEventMenu()">ï¼‹ Add Menu Section</button>
     </div>
     <div class="fg">
       <label class="fl">Guest Room Requests</label>
@@ -978,6 +989,20 @@ body{overscroll-behavior:none}
     </div>
     <div id="gf-content"></div>
     <button class="btn-s" onclick="App.closeModal('guest-feedback')">Close</button>
+  </div>
+</div>
+
+<!-- GUEST FOOD MENU -->
+<div class="mo mo-center" id="mo-guest-menu">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="gm-title">Food Menu</div>
+    <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--gold-d);margin-bottom:4px" id="gm-event-name">Event</div>
+      <div style="font-size:11.5px;color:var(--txt3);line-height:1.6" id="gm-event-meta"></div>
+    </div>
+    <div id="gm-content"></div>
+    <button class="btn-s" onclick="App.closeModal('guest-menu')">Close</button>
   </div>
 </div>
 

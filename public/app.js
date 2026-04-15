@@ -715,7 +715,6 @@ function switchTab(tab) {
   const isGuestOnly = ev && ev._isGuestOnly;
 
   if (isGuestOnly && tab !== 'events' && tab !== 'settings') {
-    openGuestRequestModal(ev.id);
     tab = 'events';
   }
 
@@ -1635,6 +1634,15 @@ function openGuestDetail(id){
       ${canViewRoomRequest&&g.roomRequestNote?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Room Request Note</div><div class="info-val">${g.roomRequestNote}</div></div>`:''}
       ${g.notes?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Notes</div><div class="info-val">${g.notes}</div></div>`:''}
     </div>
+    ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Room Request Actions</div>
+    <div class="request-actions" style="margin:0 0 16px">
+      ${g.roomRequestStatus==='pending'&&g.roomRequestType==='needs_room'
+        ?`<button class="request-btn primary" onclick="App.prepareGuestRoomAssignment('${g.id}');App.closeModal('guest-detail')">Assign in Room Map</button>`
+        :g.roomRequestStatus==='pending'
+          ?`<button class="request-btn primary" onclick="App.resolveGuestRoomRequest('${g.id}','no_room_needed');App.openGuestDetail('${g.id}')">Mark Complete</button>`
+          :''}
+      ${g.roomLoc&&g.roomNo?`<button class="request-btn secondary" onclick="App.unassignGuestRoom('${g.id}');App.closeModal('guest-detail')">Remove Room</button>`:''}
+    </div>`:''}
     <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">RSVP Status</div>
     <div class="rsvp-big">
       ${rsvpOpts.map(s=>`<button class="rsvp-opt ${g.rsvp===s?'sel-'+s:''}" onclick="App.setRsvpDirect('${g.id}','${s}')">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join('')}
@@ -1968,6 +1976,7 @@ function prepareGuestRoomAssignment(gid){
   const g=DB.guests.find(x=>x.id===gid);
   if(!g){toast('⚠️ Guest not found');return;}
   _preferredRoomGuestId=gid;
+  switchTab('rooms');
   toast(`Choose a room for ${g.first} ${g.last}`);
 }
 

@@ -732,7 +732,7 @@ function switchTab(tab) {
   if (mainScroll) mainScroll.scrollTop = 0;
   
   const navTabs = document.querySelector('.tabs');
-  if (navTabs) navTabs.style.display = isGuestOnly ? 'none' : 'flex';
+  if (navTabs) navTabs.style.display = 'flex';
   const teamBtn = document.getElementById('hdr-team-btn');
   if (teamBtn) teamBtn.style.display = isGuestOnly ? 'none' : 'block';
   
@@ -1609,10 +1609,12 @@ function confirmDeleteGuest(id){
 function openGuestDetail(id){
   const g=DB.guests.find(x=>x.id===id);
   if(!g)return;
+  ensureGuestRequestDefaults(g);
   const linkedGifts=DB.gifts.filter(gi=>gi.eventId===DB.activeEvent&&gi.from&&gi.from.toLowerCase().includes((g.first+' '+g.last).toLowerCase().trim()));
   const rsvpOpts=['invited','attending','declined','pending'];
   const el=document.getElementById('guest-detail-content');
   const hasPhone=g.contact&&g.contact.replace(/\D/g,'').length>=10;
+  const canViewRoomRequest=Auth.isRoom(DB.activeEvent);
   el.innerHTML=`
     <div class="detail-header">
       <div class="g-av" style="${avStyle(g.id)};width:44px;height:44px;font-size:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials(g.first,g.last)}</div>
@@ -1626,6 +1628,11 @@ function openGuestDetail(id){
       ${g.table?`<div class="info-cell"><div class="info-lbl">Table / Group</div><div class="info-val">${g.table}</div></div>`:''}
       ${g.roomLoc?`<div class="info-cell"><div class="info-lbl">🏨 Room Location</div><div class="info-val">${g.roomLoc}</div></div>`:''}
       ${g.roomNo?`<div class="info-cell"><div class="info-lbl">🚪 Room Number</div><div class="info-val">${g.roomNo}</div></div>`:''}
+      ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Stay Request</div><div class="info-val">${roomRequestTypeLabel(g.roomRequestType)}</div></div>`:''}
+      ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Request Status</div><div class="info-val">${roomRequestStatusLabel(g.roomRequestStatus)}</div></div>`:''}
+      ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Rooms Requested</div><div class="info-val">${Math.max(1,parseInt(g.requestedRoomCount)||1)}</div></div>`:''}
+      ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Guests Staying</div><div class="info-val">${Math.max(1,parseInt(g.requestedStayCount)||g.party||1)}</div></div>`:''}
+      ${canViewRoomRequest&&g.roomRequestNote?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Room Request Note</div><div class="info-val">${g.roomRequestNote}</div></div>`:''}
       ${g.notes?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Notes</div><div class="info-val">${g.notes}</div></div>`:''}
     </div>
     <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">RSVP Status</div>
@@ -1791,7 +1798,8 @@ function renderRooms(){
   }
   // build stats
   const guests=DB.guests.filter(g=>g.eventId===DB.activeEvent).map(g=>ensureGuestRequestDefaults(g));
-  const pendingRequests=guests.filter(g=>g.roomRequestStatus==='pending'&&g.roomRequestType!=='undecided');
+  const submittedRequests=guests.filter(g=>g.roomRequestType!=='undecided');
+  const pendingRequests=submittedRequests.filter(g=>g.roomRequestStatus==='pending');
   const totalRooms=locs.reduce((a,l)=>a+l.rooms.length,0);
   const occupiedRooms=new Set(guests.filter(g=>g.roomLoc&&g.roomNo).map(g=>g.roomLoc+'||'+g.roomNo)).size;
   const vacantRooms=totalRooms-occupiedRooms;
@@ -1807,11 +1815,11 @@ function renderRooms(){
       <div class="room-legend-item"><div class="room-legend-dot" style="background:var(--rose)"></div>Occupied</div>
       <div class="room-legend-item"><div class="room-legend-dot" style="background:#E67E22"></div>Multiple guests</div>
     </div>`;
-  if(pendingRequests.length){
+  if(submittedRequests.length){
     html+=`<div class="guest-card">
-      <div class="guest-card-title">Pending Stay Requests</div>
+      <div class="guest-card-title">Guest Stay Requests</div>
       <div class="request-list">
-        ${pendingRequests.map(g=>`
+        ${submittedRequests.map(g=>`
           <div class="request-row">
             <div class="request-row-top">
               <div>
@@ -1821,13 +1829,15 @@ function renderRooms(){
                   ${g.roomLoc&&g.roomNo?`<br>Currently assigned: ${g.roomLoc} Room ${g.roomNo}`:''}
                 </div>
               </div>
-              <span class="guest-room-status pending">Pending</span>
+              <span class="guest-room-status ${g.roomRequestStatus==='fulfilled'?'fulfilled':g.roomRequestStatus==='pending'?'pending':'none'}">${roomRequestStatusLabel(g.roomRequestStatus)}</span>
             </div>
             ${g.roomRequestNote?`<div style="font-size:12px;color:var(--txt2);line-height:1.5">${g.roomRequestNote}</div>`:''}
             <div class="request-actions">
-              ${g.roomRequestType==='needs_room'
+              ${g.roomRequestStatus==='pending'&&g.roomRequestType==='needs_room'
                 ?`<button class="request-btn primary" onclick="App.prepareGuestRoomAssignment('${g.id}')">Assign in Room Map</button>`
-                :`<button class="request-btn primary" onclick="App.resolveGuestRoomRequest('${g.id}','no_room_needed')">Mark Complete</button>`}
+                :g.roomRequestStatus==='pending'
+                  ?`<button class="request-btn primary" onclick="App.resolveGuestRoomRequest('${g.id}','no_room_needed')">Mark Complete</button>`
+                  :''}
               <button class="request-btn secondary" onclick="App.openGuestDetail('${g.id}')">View Guest</button>
             </div>
           </div>`).join('')}

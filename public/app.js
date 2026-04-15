@@ -447,7 +447,7 @@ const Auth = (() => {
     document.getElementById('hdr-team-btn').style.display='block';
     Cloud.migrateLocalEvents(sess).catch(()=>Cloud.loadEventsForSession(sess).catch(()=>{}));
     render();
-    toast(`👋 Welcome, ${sess.name}!`);
+    toast(`Welcome, ${sess.name}!`);
   }
 
   // Role resolution: returns 'organizer'|'cash'|'room'|null for current user + active event
@@ -491,11 +491,11 @@ const Auth = (() => {
     saveTeam(eventId, team);
     const el = document.getElementById('team-member-list');
     if(!el) return;
-    if(team.length===0){el.innerHTML=`<div class="empty" style="padding:20px 0"><div class="empty-ico">👥</div><div class="empty-t" style="font-size:16px">No team members yet</div></div>`;return;}
+    if(team.length===0){el.innerHTML=`<div class="empty" style="padding:20px 0"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('guests',38)}</div><div class="empty-t" style="font-size:16px">No team members yet</div></div>`;return;}
     el.innerHTML = team.map(m=>{
       const memberEmail = (m.email||'').trim().toLowerCase();
       const isMe = m.userId===sess?.id || memberEmail===((sess?.email||'').trim().toLowerCase());
-      const roleLabel = m.role==='organizer'?'👑 Organizer':m.role==='cash'?'💵 Cash Collector':'🏨 Room Coord.';
+      const roleLabel = m.role==='organizer'?'Organizer':m.role==='cash'?'Cash Collector':'Room Coord.';
       const roleCls = m.role==='organizer'?'organizer':m.role==='cash'?'cash':'room';
       const ini = (m.name||m.email||'?')[0].toUpperCase();
       return `<div class="team-member-row">
@@ -1351,7 +1351,7 @@ function openGuestRequestModal(eventId){
   if(!me){toast('⚠️ Guest record not found');return;}
   document.getElementById('gr-title').textContent='Request Room';
   document.getElementById('gr-event-name').textContent=ev.name;
-  document.getElementById('gr-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.time?`⏰ ${fmtTime(ev.time)}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
+  document.getElementById('gr-event-meta').innerHTML=`${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}${ev.location?`${uiIcon('location',12)} ${ev.location}<br>`:''}${uiIcon('user',12)} ${me.first} ${me.last}`;
   document.getElementById('gr-room-status').textContent=formatGuestRooms(me);
   document.getElementById('gr-room-request-type').value=me.roomRequestType||'undecided';
   document.getElementById('gr-requested-rooms').value=Math.max(1,parseInt(me.requestedRoomCount)||1);
@@ -1394,10 +1394,10 @@ function renderGifts(){
 
   const tabBar=`<div style="display:flex;background:var(--surf2);border-radius:var(--rs);padding:3px;margin-bottom:14px;gap:3px">
     <button onclick="App.setGiftTab('gifts')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;background:${_giftTab==='gifts'?'var(--surf)':'transparent'};color:${_giftTab==='gifts'?'var(--rose-d)':'var(--txt3)'};box-shadow:${_giftTab==='gifts'?'var(--sh1)':'none'}">
-      🎁 Gifts${physGifts.length?` <span style="background:${_giftTab==='gifts'?'var(--rose-l)':'rgba(0,0,0,.06)'};color:${_giftTab==='gifts'?'var(--rose-d)':'var(--txt3)'};border-radius:10px;padding:1px 6px;font-size:10px">${allGifts.filter(g=>!g.isMoi).length}</span>`:''}
+      Gifts${physGifts.length?` <span style="background:${_giftTab==='gifts'?'var(--rose-l)':'rgba(0,0,0,.06)'};color:${_giftTab==='gifts'?'var(--rose-d)':'var(--txt3)'};border-radius:10px;padding:1px 6px;font-size:10px">${allGifts.filter(g=>!g.isMoi).length}</span>`:''}
     </button>
     <button onclick="App.setGiftTab('moi')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;background:${_giftTab==='moi'?'var(--surf)':'transparent'};color:${_giftTab==='moi'?'var(--gold-d)':'var(--txt3)'};box-shadow:${_giftTab==='moi'?'var(--sh1)':'none'}">
-      💵 Cash Gift${moiGifts.length?` <span style="background:${_giftTab==='moi'?'var(--gold-l)':'rgba(0,0,0,.06)'};color:${_giftTab==='moi'?'var(--gold-d)':'var(--txt3)'};border-radius:10px;padding:1px 6px;font-size:10px">${moiGifts.length}</span>`:''}
+      Cash Gift${moiGifts.length?` <span style="background:${_giftTab==='moi'?'var(--gold-l)':'rgba(0,0,0,.06)'};color:${_giftTab==='moi'?'var(--gold-d)':'var(--txt3)'};border-radius:10px;padding:1px 6px;font-size:10px">${moiGifts.length}</span>`:''}
     </button>
   </div>`;
 
@@ -1415,13 +1415,13 @@ function renderGifts(){
     const gm=DB.guests.find(gu=>gu.eventId===DB.activeEvent&&(gu.first+' '+gu.last).toLowerCase().trim()===(g.from||'').toLowerCase().trim());
     const avS=gm?avStyle(gm.id):'background:var(--surf3);color:var(--txt3)';
     const ini=gm?initials(gm.first,gm.last):(g.from||'?').charAt(0).toUpperCase();
-    const tyLabel=g.ty==='sent'?'✓ TY Sent':g.ty==='drafted'?'✏ Drafted':'⏳ Pending';
+    const tyLabel=g.ty==='sent'?'TY Sent':g.ty==='drafted'?'Drafted':'Pending';
     const tyDot=g.ty==='sent'?'var(--sage-d)':g.ty==='drafted'?'var(--slate-d)':'var(--gold-d)';
     return`<div class="gift-card anim" onclick="App.openEditGift('${g.id}')">
       <div class="gift-stripe" style="background:${meta.stripe}"></div>
       <div class="gift-inner">
         <div class="gift-top">
-          <div class="gift-ico" style="background:${meta.bg}">${g.cat||'📦'}</div>
+          <div class="gift-ico" style="background:${meta.bg}">${(meta.label||'Other').charAt(0)}</div>
           <div class="gift-body">
             <div class="gift-title">${g.desc}</div>
             <div class="gift-from-row">
@@ -1458,8 +1458,8 @@ function renderGifts(){
     const medalColor=rank===1?'#C09050':rank===2?'#9E9E9E':rank===3?'#9C6B3A':null;
     const tyBg=g.ty==='sent'?'var(--sage-l)':g.ty==='drafted'?'var(--slate-l)':'var(--gold-l)';
     const tyColor=g.ty==='sent'?'var(--sage-d)':g.ty==='drafted'?'var(--slate-d)':'var(--gold-d)';
-    const tyLabel=g.ty==='sent'?'✓ TY Sent':g.ty==='drafted'?'✏ Draft':'⏳ Pending';
-    const modeIcon=g.notes==='UPI / GPay'?'📲':g.notes==='Bank Transfer'?'🏦':g.notes==='Cheque'?'📄':g.notes==='Gold / Jewellery'?'💛':'💵';
+    const tyLabel=g.ty==='sent'?'TY Sent':g.ty==='drafted'?'Draft':'Pending';
+    const modeIcon='';
     const modeLabel=g.notes||'Cash';
     return`<div class="moi-row anim" data-moi="1" data-name="${(g.from||'').replace(/"/g,'')}" data-ty="${g.ty||'pending'}" onclick="App.openEditMoi('${g.id}')">
       <div style="position:relative;flex-shrink:0">
@@ -1468,7 +1468,7 @@ function renderGifts(){
       </div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13.5px;font-weight:500;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px">${g.from||'Unknown'}</div>
-        <div style="font-size:11px;color:var(--txt4);display:flex;align-items:center;gap:4px">${modeIcon} <span>${modeLabel}</span></div>
+        <div style="font-size:11px;color:var(--txt4);display:flex;align-items:center;gap:4px"><span>${modeLabel}</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">
         <div style="text-align:right">
@@ -1482,7 +1482,7 @@ function renderGifts(){
 
   let body='';
   if(!DB.activeEvent){
-    body=`<div class="empty"><div class="empty-ico">🎁</div><div class="empty-t">No event selected</div><div class="empty-s">Select one of your events to track gifts</div></div>`;
+    body=`<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('gift',42)}</div><div class="empty-t">No event selected</div><div class="empty-s">Select one of your events to track gifts</div></div>`;
     el.innerHTML=evSelHtml+body; return;
   }
 
@@ -1508,7 +1508,7 @@ function renderGifts(){
       body+=`<div class="ty-bar-wrap">
         <div class="ty-bar-top">
           <span class="ty-bar-label">Thank-you notes</span>
-          <span class="ty-bar-pct" style="color:${fillColor}">${tyPct===100?'All done! 🎉':tyPct+'% done'}</span>
+          <span class="ty-bar-pct" style="color:${fillColor}">${tyPct===100?'All done':tyPct+'% done'}</span>
         </div>
         <div class="ty-track"><div class="ty-fill" style="width:${tyPct}%;background:${fillColor}"></div></div>
       </div>`;
@@ -1518,18 +1518,18 @@ function renderGifts(){
     if(cats.length>1){
       body+=`<div class="cat-filters">
         <span class="cat-chip ${_giftCatFilter==='all'?'on':''}" style="${_giftCatFilter==='all'?'background:var(--txt);color:white;border-color:var(--txt)':''}" onclick="App.setGiftCatFilter('all')">All</span>
-        ${cats.map(c=>{const m=CAT_META[c]||CAT_META['📦'];return`<span class="cat-chip ${_giftCatFilter===c?'on':''}" style="${_giftCatFilter===c?m.chip+';border-color:transparent':''}" onclick="App.setGiftCatFilter('${c}')">${c} ${m.label}</span>`;}).join('')}
+        ${cats.map(c=>{const m=CAT_META[c]||CAT_META['📦'];return`<span class="cat-chip ${_giftCatFilter===c?'on':''}" style="${_giftCatFilter===c?m.chip+';border-color:transparent':''}" onclick="App.setGiftCatFilter('${c}')">${m.label}</span>`;}).join('')}
       </div>`;
     }
     const filtered=_giftCatFilter==='all'?physGifts:physGifts.filter(g=>g.cat===_giftCatFilter);
     body+=`<button class="fab" onclick="App.openAddGift()">＋ Log a Gift</button>`;
     if(physGifts.length===0){
-      body+=`<div class="empty"><div class="empty-ico">🎁</div><div class="empty-t">No gifts yet</div><div class="empty-s">Tap above to log your first gift</div></div>`;
+      body+=`<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('gift',42)}</div><div class="empty-t">No gifts yet</div><div class="empty-s">Tap above to log your first gift</div></div>`;
     } else if(filtered.length===0){
-      body+=`<div class="empty"><div class="empty-ico">🔍</div><div class="empty-t">None in this category</div></div>`;
+      body+=`<div class="empty"><div class="empty-ico" style="color:var(--txt3)">${uiIcon('search',42)}</div><div class="empty-t">None in this category</div></div>`;
     } else {
       filtered.forEach((g,i)=>{
-        if(i>0&&i%8===0&&!DB.premium) body+=`<div class="ad-inline"><span>✍️ Send cards at <strong>Hallmark</strong></span><span class="adlbl" style="font-size:9px">AD</span></div>`;
+        if(i>0&&i%8===0&&!DB.premium) body+=`<div class="ad-inline"><span>Send cards at <strong>Hallmark</strong></span><span class="adlbl" style="font-size:9px">AD</span></div>`;
         body+=giftCard(g);
       });
     }
@@ -1570,7 +1570,7 @@ function renderGifts(){
           <div style="font-size:9px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Pending</div>
         </div>
       </div>
-      ${moiGifts.length>0?`<div><div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:rgba(255,255,255,.5);margin-bottom:5px"><span>Thank-you progress</span><span style="font-weight:600;color:${moiPct===100?'#A5E5B8':'rgba(255,255,255,.7)'}">${moiPct===100?'All done! 🎉':moiPct+'%'}</span></div><div style="height:6px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden"><div style="height:100%;width:${moiPct}%;background:linear-gradient(90deg,#FFD07A,#A5E5B8);border-radius:3px;transition:width .6s ease"></div></div></div>`:''}
+      ${moiGifts.length>0?`<div><div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:rgba(255,255,255,.5);margin-bottom:5px"><span>Thank-you progress</span><span style="font-weight:600;color:${moiPct===100?'#A5E5B8':'rgba(255,255,255,.7)'}">${moiPct===100?'All done':moiPct+'%'}</span></div><div style="height:6px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden"><div style="height:100%;width:${moiPct}%;background:linear-gradient(90deg,#FFD07A,#A5E5B8);border-radius:3px;transition:width .6s ease"></div></div></div>`:''}
     </div>`;
 
     if(moiGifts.length>0){
@@ -1592,14 +1592,14 @@ function renderGifts(){
 
     body+=`<button class="fab" style="background:var(--gold-d);margin-bottom:12px" onclick="App.openAddMoi()">+ Add Cash Gift Entry</button>`;
     if(moiGifts.length===0){
-      body+=`<div class="empty"><div class="empty-ico">🪙</div><div class="empty-t">No entries yet</div><div class="empty-s">Record cash received from guests — tap above to start</div></div>`;
+      body+=`<div class="empty"><div class="empty-ico" style="color:var(--gold-d)">₹</div><div class="empty-t">No entries yet</div><div class="empty-s">Record cash received from guests - tap above to start</div></div>`;
     } else {
-      body+=`<div class="search-wrap" style="margin-bottom:10px"><span class="search-ico">🔍</span><input class="search-inp" type="text" placeholder="Search by name…" oninput="App.filterMoi(this.value)" id="moi-search-inp" /></div>`;
+      body+=`<div class="search-wrap" style="margin-bottom:10px"><span class="search-ico">${uiIcon('search',14)}</span><input class="search-inp" type="text" placeholder="Search by name…" oninput="App.filterMoi(this.value)" id="moi-search-inp" /></div>`;
       body+=`<div class="moi-filter-row" id="moi-ty-filter">
         <span class="moi-fchip on" onclick="App.setMoiFilter('all',this)">All (${moiGifts.length})</span>
-        <span class="moi-fchip" onclick="App.setMoiFilter('pending',this)">⏳ Pending (${moiPend})</span>
-        <span class="moi-fchip" onclick="App.setMoiFilter('drafted',this)">✏️ Drafted (${moiDrafted})</span>
-        <span class="moi-fchip" onclick="App.setMoiFilter('sent',this)">✅ Sent (${moiSent})</span>
+        <span class="moi-fchip" onclick="App.setMoiFilter('pending',this)">Pending (${moiPend})</span>
+        <span class="moi-fchip" onclick="App.setMoiFilter('drafted',this)">Drafted (${moiDrafted})</span>
+        <span class="moi-fchip" onclick="App.setMoiFilter('sent',this)">Sent (${moiSent})</span>
       </div>`;
       const sorted=[...moiGifts].sort((a,b)=>(parseFloat(b.value)||0)-(parseFloat(a.value)||0));
       body+=`<div id="moi-list">${sorted.map((g,i)=>moiRow(g,i+1)).join('')}</div>`;

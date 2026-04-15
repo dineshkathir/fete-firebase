@@ -510,7 +510,7 @@ const Auth = (() => {
               <option value="cash" ${m.role==='cash'?'selected':''}>Cash</option>
               <option value="room" ${m.role==='room'?'selected':''}>Room</option>
             </select>
-            <button onclick="Auth._removeMember('${eventId}','${m.userId}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--txt4);padding:0 4px;font-weight:600">Remove</button>`
+            <button onclick="Auth._removeMember('${eventId}','${m.userId}')" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 4px;font-weight:700">X</button>`
           :`<span class="role-badge role-${roleCls}">${roleLabel}</span>`}
       </div>`;
     }).join('');
@@ -799,6 +799,10 @@ function getFoodMenuLikeKey(menu, itemText){
   return `${(menu?.title||'menu').trim().toLowerCase()}::${String(itemText||'').trim().toLowerCase()}`;
 }
 
+function getFoodMenuSectionLikeKey(menu){
+  return `${(menu?.title||'menu').trim().toLowerCase()}::section`;
+}
+
 function ensureGuestFoodLikesDefaults(guest){
   if(!guest) return guest;
   if(!Array.isArray(guest.foodMenuLikes)) guest.foodMenuLikes=[];
@@ -889,12 +893,16 @@ function renderGuestFoodMenuSection(ev, guest, mode='portal'){
   const likedKeys=new Set((guest.foodMenuLikes||[]).map(item=>String(item)));
   return `<div class="guest-card${mode==='portal'?' anim':''}">
       <div class="guest-card-title">Food Menu</div>
-      <div style="font-size:12px;color:var(--txt3);line-height:1.6;margin-bottom:12px">Tap the heart beside any item you love.</div>
+      <div style="font-size:12px;color:var(--txt3);line-height:1.6;margin-bottom:12px">Tap the heart for a whole menu section or for any item you love.</div>
       <div style="display:grid;gap:10px">
         ${menus.map((menu,sectionIdx)=>{
           const items=normalizeMenuItems(menu.items);
+          const sectionLiked=likedKeys.has(getFoodMenuSectionLikeKey(menu));
           return `<div style="padding:12px 14px;border-radius:var(--rs);background:var(--surf2);border:1px solid var(--bord2)">
-              <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:${items.length?'8px':'0'}">${menu.title||'Menu'}</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:${items.length?'8px':'0'}">
+                <div style="font-size:13px;font-weight:600;color:var(--txt)">${menu.title||'Menu'}</div>
+                <button type="button" onclick="App.toggleGuestFoodSectionLike(${sectionIdx},'${ev.id}')" style="flex-shrink:0;min-width:40px;height:34px;border-radius:999px;border:1px solid ${sectionLiked?'var(--rose-d)':'var(--bord)'};background:${sectionLiked?'var(--rose-l)':'var(--surf)'};color:${sectionLiked?'var(--rose-d)':'var(--txt3)'};font-size:15px;font-weight:600;cursor:pointer">${sectionLiked?'♥':'♡'}</button>
+              </div>
               ${items.length
                 ? `<div style="display:grid;gap:8px">
                     ${items.map((itemText,itemIdx)=>{
@@ -1209,7 +1217,7 @@ function renderGuests(){
         </div>
         <div class="g-actions">
           <button class="rsvp-btn r-${rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${rsvpLabel}</button>
-          <button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">Remove</button>
+          <button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">X</button>
         </div>
       </div>`;
     });
@@ -1366,7 +1374,7 @@ let _giftCatFilter='all';
 const CAT_META={
   personal:{label:'Personal',  stripe:'#C4637A',bg:'#FAF0F3',chip:'background:#FAF0F3;color:#8B3A52'},
   home:{label:'Home',      stripe:'#5B7FA6',bg:'#EBF2F9',chip:'background:#EBF2F9;color:#2F5380'},
-  cash_card:{label:'Cash/Card', stripe:'#C09050',bg:'#FBF6EC',chip:'background:#FBF6EC;color:#8A6020'},
+  gold_silver:{label:'Gold/Silver', stripe:'#C09050',bg:'#FBF6EC',chip:'background:#FBF6EC;color:#8A6020'},
   clothing:{label:'Clothing',  stripe:'#9B6BC4',bg:'#F5EEFA',chip:'background:#F5EEFA;color:#6A2B9A'},
   kitchen:{label:'Kitchen',  stripe:'#6B9B7E',bg:'#EEF5F0',chip:'background:#EEF5F0;color:#3D6B50'},
   other:{label:'Other',     stripe:'#888780',bg:'#F5F0E8',chip:'background:#F5F0E8;color:#5F5E5A'},
@@ -1376,7 +1384,8 @@ const CAT_META={
 const LEGACY_GIFT_CATEGORY_MAP={
   '\u{1F49D}':'personal',
   '\u{1F3E0}':'home',
-  '\u{1F4B3}':'cash_card',
+  '\u{1F4B3}':'gold_silver',
+  cash_card:'gold_silver',
   '\u{1F457}':'clothing',
   '\u{1F37D}\uFE0F':'kitchen',
   '\u{1F4E6}':'other',
@@ -1464,7 +1473,7 @@ function renderGifts(){
         </div>
         ${g.photo?`<img class="gift-photo-thumb" src="${g.photo}" alt="Gift" />`:''}
       </div>
-      <button class="gift-del" onclick="event.stopPropagation();App.confirmDeleteGift('${g.id}')">Remove</button>
+      <button class="gift-del" onclick="event.stopPropagation();App.confirmDeleteGift('${g.id}')">X</button>
     </div>`;
   }
 
@@ -2142,12 +2151,16 @@ function renderEventMenusEditor(){
     <div class="room-loc-block">
       <div class="room-loc-name" style="margin-bottom:10px">
         <input style="flex:1;background:transparent;border:none;outline:none;font-size:12.5px;font-weight:600;color:var(--txt2);font-family:'Plus Jakarta Sans',sans-serif" value="${menu.title||''}" placeholder="Section title (e.g. Breakfast)" oninput="App._updateEventMenuTitle(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''} />
-        ${_eventMenuEditorDisabled?'':`<button style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--txt4);padding:0 0 0 6px;font-weight:600" onclick="App._removeEventMenu(${idx})" title="Remove menu section">Remove</button>`}
+        ${_eventMenuEditorDisabled?'':`<button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 0 0 6px;font-weight:700" onclick="App._removeEventMenu(${idx})" title="Remove menu section">X</button>`}
       </div>
       <textarea class="fi" rows="4" style="resize:vertical" placeholder="Enter each menu item on a new line" oninput="App._updateEventMenuItems(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''}>${menu.items||''}</textarea>
-      ${canViewLikes&&normalizeMenuItems(menu.items).length?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surf);border:1px solid var(--bord2)">
+      ${canViewLikes?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surf);border:1px solid var(--bord2)">
         <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Guest Hearts</div>
-        <div style="display:grid;gap:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--txt2);margin-bottom:${normalizeMenuItems(menu.items).length?'8px':'0'}${normalizeMenuItems(menu.items).length?';padding-bottom:8px;border-bottom:1px solid var(--bord2)':''}">
+          <span style="line-height:1.5">${menu.title||'Menu'} section</span>
+          <span style="flex-shrink:0;padding:3px 9px;border-radius:999px;background:${(likeCounts.get(getFoodMenuSectionLikeKey(menu))||0)?'var(--rose-l)':'var(--surf2)'};color:${(likeCounts.get(getFoodMenuSectionLikeKey(menu))||0)?'var(--rose-d)':'var(--txt3)'};font-weight:600">${likeCounts.get(getFoodMenuSectionLikeKey(menu))||0} heart${(likeCounts.get(getFoodMenuSectionLikeKey(menu))||0)===1?'':'s'}</span>
+        </div>
+        ${normalizeMenuItems(menu.items).length?`<div style="display:grid;gap:6px">
           ${normalizeMenuItems(menu.items).map(itemText=>{
             const count=likeCounts.get(getFoodMenuLikeKey(menu,itemText))||0;
             return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--txt2)">
@@ -2155,7 +2168,7 @@ function renderEventMenusEditor(){
                 <span style="flex-shrink:0;padding:3px 9px;border-radius:999px;background:${count?'var(--rose-l)':'var(--surf2)'};color:${count?'var(--rose-d)':'var(--txt3)'};font-weight:600">${count} heart${count===1?'':'s'}</span>
               </div>`;
           }).join('')}
-        </div>
+        </div>`:''}
       </div>`:''}
     </div>`).join('');
 }
@@ -2193,10 +2206,10 @@ function renderRoomLocsEditor(){
     <div class="room-loc-block">
       <div class="room-loc-name">
         <input style="flex:1;background:transparent;border:none;outline:none;font-size:12.5px;font-weight:600;color:var(--txt2);font-family:'Plus Jakarta Sans',sans-serif" value="${loc.name}" placeholder="Location name (e.g. Block A, Hall 1)" oninput="App._updateLocName(${li},this.value)" />
-        <button style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--txt4);padding:0 0 0 6px;font-weight:600" onclick="App._removeLocation(${li})" title="Remove location">Remove</button>
+        <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 0 0 6px;font-weight:700" onclick="App._removeLocation(${li})" title="Remove location">X</button>
       </div>
       <div class="room-list" id="room-list-${li}">
-        ${loc.rooms.map((r,ri)=>`<span class="room-tag">${r}<button class="room-tag-del" onclick="App._removeRoom(${li},${ri})">Remove</button></span>`).join('')}
+        ${loc.rooms.map((r,ri)=>`<span class="room-tag">${r}<button class="room-tag-del" onclick="App._removeRoom(${li},${ri})">X</button></span>`).join('')}
       </div>
       <div class="room-add-row">
         <input class="room-add-inp" id="room-inp-${li}" type="text" placeholder="e.g. 101 or 101,102 or 101-110" onkeydown="if(event.key==='Enter'){event.preventDefault();App._addRoom(${li})}" />
@@ -2457,7 +2470,7 @@ function openRoomDetail(locName,roomNo){
             <div style="font-size:11px;color:var(--txt3)">Peoples: ${g.party||1}${g.contact?' · '+g.contact:''}${getGuestRoomAssignments(g).length>1?` · ${getGuestRoomAssignments(g).length} rooms`:''}</div>
           </div>
         </div>
-        <button onclick="App.unassignGuestRoom('${g.id}')" style="background:#FEE8E8;color:#932B2B;border:1px solid #FABCBC;border-radius:var(--rxs);padding:4px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">Remove This Room</button>
+        <button onclick="App.unassignGuestRoom('${g.id}')" style="background:#FEE8E8;color:#932B2B;border:1px solid #FABCBC;border-radius:var(--rxs);padding:4px 9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">X</button>
       </div>`).join('');
   } else {
     occEl.innerHTML=`<div style="background:var(--sage-l);border:1px solid var(--sage-m);border-radius:var(--rs);padding:10px 13px;margin-bottom:12px;font-size:12px;color:var(--sage-d)">Vacant — no guests assigned</div>`;
@@ -2659,6 +2672,30 @@ function toggleGuestFoodLike(sectionIdx,itemIdx,eventId){
   const itemText=normalizeMenuItems(menu?.items)[itemIdx];
   if(!menu||!itemText) return;
   const key=getFoodMenuLikeKey(menu,itemText);
+  const liked=new Set((me.foodMenuLikes||[]).map(item=>String(item)));
+  if(liked.has(key)) liked.delete(key);
+  else liked.add(key);
+  me.foodMenuLikes=Array.from(liked);
+  me.foodMenuLikesUpdatedAt=Date.now();
+  save();
+  syncActiveEventData();
+  renderGuestPortal();
+  render();
+  if(document.getElementById('mo-guest-menu')?.classList.contains('open')){
+    renderGuestFoodMenuModalContent(targetId);
+  }
+}
+
+function toggleGuestFoodSectionLike(sectionIdx,eventId){
+  const targetId=eventId||DB.activeEvent;
+  const ev=DB.events.find(e=>e.id===targetId);
+  if(!ev||!ev._isGuestOnly){toast('⚠️ Food menu not available');return;}
+  const me=ensureGuestFoodLikesDefaults(getCurrentGuestInvite(targetId));
+  if(!me){toast('⚠️ Guest record not found');return;}
+  const menus=normalizeEventMenus(ev.foodMenus);
+  const menu=menus[sectionIdx];
+  if(!menu) return;
+  const key=getFoodMenuSectionLikeKey(menu);
   const liked=new Set((me.foodMenuLikes||[]).map(item=>String(item)));
   if(liked.has(key)) liked.delete(key);
   else liked.add(key);
@@ -3226,7 +3263,7 @@ window.App={
   _editingGift:()=>_editing.gift,
   openGuestRequestModal,openGuestFeedbackModal,openGuestFoodMenuModal,
   submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
-  toggleGuestFoodLike,
+  toggleGuestFoodLike,toggleGuestFoodSectionLike,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   saveProfile,openProfileModal,toggleSetting,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,

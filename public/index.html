@@ -241,6 +241,9 @@ body{overscroll-behavior:none}
 .mo.open{opacity:1;pointer-events:all}
 .ms{background:var(--bg);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:430px;padding:18px 18px 30px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:92vh;overflow-y:auto}
 .mo.open .ms{transform:translateY(0)}
+.mo-center{align-items:center;padding:18px}
+.mo-center .ms{border-radius:var(--r);max-width:360px;max-height:min(88vh,640px);transform:translateY(18px) scale(.98);padding:18px 18px 22px}
+.mo-center.open .ms{transform:translateY(0) scale(1)}
 .ms::-webkit-scrollbar{display:none}
 .m-handle{width:36px;height:4px;background:var(--bord);border-radius:2px;margin:0 auto 18px}
 .m-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--txt);margin-bottom:16px}
@@ -900,6 +903,47 @@ body{overscroll-behavior:none}
     <div id="room-alloc-conflict" style="display:none;margin-top:6px"></div>
     <button class="btn-p" style="margin-top:12px" onclick="App.assignGuestToRoom()">✅ Assign to Room</button>
     <button class="btn-s" onclick="App.closeModal('room-alloc')">Cancel</button>
+  </div>
+</div>
+
+<!-- GUEST ROOM REQUEST -->
+<div class="mo mo-center" id="mo-guest-request">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="gr-title">Request Room</div>
+    <div style="background:var(--slate-l);border:1px solid var(--slate-m);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--slate-d);margin-bottom:4px" id="gr-event-name">Event</div>
+      <div style="font-size:11.5px;color:var(--txt3);line-height:1.6" id="gr-event-meta"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Current Room Status</label>
+      <div class="fi" id="gr-room-status" style="min-height:auto;background:var(--surf2)"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Stay Requirement</label>
+      <select class="fi" id="gr-room-request-type">
+        <option value="needs_room">Room required</option>
+        <option value="no_room_needed">Room not required</option>
+        <option value="undecided">Not decided yet</option>
+      </select>
+    </div>
+    <div class="fr">
+      <div class="fg">
+        <label class="fl">Rooms Needed</label>
+        <input class="fi" type="number" id="gr-requested-rooms" min="1" max="20" value="1" />
+      </div>
+      <div class="fg">
+        <label class="fl">People Staying</label>
+        <input class="fi" type="number" id="gr-requested-stay-count" min="1" max="50" value="1" />
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Note for Room Team</label>
+      <textarea class="fi" id="gr-room-request-note" rows="3" style="resize:vertical" placeholder="Arrival time, family members, room preference…"></textarea>
+    </div>
+    <div style="font-size:11.5px;color:var(--txt3);line-height:1.6;margin-bottom:8px">Your request will appear in the room coordinator and organiser request queue.</div>
+    <button class="btn-p" style="background:var(--slate-d)" onclick="App.submitGuestRoomRequest()">Send Request</button>
+    <button class="btn-s" onclick="App.closeModal('guest-request')">Close</button>
   </div>
 </div>
 

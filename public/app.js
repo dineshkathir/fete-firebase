@@ -714,8 +714,9 @@ function switchTab(tab) {
   const ev = DB.events.find(e => e.id === DB.activeEvent);
   const isGuestOnly = ev && ev._isGuestOnly;
 
-  if (isGuestOnly && tab !== 'events' && tab !== 'guest-portal' && tab !== 'settings') {
-    tab = 'guest-portal';
+  if (isGuestOnly && tab !== 'events' && tab !== 'settings') {
+    openGuestRequestModal(ev.id);
+    tab = 'events';
   }
 
   _tab = tab;
@@ -773,7 +774,7 @@ function renderEvents(){
     const attending=gc.filter(g=>g.rsvp==='attending').length;
     const days=daysUntil(ae.date);
     const col=COLORS[ae.color]||COLORS.rose;
-    heroHtml=`<div class="dash-hero anim" onclick="App.setActive('${ae.id}');App.switchTab('${ae._isGuestOnly?'guest-portal':'guests'}')">
+    heroHtml=`<div class="dash-hero anim" onclick="${ae._isGuestOnly?`App.setActive('${ae.id}');App.openGuestRequestModal('${ae.id}')`:`App.setActive('${ae.id}');App.switchTab('guests')`}">
       <div class="dash-hero-event">${TYPE_LABEL[ae.type]||ae.type}</div>
       <div class="dash-hero-title">${ae.name}</div>
       <div class="dash-hero-stats">
@@ -816,7 +817,7 @@ function renderEvents(){
           ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?'⏳ '+days+' days':days===0?'🎉 Today!':'✅ Past'}</span>`:'<span></span>'}
           <div class="ev-actions">
             ${ev._isGuestOnly
-              ?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guest-portal')">Request Room</button>`
+              ?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestRequestModal('${ev.id}')">Request Room</button>`
               :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>`}
             ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openEditEvent('${ev.id}')">✏️</button>`:''}
@@ -974,6 +975,25 @@ function renderGuestPortal(){
       </div>
       <button class="btn-p" style="background:var(--slate-d)" onclick="App.submitGuestRoomRequest()">Send Room Request</button>
     </div>`;
+}
+
+function openGuestRequestModal(eventId){
+  const targetId=eventId||DB.activeEvent;
+  const ev=DB.events.find(e=>e.id===targetId);
+  if(!ev||!ev._isGuestOnly){toast('⚠️ Guest request not available');return;}
+  DB.activeEvent=targetId;
+  save();
+  const me=ensureGuestRequestDefaults(getCurrentGuestInvite(targetId));
+  if(!me){toast('⚠️ Guest record not found');return;}
+  document.getElementById('gr-title').textContent='Request Room';
+  document.getElementById('gr-event-name').textContent=ev.name;
+  document.getElementById('gr-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
+  document.getElementById('gr-room-status').textContent=me.roomLoc&&me.roomNo?`${me.roomLoc} · Room ${me.roomNo}`:me.roomLoc?me.roomLoc:'Not assigned yet';
+  document.getElementById('gr-room-request-type').value=me.roomRequestType||'undecided';
+  document.getElementById('gr-requested-rooms').value=Math.max(1,parseInt(me.requestedRoomCount)||1);
+  document.getElementById('gr-requested-stay-count').value=Math.max(1,parseInt(me.requestedStayCount)||me.party||1);
+  document.getElementById('gr-room-request-note').value=me.roomRequestNote||'';
+  openModal('guest-request');
 }
 
 let _giftTab='gifts';
@@ -1328,13 +1348,25 @@ function updateBadges(){
   // pending TY badge on gifts tab
   const tyPend=DB.gifts.filter(g=>g.eventId===DB.activeEvent&&g.ty==='pending').length;
   const giftTab=document.getElementById('tab-gifts');
-  const existing=giftTab.querySelector('.tab-badge');
+  const existing=giftTab?.querySelector('.tab-badge');
   if(existing)existing.remove();
-  if(tyPend>0){
+  if(giftTab&&tyPend>0){
     const b=document.createElement('span');
     b.className='tab-badge';
     b.textContent=tyPend;
     giftTab.appendChild(b);
+  }
+  const roomsTab=document.getElementById('tab-rooms');
+  const roomBadge=roomsTab?.querySelector('.tab-badge');
+  if(roomBadge)roomBadge.remove();
+  if(roomsTab&&Auth.isRoom(DB.activeEvent)){
+    const roomPend=DB.guests.filter(g=>g.eventId===DB.activeEvent&&ensureGuestRequestDefaults(g).roomRequestStatus==='pending'&&g.roomRequestType!=='undecided').length;
+    if(roomPend>0){
+      const b=document.createElement('span');
+      b.className='tab-badge';
+      b.textContent=roomPend;
+      roomsTab.appendChild(b);
+    }
   }
 }
 
@@ -1967,13 +1999,17 @@ function submitGuestRoomRequest(){
   const me=getCurrentGuestInvite(ev.id);
   if(!me){toast('⚠️ Guest record not found');return;}
   ensureGuestRequestDefaults(me);
-  me.roomRequestType=document.getElementById('gp-room-request-type').value;
-  me.requestedRoomCount=Math.max(1,parseInt(document.getElementById('gp-requested-rooms').value)||1);
-  me.requestedStayCount=Math.max(1,parseInt(document.getElementById('gp-requested-stay-count').value)||1);
-  me.roomRequestNote=document.getElementById('gp-room-request-note').value.trim();
+  const typeEl=document.getElementById('gr-room-request-type')||document.getElementById('gp-room-request-type');
+  const roomsEl=document.getElementById('gr-requested-rooms')||document.getElementById('gp-requested-rooms');
+  const stayEl=document.getElementById('gr-requested-stay-count')||document.getElementById('gp-requested-stay-count');
+  const noteEl=document.getElementById('gr-room-request-note')||document.getElementById('gp-room-request-note');
+  me.roomRequestType=typeEl.value;
+  me.requestedRoomCount=Math.max(1,parseInt(roomsEl.value)||1);
+  me.requestedStayCount=Math.max(1,parseInt(stayEl.value)||1);
+  me.roomRequestNote=noteEl.value.trim();
   me.roomRequestUpdatedAt=Date.now();
   me.roomRequestStatus=me.roomRequestType==='undecided'?'none':'pending';
-  save();syncActiveEventData();renderGuestPortal();
+  save();syncActiveEventData();closeModal('guest-request');renderGuestPortal();render();
   toast('✅ Room request sent');
 }
 
@@ -2500,6 +2536,7 @@ window.App={
   setGiftTab,setGiftCatFilter,selectCat,
   openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,filterMoi,setMoiFilter,setMoiTy,
   _editingGift:()=>_editing.gift,
+  openGuestRequestModal,
   submitGuestRoomRequest,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   saveProfile,toggleSetting,unlockPremium,clearAllData,

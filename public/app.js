@@ -631,9 +631,23 @@ const COLORS={
   gold:{accent:'#C09050',light:'#FBF6EC',chip:'background:var(--gold-l);color:var(--gold-d)'},
   slate:{accent:'#5B7FA6',light:'#EBF2F9',chip:'background:var(--slate-l);color:var(--slate-d)'},
 };
-const TYPE_LABEL={wedding:'💍 Wedding',birthday:'🎂 Birthday',babyshower:'🍼 Baby Shower',party:'🎊 Party',other:'✨ Other'};
 const AV_BG=['#FFEAEE','#E8F5E9','#E3EEF9','#FFF6E1','#F4EAF5','#E1F4F0'];
 const AV_C=['#8B3A52','#3D6B50','#2F5380','#8A6020','#6A2B8A','#1A6B5A'];
+function uiIcon(name,size=14){
+  const icons={
+    event:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 12.5 12 5l7 7.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 11.5V19h10v-7.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 19v-4h4v4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    calendar:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8 3.5v3M16 3.5v3M4 9.5h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    time:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 7.5v5l3 1.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    location:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 20s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>`,
+    user:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="12" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 18c1-3 3.4-4.5 6.5-4.5S17.5 15 18.5 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    guests:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="9" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4.5 18c.6-2.7 2.5-4 4.5-4s3.9 1.3 4.5 4M13.5 18c.4-2 1.8-3.1 3.5-3.1 1.4 0 2.7.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    gift:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 10h16v10H4zM12 10v10M4 14h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10s-3.8-1.5-3.8-3.9c0-1.3 1-2.2 2.2-2.2 1.1 0 1.9.6 2.6 2 .7-1.4 1.5-2 2.6-2 1.2 0 2.2.9 2.2 2.2C15.8 8.5 12 10 12 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>`,
+    room:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 19V8.5A1.5 1.5 0 0 1 6.5 7h11A1.5 1.5 0 0 1 19 8.5V19M3 19h18M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M9 11h2v2H9zm4 0h2v2h-2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    search:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`
+  };
+  return icons[name]||'';
+}
+const TYPE_LABEL={wedding:'Wedding',birthday:'Birthday',babyshower:'Baby Shower',party:'Party',other:'Other'};
 
 function daysUntil(dateStr){
   if(!dateStr)return null;
@@ -721,7 +735,7 @@ function myManagedEvents(){
   return DB.events.filter(ev=>!ev._isGuestOnly);
 }
 function renderCreateEventState(title,message){
-  return `<div class="empty"><div class="empty-ico">🎉</div><div class="empty-t">${title}</div><div class="empty-s">${message}</div><button class="fab" style="margin-top:16px" onclick="App.openAddEvent()">＋ Create New Event</button></div>`;
+  return `<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('event',42)}</div><div class="empty-t">${title}</div><div class="empty-s">${message}</div><button class="fab" style="margin-top:16px" onclick="App.openAddEvent()">＋ Create New Event</button></div>`;
 }
 function addGuestRoomAssignment(guest,loc,no){
   const rooms=getGuestRoomAssignments(guest);
@@ -863,7 +877,7 @@ function openGuestFeedbackModal(eventId){
   ensureGuestFeedbackDefaults(me);
   document.getElementById('gf-title').textContent='Event Feedback';
   document.getElementById('gf-event-name').textContent=ev.name;
-  document.getElementById('gf-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.time?`⏰ ${fmtTime(ev.time)}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
+  document.getElementById('gf-event-meta').innerHTML=`${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}${ev.location?`${uiIcon('location',12)} ${ev.location}<br>`:''}${uiIcon('user',12)} ${me.first} ${me.last}`;
   document.getElementById('gf-content').innerHTML=renderGuestFeedbackSection(ev, me, 'gf-modal');
   openModal('guest-feedback');
 }
@@ -906,7 +920,7 @@ function renderGuestFoodMenuModalContent(eventId){
   if(!ev||!ev._isGuestOnly||!me||!contentEl) return;
   document.getElementById('gm-title').textContent='Food Menu';
   document.getElementById('gm-event-name').textContent=ev.name;
-  document.getElementById('gm-event-meta').innerHTML=`${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}${ev.time?`⏰ ${fmtTime(ev.time)}<br>`:''}${ev.location?`📍 ${ev.location}<br>`:''}👤 ${me.first} ${me.last}`;
+  document.getElementById('gm-event-meta').innerHTML=`${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}${ev.location?`${uiIcon('location',12)} ${ev.location}<br>`:''}${uiIcon('user',12)} ${me.first} ${me.last}`;
   contentEl.innerHTML=renderGuestFoodMenuSection(ev, me, 'modal');
 }
 
@@ -1020,7 +1034,7 @@ function renderEvents(){
   const myEvents=_showPastEvents ? [...upcomingEvents, ...pastEvents] : upcomingEvents;
   if(accessibleEvents.length===0){
     el.innerHTML=`<div class="no-events">
-      <div class="no-events-ico">🎊</div>
+      <div class="no-events-ico" style="color:var(--rose-d)">${uiIcon('event',44)}</div>
       <div class="no-events-t">Welcome to eventise!</div>
       <p class="no-events-s">Manage guest lists and track gifts for all your special events in one beautiful place.</p>
       <button class="fab" onclick="App.openAddEvent()">＋ Create Your First Event</button>
@@ -1029,7 +1043,7 @@ function renderEvents(){
   }
   if(myEvents.length===0&&pastEvents.length){
     el.innerHTML=`<div class="no-events">
-      <div class="no-events-ico">📅</div>
+      <div class="no-events-ico" style="color:var(--txt3)">${uiIcon('calendar',44)}</div>
       <div class="no-events-t">No upcoming events</div>
       <p class="no-events-s">Your past events are still available whenever you need to look back at them.</p>
       <div style="display:flex;justify-content:center;margin-top:10px">
@@ -1061,7 +1075,7 @@ function renderEvents(){
         <div class="dash-stat"><span class="dash-stat-n">${attending}</span><span class="dash-stat-l">Attending</span></div>
         <div class="dash-stat"><span class="dash-stat-n">${giftc.length}</span><span class="dash-stat-l">Gifts</span></div>`}
       </div>
-      ${days!==null?`<div class="dash-cd">${days>0?'⏳ '+days+' days away':days===0?'🎉 Today!':'✅ Past event'}</div>`:''}
+      ${days!==null?`<div class="dash-cd">${days>0?days+' days away':days===0?'Today':'Past event'}</div>`:''}
       ${ae._isGuestOnly?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()">
         ${normalizeEventMenus(ae.foodMenus).length?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFoodMenuModal('${ae.id}')">Food Menu</button>`:''}
         <button class="ev-btn" onclick="App.setActive('${ae.id}');${isRoomRequestEnabled(ae)?`App.openGuestRequestModal('${ae.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ae)?'Request Room':'View Rooms'}</button>
@@ -1078,7 +1092,7 @@ function renderEvents(){
     const isAct=ev.id===DB.activeEvent;
     const team=Auth.getTeam(ev.id);
     const myRole=team.find(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase()))?.role||'';
-    const roleLbl=myRole==='organizer'?'👑':myRole==='cash'?'💵':myRole==='room'?'🏨':'';
+    const roleLbl=myRole==='organizer'?'Organizer':myRole==='cash'?'Cash':myRole==='room'?'Room':'';
     return`<div class="ev-card anim ${isAct?'':''}">
       <div class="ev-accent" style="background:${col.accent}"></div>
       <div class="ev-body">
@@ -1087,9 +1101,9 @@ function renderEvents(){
           <span class="type-chip" style="${col.chip}">${TYPE_LABEL[ev.type]||ev.type} ${roleLbl}</span>
         </div>
         <div class="ev-meta">
-          ${ev.date?`<span class="ev-meta-item">📅 ${fmtDate(ev.date)}</span>`:''}
-          ${ev.time?`<span class="ev-meta-item">⏰ ${fmtTime(ev.time)}</span>`:''}
-          ${ev.location?`<span class="ev-meta-item"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.location)}" target="_blank" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">📍 ${ev.location}</a></span>`:''}
+          ${ev.date?`<span class="ev-meta-item">${uiIcon('calendar',12)} ${fmtDate(ev.date)}</span>`:''}
+          ${ev.time?`<span class="ev-meta-item">${uiIcon('time',12)} ${fmtTime(ev.time)}</span>`:''}
+          ${ev.location?`<span class="ev-meta-item"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.location)}" target="_blank" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">${uiIcon('location',12)} ${ev.location}</a></span>`:''}
         </div>
         <div class="ev-stats">
           ${ev._isGuestOnly ? `<div class="ev-stat"><span class="ev-stat-l">My Invitation Access</span></div>` : 
@@ -1097,9 +1111,9 @@ function renderEvents(){
           <div class="ev-stat"><span class="ev-stat-n">${att}</span><span class="ev-stat-l">Attending</span></div>
           <div class="ev-stat"><span class="ev-stat-n">${giftc.length}</span><span class="ev-stat-l">Gifts</span></div>`}
         </div>
-        ${normalizeEventMenus(ev.foodMenus).length?`<div style="font-size:11.5px;color:var(--txt3);margin-top:10px">🍽 ${normalizeEventMenus(ev.foodMenus).length} menu section${normalizeEventMenus(ev.foodMenus).length!==1?'s':''} added</div>`:''}
+        ${normalizeEventMenus(ev.foodMenus).length?`<div style="font-size:11.5px;color:var(--txt3);margin-top:10px">${uiIcon('gift',12)} ${normalizeEventMenus(ev.foodMenus).length} menu section${normalizeEventMenus(ev.foodMenus).length!==1?'s':''} added</div>`:''}
         <div class="ev-footer">
-          ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?'⏳ '+days+' days':days===0?'🎉 Today!':'✅ Past'}</span>`:'<span></span>'}
+          ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?days+' days':days===0?'Today':'Past'}</span>`:'<span></span>'}
           <div class="ev-actions">
             ${ev._isGuestOnly
               ?`${normalizeEventMenus(ev.foodMenus).length?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFoodMenuModal('${ev.id}')">Food Menu</button>`:''}
@@ -1107,7 +1121,7 @@ function renderEvents(){
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
               :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>`}
-            ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openEditEvent('${ev.id}')">✏️</button>`:''}
+            ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openEditEvent('${ev.id}')">Edit</button>`:''}
           </div>
         </div>
       </div>
@@ -1157,10 +1171,10 @@ function renderGuests(){
   </div>`;
   const filtersHtml=`<div class="filters">
     <span class="fchip ${_guestFilter==='all'?'on':''}" onclick="App.setGFilter('all')">All (${total})</span>
-    <span class="fchip ${_guestFilter==='attending'?'on':''}" onclick="App.setGFilter('attending')">✅ Attending</span>
-    <span class="fchip ${_guestFilter==='pending'?'on':''}" onclick="App.setGFilter('pending')">⏳ Pending</span>
-    <span class="fchip ${_guestFilter==='declined'?'on':''}" onclick="App.setGFilter('declined')">❌ Declined</span>
-    <span class="fchip ${_guestFilter==='invited'?'on':''}" onclick="App.setGFilter('invited')">📬 Invited</span>
+    <span class="fchip ${_guestFilter==='attending'?'on':''}" onclick="App.setGFilter('attending')">Attending</span>
+    <span class="fchip ${_guestFilter==='pending'?'on':''}" onclick="App.setGFilter('pending')">Pending</span>
+    <span class="fchip ${_guestFilter==='declined'?'on':''}" onclick="App.setGFilter('declined')">Declined</span>
+    <span class="fchip ${_guestFilter==='invited'?'on':''}" onclick="App.setGFilter('invited')">Invited</span>
   </div>`;
   const isOrg=Auth.isOrganizer(DB.activeEvent);
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
@@ -1169,9 +1183,9 @@ function renderGuests(){
     </div>`:'';
   let listHtml='';
   if(!DB.activeEvent){
-    listHtml=`<div class="empty"><div class="empty-ico">📋</div><div class="empty-t">No event selected</div><div class="empty-s">Select one of your events to manage guests</div></div>`;
+    listHtml=`<div class="empty"><div class="empty-ico" style="color:var(--txt3)">${uiIcon('event',42)}</div><div class="empty-t">No event selected</div><div class="empty-s">Select one of your events to manage guests</div></div>`;
   } else if(guests.length===0){
-    listHtml=`<div class="empty"><div class="empty-ico">👥</div><div class="empty-t">No guests yet</div><div class="empty-s">${_guestSearch||_guestFilter!=='all'?'Try clearing filters':'Add your first guest to get started'}</div></div>`;
+    listHtml=`<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('guests',42)}</div><div class="empty-t">No guests yet</div><div class="empty-s">${_guestSearch||_guestFilter!=='all'?'Try clearing filters':'Add your first guest to get started'}</div></div>`;
   } else {
     guests.forEach((g,i)=>{
       if(i>0&&i%15===0&&!DB.premium){
@@ -1191,7 +1205,7 @@ function renderGuests(){
         <div class="g-av" style="${avStyle(g.id)}">${ini}</div>
         <div class="g-info">
           <div class="g-name">${first} ${last}</div>
-          <div class="g-detail">Peoples: ${party}${contact?' · '+contact:''}${email?' · '+email:''}${table?' · '+table:''}${getGuestRoomAssignments(g).length?` · 🏨 ${formatGuestRooms(g)}`:''}${notes?' · '+notes:''}</div>
+          <div class="g-detail">Peoples: ${party}${contact?' · '+contact:''}${email?' · '+email:''}${table?' · '+table:''}${getGuestRoomAssignments(g).length?` · Rooms: ${formatGuestRooms(g)}`:''}${notes?' · '+notes:''}</div>
         </div>
         <div class="g-actions">
           <button class="rsvp-btn r-${rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${rsvpLabel}</button>
@@ -1219,7 +1233,7 @@ function renderGuests(){
     `<div class="ph"><div class="ph-title">Guest List</div></div>`+
     statsHtml+
     organizerActions+
-    `<div class="search-wrap"><span class="search-ico">🔍</span><input class="search-inp" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
+    `<div class="search-wrap"><span class="search-ico">${uiIcon('search',14)}</span><input class="search-inp" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
     filtersHtml+listHtml+feedbackHtml;
   // Hide delete buttons for non-organisers
   if(!isOrg){
@@ -1234,12 +1248,12 @@ function renderGuestPortal(){
   const el=document.getElementById('scr-guest-portal');
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
   if(!ev){
-    el.innerHTML=`<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">No invitation selected</div><div class="empty-s">Choose an event to view your stay details.</div></div>`;
+    el.innerHTML=`<div class="empty"><div class="empty-ico" style="color:var(--txt3)">${uiIcon('room',42)}</div><div class="empty-t">No invitation selected</div><div class="empty-s">Choose an event to view your stay details.</div></div>`;
     return;
   }
   const me=ensureGuestRequestDefaults(getCurrentGuestInvite(ev.id));
   if(!me){
-    el.innerHTML=`<div class="empty"><div class="empty-ico">📩</div><div class="empty-t">Invitation not found</div><div class="empty-s">We couldn't find your guest record for this event yet.</div></div>`;
+    el.innerHTML=`<div class="empty"><div class="empty-ico" style="color:var(--txt3)">${uiIcon('guests',42)}</div><div class="empty-t">Invitation not found</div><div class="empty-s">We couldn't find your guest record for this event yet.</div></div>`;
     return;
   }
   ensureGuestFeedbackDefaults(me);
@@ -1260,10 +1274,10 @@ function renderGuestPortal(){
       <div class="guest-kicker">Guest Portal</div>
       <div class="guest-title">${ev.name}</div>
       <div class="guest-sub">
-        ${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}
-        ${ev.time?`⏰ ${fmtTime(ev.time)}<br>`:''}
-        ${ev.location?`📍 ${ev.location}<br>`:''}
-        👤 ${me.first} ${me.last}
+        ${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}
+        ${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}
+        ${ev.location?`${uiIcon('location',12)} ${ev.location}<br>`:''}
+        ${uiIcon('user',12)} ${me.first} ${me.last}
       </div>
     </div>`+
     `<div class="guest-card anim">

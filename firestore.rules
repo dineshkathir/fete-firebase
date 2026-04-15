@@ -27,6 +27,13 @@ service cloud.firestore {
       return signedIn() && myEmail() in docData.get('roomEmails', []);
     }
 
+    function isGuestSelf(guestData) {
+      return signedIn() && (
+        (guestData.get('email', '') != '' && myEmail() == guestData.get('email', '').lower()) ||
+        (guestData.get('contact', '') != '' && myEmail() == guestData.get('contact', '').lower())
+      );
+    }
+
     match /events/{eventId} {
       allow read: if signedIn() && (myEmail() in resource.data.memberEmails || myEmail() in resource.data.get('guestEmails', []));
       allow create: if signedIn()
@@ -40,8 +47,22 @@ service cloud.firestore {
     }
 
     match /guests/{guestId} {
-      allow read: if signedIn() && (isEventMember(resource.data.eventId) || (resource.data.get('contact', '') != '' && myEmail() == resource.data.contact.lower()));
-      allow update: if signedIn() && (isEventMember(resource.data.eventId) || (resource.data.get('contact', '') != '' && myEmail() == resource.data.contact.lower()));
+      allow read: if signedIn() && (isEventMember(resource.data.eventId) || isGuestSelf(resource.data));
+      allow update: if signedIn() && (
+        isEventMember(resource.data.eventId) ||
+        (
+          isGuestSelf(resource.data) &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly([
+            'roomRequestType',
+            'requestedRoomCount',
+            'requestedStayCount',
+            'roomRequestNote',
+            'roomRequestStatus',
+            'roomRequestUpdatedAt'
+          ]) &&
+          request.resource.data.roomRequestStatus == 'pending'
+        )
+      );
       allow delete: if signedIn() && isEventMember(resource.data.eventId);
       allow create: if signedIn() && isEventMember(request.resource.data.eventId);
     }

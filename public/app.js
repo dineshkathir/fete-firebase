@@ -144,18 +144,43 @@ const Cloud = (() => {
 
       if (guestOnlyIds.length > 0) {
         const email = normalizeEmail(Auth.currentSession()?.email);
-        // Execute a strict query for guests where contact exactly equals their email to satisfy Firestore rules.
-        const qGuestsGuest = query(collection(_fbDb, 'guests'), where('contact', '==', email));
+        const guestOnlyMaps = {
+          email: new Map(),
+          legacy: new Map()
+        };
+        const mergeGuestOnlyGuests = () => {
+          guestOnlyIds.forEach(evId => {
+            for (const [gid, gdata] of guestsMap) {
+              if (gdata.eventId === evId) guestsMap.delete(gid);
+            }
+          });
+          for (const sourceMap of Object.values(guestOnlyMaps)) {
+            sourceMap.forEach((value, key) => guestsMap.set(key, value));
+          }
+          flushData();
+        };
+        // Support both the new dedicated email field and older records that stored email in contact.
+        const qGuestsGuest = query(collection(_fbDb, 'guests'), where('email', '==', email));
         _unsubs.guests.push(onSnapshot(qGuestsGuest, snapshot => {
-          // Because this query fetches globally for their email, we must locally filter by the chunks
-          guestOnlyIds.forEach(evId => { for(const [gid, gdata] of guestsMap) { if(gdata.eventId === evId) guestsMap.delete(gid); } });
+          guestOnlyMaps.email.clear();
           snapshot.docs.forEach(docSnap => {
             const data = docSnap.data();
             if (guestOnlyIds.includes(data.eventId)) {
-              guestsMap.set(docSnap.id, { id: docSnap.id, ...data });
+              guestOnlyMaps.email.set(docSnap.id, { id: docSnap.id, ...data });
             }
           });
-          flushData();
+          mergeGuestOnlyGuests();
+        }));
+        const qGuestsGuestLegacy = query(collection(_fbDb, 'guests'), where('contact', '==', email));
+        _unsubs.guests.push(onSnapshot(qGuestsGuestLegacy, snapshot => {
+          guestOnlyMaps.legacy.clear();
+          snapshot.docs.forEach(docSnap => {
+            const data = docSnap.data();
+            if (guestOnlyIds.includes(data.eventId)) {
+              guestOnlyMaps.legacy.set(docSnap.id, { id: docSnap.id, ...data });
+            }
+          });
+          mergeGuestOnlyGuests();
         }));
       }
     }
@@ -185,7 +210,12 @@ const Cloud = (() => {
     const ev = DB.events.find(e => e.id === eventId);
     if (ev && !ev._isGuestOnly) {
       await syncCollectionForEvent('gifts', eventId, DB.gifts.filter(gift => gift.eventId === eventId));
-      const guestEmails = [...new Set(guests.map(g => (g.contact || '').toLowerCase().trim()).filter(e => e.includes('@')))];
+      const guestEmails = [...new Set(
+        guests
+          .flatMap(g => [g.email || '', g.contact || ''])
+          .map(v => v.toLowerCase().trim())
+          .filter(e => e.includes('@'))
+      )];
       try { await setDoc(doc(_fbDb, 'events', eventId), { guestEmails }, { merge: true }); } catch(e){}
     }
   }
@@ -594,6 +624,31 @@ function fmtVal(v){
 }
 function initials(first,last){return((first||'')[0]||(last||'')[0]||'?').toUpperCase()+((last||'')[0]||'').toUpperCase()}
 function avStyle(id){const i=Math.abs(id.charCodeAt?[...id].reduce((a,c)=>a+c.charCodeAt(0),0):0)%6;return`background:${AV_BG[i]};color:${AV_C[i]}`}
+function normalizeEmailValue(email){return(email||'').trim().toLowerCase()}
+function guestMatchesSession(guest,session){
+  const email=normalizeEmailValue(session?.email);
+  if(!email||!guest)return false;
+  return normalizeEmailValue(guest.email)===email||normalizeEmailValue(guest.contact)===email;
+}
+function getCurrentGuestInvite(eventId){
+  const session=Auth.currentSession();
+  return DB.guests.find(g=>g.eventId===eventId&&guestMatchesSession(g,session))||null;
+}
+function roomRequestTypeLabel(type){
+  return type==='needs_room'?'Room needed':type==='no_room_needed'?'No room needed':'Not submitted';
+}
+function roomRequestStatusLabel(status){
+  return status==='fulfilled'?'Request handled':status==='pending'?'Awaiting coordinator':'No request';
+}
+function ensureGuestRequestDefaults(guest){
+  if(!guest)return guest;
+  if(!guest.roomRequestType) guest.roomRequestType='undecided';
+  if(!guest.roomRequestStatus) guest.roomRequestStatus=guest.roomLoc&&guest.roomNo?'fulfilled':'none';
+  if(guest.requestedRoomCount==null) guest.requestedRoomCount=guest.roomLoc&&guest.roomNo?1:1;
+  if(guest.requestedStayCount==null) guest.requestedStayCount=guest.party||1;
+  if(!('roomRequestNote' in guest)) guest.roomRequestNote='';
+  return guest;
+}
 
 let _toastTimer;
 function toast(msg){
@@ -662,6 +717,8 @@ function switchTab(tab) {
   
   const navTabs = document.querySelector('.tabs');
   if (navTabs) navTabs.style.display = isGuestOnly ? 'none' : 'flex';
+  const teamBtn = document.getElementById('hdr-team-btn');
+  if (teamBtn) teamBtn.style.display = isGuestOnly ? 'none' : 'block';
   
   render();
 }
@@ -771,7 +828,7 @@ function renderGuests(){
   const pen=guests.filter(g=>g.rsvp==='pending').length;
   // filter
   if(_guestFilter!=='all') guests=guests.filter(g=>g.rsvp===_guestFilter);
-  if(_guestSearch) guests=guests.filter(g=>(g.first+' '+g.last+' '+g.contact+' '+g.table).toLowerCase().includes(_guestSearch.toLowerCase()));
+  if(_guestSearch) guests=guests.filter(g=>(g.first+' '+g.last+' '+(g.contact||'')+' '+(g.email||'')+' '+(g.table||'')).toLowerCase().includes(_guestSearch.toLowerCase()));
   const evSelHtml=`<div class="ev-sel" onclick="App.openModal('event-pick')">
     <div><div class="ev-sel-lbl">Current Event</div><div class="ev-sel-val">${ev?ev.name:'Select an event'}</div></div>
     <span class="chev">▼</span>
@@ -803,7 +860,7 @@ function renderGuests(){
         <div class="g-av" style="${avStyle(g.id)}">${ini}</div>
         <div class="g-info">
           <div class="g-name">${g.first} ${g.last}</div>
-          <div class="g-detail">Party of ${g.party||1}${g.table?' · '+g.table:''}${g.roomLoc?' · 🏨 '+g.roomLoc+(g.roomNo?' #'+g.roomNo:''):''}${g.notes?' · '+g.notes:''}</div>
+          <div class="g-detail">Party of ${g.party||1}${g.contact?' · '+g.contact:''}${g.email?' · '+g.email:''}${g.table?' · '+g.table:''}${g.roomLoc?' · 🏨 '+g.roomLoc+(g.roomNo?' #'+g.roomNo:''):''}${g.notes?' · '+g.notes:''}</div>
         </div>
         <div class="g-actions">
           <button class="rsvp-btn r-${g.rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${g.rsvp.charAt(0).toUpperCase()+g.rsvp.slice(1)}</button>
@@ -828,6 +885,80 @@ function renderGuests(){
 // ═══════════════════════════════════════════════
 // GIFTS SCREEN  (Gifts tab | Moi tab)
 // ═══════════════════════════════════════════════
+function renderGuestPortal(){
+  const el=document.getElementById('scr-guest-portal');
+  const ev=DB.events.find(e=>e.id===DB.activeEvent);
+  if(!ev){
+    el.innerHTML=`<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">No invitation selected</div><div class="empty-s">Choose an event to view your stay details.</div></div>`;
+    return;
+  }
+  const me=ensureGuestRequestDefaults(getCurrentGuestInvite(ev.id));
+  if(!me){
+    el.innerHTML=`<div class="empty"><div class="empty-ico">📩</div><div class="empty-t">Invitation not found</div><div class="empty-s">We couldn't find your guest record for this event yet.</div></div>`;
+    return;
+  }
+  const statusClass=me.roomRequestStatus==='fulfilled'?'fulfilled':me.roomRequestStatus==='pending'?'pending':'none';
+  const assignedRoom=me.roomLoc&&me.roomNo?`${me.roomLoc} · Room ${me.roomNo}`:me.roomLoc?me.roomLoc:'Not assigned yet';
+  const requestType=me.roomRequestType||'undecided';
+  const requestHelp=requestType==='needs_room'
+    ?'Your request is visible to the organiser and room coordinator.'
+    :requestType==='no_room_needed'
+      ?'We will keep your stay marked as not required unless you update it.'
+      :'Submit your stay requirement so the room team can plan ahead.';
+  el.innerHTML=
+    `<div class="guest-hero anim">
+      <div class="guest-kicker">Guest Portal</div>
+      <div class="guest-title">${ev.name}</div>
+      <div class="guest-sub">
+        ${ev.date?`📅 ${fmtDate(ev.date)}<br>`:''}
+        ${ev.location?`📍 ${ev.location}<br>`:''}
+        👤 ${me.first} ${me.last}
+      </div>
+    </div>`+
+    `<div class="guest-card anim">
+      <div class="guest-card-title">Room Allocation</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <div style="font-size:18px;font-weight:600;color:var(--txt);line-height:1.2">${assignedRoom}</div>
+          <div style="font-size:12px;color:var(--txt3);margin-top:5px">Only your own room allocation is shown here.</div>
+        </div>
+        <span class="guest-room-status ${statusClass}">${roomRequestStatusLabel(me.roomRequestStatus)}</span>
+      </div>
+    </div>`+
+    `<div class="guest-card anim">
+      <div class="guest-card-title">Stay Request</div>
+      <div style="font-size:13px;color:var(--txt2);line-height:1.6;margin-bottom:12px">${requestHelp}</div>
+      <div class="request-chip-row">
+        <span class="request-chip">${roomRequestTypeLabel(requestType)}</span>
+        <span class="request-chip">${Math.max(1,parseInt(me.requestedRoomCount)||1)} room(s) requested</span>
+        <span class="request-chip">${Math.max(1,parseInt(me.requestedStayCount)||me.party||1)} guest(s) staying</span>
+      </div>
+      <div class="fg" style="margin-top:14px">
+        <label class="fl">Stay Requirement</label>
+        <select class="fi" id="gp-room-request-type">
+          <option value="needs_room" ${requestType==='needs_room'?'selected':''}>Room required</option>
+          <option value="no_room_needed" ${requestType==='no_room_needed'?'selected':''}>Room not required</option>
+          <option value="undecided" ${requestType==='undecided'?'selected':''}>Not decided yet</option>
+        </select>
+      </div>
+      <div class="request-grid">
+        <div class="fg">
+          <label class="fl">Rooms Needed</label>
+          <input class="fi" type="number" id="gp-requested-rooms" min="1" max="20" value="${Math.max(1,parseInt(me.requestedRoomCount)||1)}" />
+        </div>
+        <div class="fg">
+          <label class="fl">People Staying</label>
+          <input class="fi" type="number" id="gp-requested-stay-count" min="1" max="50" value="${Math.max(1,parseInt(me.requestedStayCount)||me.party||1)}" />
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Note for Room Team</label>
+        <textarea class="fi" id="gp-room-request-note" rows="3" style="resize:vertical">${me.roomRequestNote||''}</textarea>
+      </div>
+      <button class="btn-p" style="background:var(--slate-d)" onclick="App.submitGuestRoomRequest()">Send Room Request</button>
+    </div>`;
+}
+
 let _giftTab='gifts';
 let _giftCatFilter='all';
 
@@ -1164,11 +1295,15 @@ function renderSettings(){
 // MAIN RENDER
 // ═══════════════════════════════════════════════
 function render(){
+  const ev=DB.events.find(e=>e.id===DB.activeEvent);
+  const teamBtn=document.getElementById('hdr-team-btn');
+  if(teamBtn) teamBtn.style.display=ev&&ev._isGuestOnly?'none':'block';
   if(_tab==='events') renderEvents();
   else if(_tab==='guests') renderGuests();
   else if(_tab==='gifts') renderGifts();
   else if(_tab==='settings') renderSettings();
   else if(_tab==='rooms') renderRooms();
+  else if(_tab==='guest-portal') renderGuestPortal();
   updateBadges();
 }
 
@@ -1327,7 +1462,7 @@ function openAddGuest(){
   if(!DB.activeEvent){toast('⚠️ Please select an event first');return;}
   _editing.guest=null;
   document.getElementById('mo-guest-title').textContent='Add Guest';
-  ['g-first','g-last','g-contact','g-notes','g-table'].forEach(id=>document.getElementById(id).value='');
+  ['g-first','g-last','g-contact','g-email','g-notes','g-table'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('g-party').value='1';
   document.getElementById('g-rsvp').value='invited';
   document.getElementById('del-guest-btn').style.display='none';
@@ -1346,6 +1481,7 @@ function openEditGuest(id){
   document.getElementById('g-first').value=g.first||'';
   document.getElementById('g-last').value=g.last||'';
   document.getElementById('g-contact').value=g.contact||'';
+  document.getElementById('g-email').value=g.email||'';
   document.getElementById('g-party').value=g.party||1;
   document.getElementById('g-rsvp').value=g.rsvp||'invited';
   document.getElementById('g-notes').value=g.notes||'';
@@ -1360,31 +1496,42 @@ function openEditGuest(id){
 function saveGuest(){
   const first=document.getElementById('g-first').value.trim();
   if(!first){toast('⚠️ Please enter a first name');return;}
+  const last=document.getElementById('g-last').value.trim();
+  const gContact=document.getElementById('g-contact').value.trim();
+  const gEmail=document.getElementById('g-email').value.trim().toLowerCase();
   const roomLoc=document.getElementById('g-room-loc').value;
   const roomNo=document.getElementById('g-room-no').value;
   if(_editing.guest){
     const g=DB.guests.find(x=>x.id===_editing.guest);
-    const gContact = document.getElementById('g-contact').value.trim();
     if(g){
-      g.first=first;g.last=document.getElementById('g-last').value.trim();
-      g.contact=gContact.includes('@') ? gContact.toLowerCase() : gContact;
+      ensureGuestRequestDefaults(g);
+      g.first=first;g.last=last;
+      g.contact=gContact;
+      g.email=gEmail;
       g.party=parseInt(document.getElementById('g-party').value)||1;
       g.rsvp=document.getElementById('g-rsvp').value;
       g.notes=document.getElementById('g-notes').value.trim();
       g.table=document.getElementById('g-table').value.trim();
       g.roomLoc=roomLoc;g.roomNo=roomNo;
+      if(roomLoc&&roomNo) g.roomRequestStatus='fulfilled';
     }
     toast('✅ Guest updated');
   } else {
     DB.guests.push({
       id:uid(),eventId:DB.activeEvent,
-      first,last:document.getElementById('g-last').value.trim(),
-      contact:gContact.includes('@') ? gContact.toLowerCase() : gContact,
+      first,last,
+      contact:gContact,
+      email:gEmail,
       party:parseInt(document.getElementById('g-party').value)||1,
       rsvp:document.getElementById('g-rsvp').value,
       notes:document.getElementById('g-notes').value.trim(),
       table:document.getElementById('g-table').value.trim(),
       roomLoc,roomNo,
+      roomRequestType:'undecided',
+      requestedRoomCount:1,
+      requestedStayCount:parseInt(document.getElementById('g-party').value)||1,
+      roomRequestNote:'',
+      roomRequestStatus:roomLoc&&roomNo?'fulfilled':'none',
       createdAt:Date.now()
     });
     toast(`👤 ${first} added!`);
@@ -1424,7 +1571,8 @@ function openGuestDetail(id){
       <button class="ib" onclick="App.openEditGuest('${g.id}');App.closeModal('guest-detail')">✏️</button>
     </div>
     <div class="info-grid">
-      ${g.contact?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Contact</div><div class="info-val">${g.contact}</div></div>`:''}
+      ${g.contact?`<div class="info-cell"><div class="info-lbl">Phone</div><div class="info-val">${g.contact}</div></div>`:''}
+      ${g.email?`<div class="info-cell"><div class="info-lbl">Email</div><div class="info-val">${g.email}</div></div>`:''}
       <div class="info-cell"><div class="info-lbl">Party Size</div><div class="info-val">${g.party||1}</div></div>
       ${g.table?`<div class="info-cell"><div class="info-lbl">Table / Group</div><div class="info-val">${g.table}</div></div>`:''}
       ${g.roomLoc?`<div class="info-cell"><div class="info-lbl">🏨 Room Location</div><div class="info-val">${g.roomLoc}</div></div>`:''}
@@ -1581,6 +1729,10 @@ function renderRooms(){
     el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">🏨</div><div class="empty-t">No event selected</div><div class="empty-s">Select an event to manage rooms</div></div>`;
     return;
   }
+  if(!Auth.isRoom(DB.activeEvent)){
+    el.innerHTML=evSelHtml+`<div class="empty"><div class="empty-ico">🔐</div><div class="empty-t">Room access required</div><div class="empty-s">Only organisers and room coordinators can fulfill stay requests and allocate rooms.</div></div>`;
+    return;
+  }
   const locs=(ev.roomLocs)||[];
   if(locs.length===0){
     el.innerHTML=evSelHtml+
@@ -1589,7 +1741,8 @@ function renderRooms(){
     return;
   }
   // build stats
-  const guests=DB.guests.filter(g=>g.eventId===DB.activeEvent);
+  const guests=DB.guests.filter(g=>g.eventId===DB.activeEvent).map(g=>ensureGuestRequestDefaults(g));
+  const pendingRequests=guests.filter(g=>g.roomRequestStatus==='pending'&&g.roomRequestType!=='undecided');
   const totalRooms=locs.reduce((a,l)=>a+l.rooms.length,0);
   const occupiedRooms=new Set(guests.filter(g=>g.roomLoc&&g.roomNo).map(g=>g.roomLoc+'||'+g.roomNo)).size;
   const vacantRooms=totalRooms-occupiedRooms;
@@ -1598,13 +1751,40 @@ function renderRooms(){
     `<div class="stats-row">
       <div class="s-card"><span class="s-n">${totalRooms}</span><span class="s-l">Total</span></div>
       <div class="s-card"><span class="s-n" style="color:var(--rose-d)">${occupiedRooms}</span><span class="s-l">Occupied</span></div>
-      <div class="s-card"><span class="s-n" style="color:var(--sage-d)">${vacantRooms}</span><span class="s-l">Vacant</span></div>
+      <div class="s-card"><span class="s-n" style="color:${pendingRequests.length?'var(--gold-d)':'var(--sage-d)'}">${pendingRequests.length||vacantRooms}</span><span class="s-l">${pendingRequests.length?'Requests':'Vacant'}</span></div>
     </div>`+
     `<div class="room-legend">
       <div class="room-legend-item"><div class="room-legend-dot" style="background:var(--sage-m)"></div>Vacant</div>
       <div class="room-legend-item"><div class="room-legend-dot" style="background:var(--rose)"></div>Occupied</div>
       <div class="room-legend-item"><div class="room-legend-dot" style="background:#E67E22"></div>Multiple guests</div>
     </div>`;
+  if(pendingRequests.length){
+    html+=`<div class="guest-card">
+      <div class="guest-card-title">Pending Stay Requests</div>
+      <div class="request-list">
+        ${pendingRequests.map(g=>`
+          <div class="request-row">
+            <div class="request-row-top">
+              <div>
+                <div class="request-row-name">${g.first} ${g.last}</div>
+                <div class="request-row-meta">
+                  ${roomRequestTypeLabel(g.roomRequestType)} · ${Math.max(1,parseInt(g.requestedRoomCount)||1)} room(s) · ${Math.max(1,parseInt(g.requestedStayCount)||g.party||1)} guest(s)
+                  ${g.roomLoc&&g.roomNo?`<br>Currently assigned: ${g.roomLoc} Room ${g.roomNo}`:''}
+                </div>
+              </div>
+              <span class="guest-room-status pending">Pending</span>
+            </div>
+            ${g.roomRequestNote?`<div style="font-size:12px;color:var(--txt2);line-height:1.5">${g.roomRequestNote}</div>`:''}
+            <div class="request-actions">
+              ${g.roomRequestType==='needs_room'
+                ?`<button class="request-btn primary" onclick="App.prepareGuestRoomAssignment('${g.id}')">Assign in Room Map</button>`
+                :`<button class="request-btn primary" onclick="App.resolveGuestRoomRequest('${g.id}','no_room_needed')">Mark Complete</button>`}
+              <button class="request-btn secondary" onclick="App.openGuestDetail('${g.id}')">View Guest</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
   locs.forEach(loc=>{
     const locGuests=guests.filter(g=>g.roomLoc===loc.name&&g.roomNo);
     html+=`<div class="room-loc-section">
@@ -1635,6 +1815,7 @@ function renderRooms(){
 
 let _roomAllocLoc='';
 let _roomAllocNo='';
+let _preferredRoomGuestId='';
 
 function openRoomDetail(locName,roomNo){
   _roomAllocLoc=locName;
@@ -1673,8 +1854,11 @@ function openRoomDetail(locName,roomNo){
       const label=`${g.first} ${g.last}`+(inThisRoom?' ✓ (this room)':inOtherRoom?` (${g.roomLoc} #${g.roomNo})`:'');
       return`<option value="${g.id}" ${inThisRoom?'disabled':''}>${label}</option>`;
     }).join('');
-
   document.getElementById('room-alloc-conflict').style.display='none';
+  if(_preferredRoomGuestId && allGuests.some(g=>g.id===_preferredRoomGuestId)){
+    sel.value=_preferredRoomGuestId;
+    onRoomAllocGuestChange();
+  }
   openModal('room-alloc');
 }
 
@@ -1696,9 +1880,12 @@ function assignGuestToRoom(){
   if(!gid){toast('⚠️ Select a guest');return;}
   const g=DB.guests.find(x=>x.id===gid);
   if(!g)return;
+  ensureGuestRequestDefaults(g);
   g.roomLoc=_roomAllocLoc;
   g.roomNo=_roomAllocNo;
+  g.roomRequestStatus='fulfilled';
   save();syncActiveEventData();
+  _preferredRoomGuestId='';
   toast(`✅ ${g.first} assigned to ${_roomAllocLoc} Room ${_roomAllocNo}`);
   closeModal('room-alloc');
   renderRooms();
@@ -1707,13 +1894,36 @@ function assignGuestToRoom(){
 function unassignGuestRoom(gid){
   const g=DB.guests.find(x=>x.id===gid);
   if(!g)return;
+  ensureGuestRequestDefaults(g);
   const name=`${g.first} ${g.last}`;
   g.roomLoc='';g.roomNo='';
+  g.roomRequestStatus=g.roomRequestType==='needs_room'?'pending':'none';
   save();syncActiveEventData();
   toast(`🗑️ ${name} unassigned`);
   // re-open to refresh
   openRoomDetail(_roomAllocLoc,_roomAllocNo);
   renderRooms();
+}
+
+function prepareGuestRoomAssignment(gid){
+  const g=DB.guests.find(x=>x.id===gid);
+  if(!g){toast('⚠️ Guest not found');return;}
+  _preferredRoomGuestId=gid;
+  toast(`Choose a room for ${g.first} ${g.last}`);
+}
+
+function resolveGuestRoomRequest(gid,outcome){
+  const g=DB.guests.find(x=>x.id===gid);
+  if(!g)return;
+  ensureGuestRequestDefaults(g);
+  if(outcome==='no_room_needed'){
+    g.roomLoc='';
+    g.roomNo='';
+    g.roomRequestType='no_room_needed';
+    g.roomRequestStatus='fulfilled';
+  }
+  save();syncActiveEventData();renderRooms();
+  toast(`✅ ${g.first}'s request updated`);
 }
 
 function sendGuestInvite(guestId){
@@ -1732,6 +1942,26 @@ function sendGuestInvite(guestId){
   const url=`https://wa.me/${intlPhone}?text=${encodeURIComponent(msg)}`;
   window.open(url,'_blank');
   toast('📲 WhatsApp invite opened!');
+}
+
+function submitGuestRoomRequest(){
+  const ev=DB.events.find(e=>e.id===DB.activeEvent);
+  if(!ev||!ev._isGuestOnly){toast('⚠️ Guest portal only');return;}
+  const me=getCurrentGuestInvite(ev.id);
+  if(!me){toast('⚠️ Guest record not found');return;}
+  ensureGuestRequestDefaults(me);
+  me.roomRequestType=document.getElementById('gp-room-request-type').value;
+  me.requestedRoomCount=Math.max(1,parseInt(document.getElementById('gp-requested-rooms').value)||1);
+  me.requestedStayCount=Math.max(1,parseInt(document.getElementById('gp-requested-stay-count').value)||1);
+  me.roomRequestNote=document.getElementById('gp-room-request-note').value.trim();
+  me.roomRequestUpdatedAt=Date.now();
+  me.roomRequestStatus=me.roomRequestType==='undecided'?'none':'pending';
+  if(me.roomRequestType==='no_room_needed'){
+    me.roomLoc='';
+    me.roomNo='';
+  }
+  save();syncActiveEventData();renderGuestPortal();
+  toast('✅ Room request sent');
 }
 
 function setRsvpDirect(id,status){
@@ -1930,8 +2160,8 @@ function exportGuests(){
   const ev=DB.events.find(e=>e.id===evId);
   const guests=DB.guests.filter(g=>g.eventId===evId);
   if(guests.length===0){toast('⚠️ No guests to export');return;}
-  const rows=[['First Name','Last Name','Contact','Party Size','RSVP Status','Table/Group','Notes']];
-  guests.forEach(g=>rows.push([g.first,g.last,g.contact,g.party,g.rsvp,g.table,g.notes]));
+  const rows=[['First Name','Last Name','Phone','Email','Party Size','RSVP Status','Table/Group','Notes']];
+  guests.forEach(g=>rows.push([g.first,g.last,g.contact,g.email,g.party,g.rsvp,g.table,g.notes]));
   downloadCSV(`${(ev?.name||'event').replace(/\s+/g,'_')}_guests.csv`,rows);
   toast('📊 Guest list exported!');
   closeModal('export');
@@ -2257,6 +2487,7 @@ window.App={
   setGiftTab,setGiftCatFilter,selectCat,
   openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,filterMoi,setMoiFilter,setMoiTy,
   _editingGift:()=>_editing.gift,
+  submitGuestRoomRequest,prepareGuestRoomAssignment:_requireRoom(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireRoom(resolveGuestRoomRequest),
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   saveProfile,toggleSetting,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,

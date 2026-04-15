@@ -352,6 +352,31 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
 .room-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt3)}
 .room-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
 
+/* —— GUEST PORTAL —— */
+.guest-hero{background:linear-gradient(135deg,var(--slate-d) 0%,#26476F 100%);border-radius:var(--r);padding:18px;margin-bottom:16px;color:white;position:relative;overflow:hidden}
+.guest-hero::after{content:'';position:absolute;right:-24px;top:-18px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08)}
+.guest-kicker{font-size:11px;letter-spacing:1px;text-transform:uppercase;opacity:.72;margin-bottom:5px}
+.guest-title{font-family:'Cormorant Garamond',serif;font-size:27px;font-weight:600;line-height:1.15;margin-bottom:8px}
+.guest-sub{font-size:12.5px;opacity:.86;line-height:1.5}
+.guest-card{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--r);padding:15px 16px;margin-bottom:12px;box-shadow:var(--sh1)}
+.guest-card-title{font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px}
+.guest-room-status{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:600}
+.guest-room-status.pending{background:var(--gold-l);color:var(--gold-d)}
+.guest-room-status.fulfilled{background:var(--sage-l);color:var(--sage-d)}
+.guest-room-status.none{background:var(--surf2);color:var(--txt2)}
+.request-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.request-chip-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.request-chip{background:var(--surf2);border-radius:999px;padding:4px 10px;font-size:11px;color:var(--txt2);font-weight:500}
+.request-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.request-row{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:12px 13px;box-shadow:var(--sh1)}
+.request-row-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.request-row-name{font-size:13.5px;font-weight:600;color:var(--txt)}
+.request-row-meta{font-size:11.5px;color:var(--txt3);line-height:1.5}
+.request-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.request-btn{padding:8px 10px;border:none;border-radius:var(--rxs);font-size:11.5px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+.request-btn.primary{background:var(--slate-d);color:white}
+.request-btn.secondary{background:var(--surf2);color:var(--txt2);border:1px solid var(--bord)}
+
 /* ── AUTH SCREEN ── */
 #auth-screen{position:fixed;inset:0;background:linear-gradient(145deg,#FAF0F3 0%,#FBF6EC 50%,#EEF5F0 100%);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
 .auth-card{width:100%;max-width:360px;background:var(--surf);border-radius:20px;padding:36px 28px 30px;box-shadow:var(--sh3);text-align:center}
@@ -442,7 +467,6 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
   <header class="hdr">
     <div class="logo">Plan with Flow</div>
     <div class="hdr-right">
-      <button class="ib" onclick="App.openModal('search-global')" title="Search">🔍</button>
       <button class="ib" id="hdr-team-btn" onclick="App.openTeamModal()" title="Team" style="display:none">👥</button>
       <button class="ib" onclick="App.switchTab('settings')" title="Settings" id="hdr-settings-btn">⚙️</button>
       <button class="ib" onclick="App.openUserMenu()" title="Account" id="hdr-user-btn">👤</button>
@@ -586,8 +610,12 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
       </div>
     </div>
     <div class="fg">
-      <label class="fl">Phone / Email</label>
+      <label class="fl">Phone</label>
       <input class="fi" type="text" id="g-contact" placeholder="+91 98000 00000" />
+    </div>
+    <div class="fg">
+      <label class="fl">Email</label>
+      <input class="fi" type="email" id="g-email" placeholder="guest@example.com" />
     </div>
     <div class="fr">
       <div class="fg">

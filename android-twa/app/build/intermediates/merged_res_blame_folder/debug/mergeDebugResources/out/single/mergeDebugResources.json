@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.eventise.twa.app-debug-25:/drawable_ic_splash.xml.flat",
+        "source": "com.eventise.twa.app-main-27:/drawable/ic_splash.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-debug-25:/drawable_ic_logo.xml.flat",
+        "source": "com.eventise.twa.app-main-27:/drawable/ic_logo.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-debug-25:/drawable_ic_launcher.xml.flat",
+        "source": "com.eventise.twa.app-main-27:/drawable/ic_launcher.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-debug-25:/xml_filepaths.xml.flat",
+        "source": "com.eventise.twa.app-main-27:/xml/filepaths.xml"
+    }
+]

@@ -1,0 +1,46 @@
+plugins {
+  id 'com.android.application'
+}
+
+android {
+  namespace 'com.eventise.twa'
+  compileSdk 34
+
+  defaultConfig {
+    applicationId "com.eventise.twa"
+    minSdk 21
+    targetSdk 34
+    versionCode 1
+    versionName "1.0.0"
+  }
+
+  buildTypes {
+    debug {
+      applicationIdSuffix ".debug"
+      versionNameSuffix "-debug"
+    }
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+dependencies {
+  implementation 'androidx.appcompat:appcompat:1.7.0'
+  implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.4.0'
+
+  constraints {
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22") {
+      because("kotlin-stdlib 1.8.22 includes jdk7 and jdk8")
+    }
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22") {
+      because("kotlin-stdlib 1.8.22 includes jdk7 and jdk8")
+    }
+  }
+}

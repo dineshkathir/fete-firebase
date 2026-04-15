@@ -1,0 +1,4 @@
+<resources>
+  <string name="app_name">eventise</string>
+  <string name="launch_url">https://eventise.vercel.app/</string>
+</resources>

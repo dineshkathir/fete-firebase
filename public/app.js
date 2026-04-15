@@ -19,10 +19,11 @@ const _gProvider = new GoogleAuthProvider();
 
 const Cloud = (() => {
   let _sessionToken = 0;
-  let _unsubs = { events: null, guests: [], gifts: [] };
+  let _unsubs = { eventsMem: null, eventsGst: null, guests: [], gifts: [] };
 
   function unsubscribeAll() {
-    if (_unsubs.events) { _unsubs.events(); _unsubs.events = null; }
+    if (_unsubs.eventsMem) { _unsubs.eventsMem(); _unsubs.eventsMem = null; }
+    if (_unsubs.eventsGst) { _unsubs.eventsGst(); _unsubs.eventsGst = null; }
     _unsubs.guests.forEach(unsub => unsub()); _unsubs.guests = [];
     _unsubs.gifts.forEach(unsub => unsub()); _unsubs.gifts = [];
   }
@@ -121,27 +122,42 @@ const Cloud = (() => {
 
     const batches = chunk(eventIds, 10);
     for (const ids of batches) {
-      const qGuests = query(collection(_fbDb, 'guests'), where('eventId', 'in', ids));
-      _unsubs.guests.push(onSnapshot(qGuests, snapshot => {
-        ids.forEach(evId => {
-           for(const [gid, gdata] of guestsMap) {
-             if(gdata.eventId === evId) guestsMap.delete(gid);
-           }
-        });
-        snapshot.docs.forEach(docSnap => guestsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() }));
-        flushData();
-      }));
-      
-      const qGifts = query(collection(_fbDb, 'gifts'), where('eventId', 'in', ids));
-      _unsubs.gifts.push(onSnapshot(qGifts, snapshot => {
-        ids.forEach(evId => {
-           for(const [gid, gdata] of giftsMap) {
-             if(gdata.eventId === evId) giftsMap.delete(gid);
-           }
-        });
-        snapshot.docs.forEach(docSnap => giftsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() }));
-        flushData();
-      }));
+      // Split IDs into guest-only and member events
+      const guestOnlyIds = ids.filter(id => { const ev = DB.events.find(e => e.id === id); return ev && ev._isGuestOnly; });
+      const memberIds = ids.filter(id => !guestOnlyIds.includes(id));
+
+      if (memberIds.length > 0) {
+        const qGuests = query(collection(_fbDb, 'guests'), where('eventId', 'in', memberIds));
+        _unsubs.guests.push(onSnapshot(qGuests, snapshot => {
+          memberIds.forEach(evId => { for(const [gid, gdata] of guestsMap) { if(gdata.eventId === evId) guestsMap.delete(gid); } });
+          snapshot.docs.forEach(docSnap => guestsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() }));
+          flushData();
+        }));
+        
+        const qGifts = query(collection(_fbDb, 'gifts'), where('eventId', 'in', memberIds));
+        _unsubs.gifts.push(onSnapshot(qGifts, snapshot => {
+          memberIds.forEach(evId => { for(const [gid, gdata] of giftsMap) { if(gdata.eventId === evId) giftsMap.delete(gid); } });
+          snapshot.docs.forEach(docSnap => giftsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() }));
+          flushData();
+        }));
+      }
+
+      if (guestOnlyIds.length > 0) {
+        const email = normalizeEmail(Auth.currentSession()?.email);
+        // Execute a strict query for guests where contact exactly equals their email to satisfy Firestore rules.
+        const qGuestsGuest = query(collection(_fbDb, 'guests'), where('contact', '==', email));
+        _unsubs.guests.push(onSnapshot(qGuestsGuest, snapshot => {
+          // Because this query fetches globally for their email, we must locally filter by the chunks
+          guestOnlyIds.forEach(evId => { for(const [gid, gdata] of guestsMap) { if(gdata.eventId === evId) guestsMap.delete(gid); } });
+          snapshot.docs.forEach(docSnap => {
+            const data = docSnap.data();
+            if (guestOnlyIds.includes(data.eventId)) {
+              guestsMap.set(docSnap.id, { id: docSnap.id, ...data });
+            }
+          });
+          flushData();
+        }));
+      }
     }
   }
 
@@ -162,8 +178,16 @@ const Cloud = (() => {
 
   async function syncEventData(eventId) {
     if (!eventId) return;
-    await syncCollectionForEvent('guests', eventId, DB.guests.filter(guest => guest.eventId === eventId));
-    await syncCollectionForEvent('gifts', eventId, DB.gifts.filter(gift => gift.eventId === eventId));
+    const guests = DB.guests.filter(guest => guest.eventId === eventId);
+    await syncCollectionForEvent('guests', eventId, guests);
+    
+    // Gifts and Events updates should only be performed by actual team members, not guests handling their own room requests.
+    const ev = DB.events.find(e => e.id === eventId);
+    if (ev && !ev._isGuestOnly) {
+      await syncCollectionForEvent('gifts', eventId, DB.gifts.filter(gift => gift.eventId === eventId));
+      const guestEmails = [...new Set(guests.map(g => (g.contact || '').toLowerCase().trim()).filter(e => e.includes('@')))];
+      try { await setDoc(doc(_fbDb, 'events', eventId), { guestEmails }, { merge: true }); } catch(e){}
+    }
   }
 
   async function deleteDocsForEvent(collectionName, eventId) {
@@ -206,7 +230,8 @@ const Cloud = (() => {
     const myToken = ++_sessionToken;
     const email = normalizeEmail(session?.email);
     
-    if (_unsubs.events) { _unsubs.events(); _unsubs.events = null; }
+    if (_unsubs.eventsMem) { _unsubs.eventsMem(); _unsubs.eventsMem = null; }
+    if (_unsubs.eventsGst) { _unsubs.eventsGst(); _unsubs.eventsGst = null; }
     
     if (!email) {
       applyEventsToLocal([], session);
@@ -214,13 +239,31 @@ const Cloud = (() => {
       return;
     }
     
-    const qEvents = query(collection(_fbDb, 'events'), where('memberEmails', 'array-contains', email));
-    _unsubs.events = onSnapshot(qEvents, snapshot => {
-      if (myToken !== _sessionToken) return;
-      const events = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-      applyEventsToLocal(events, session);
-      loadEventDataForEvents(events.map(event => event.id));
+    let memEvents = new Map();
+    let gstEvents = new Map();
+
+    const flushEvents = () => {
+      // Members take precedence if both matched
+      const allEvents = new Map([...gstEvents, ...memEvents]); 
+      applyEventsToLocal(Array.from(allEvents.values()), session);
+      loadEventDataForEvents(Array.from(allEvents.keys()));
       render();
+    };
+    
+    const qEventsMem = query(collection(_fbDb, 'events'), where('memberEmails', 'array-contains', email));
+    _unsubs.eventsMem = onSnapshot(qEventsMem, snapshot => {
+      if (myToken !== _sessionToken) return;
+      memEvents.clear();
+      snapshot.docs.forEach(docSnap => memEvents.set(docSnap.id, { id: docSnap.id, _isGuestOnly: false, ...docSnap.data() }));
+      flushEvents();
+    });
+
+    const qEventsGst = query(collection(_fbDb, 'events'), where('guestEmails', 'array-contains', email));
+    _unsubs.eventsGst = onSnapshot(qEventsGst, snapshot => {
+      if (myToken !== _sessionToken) return;
+      gstEvents.clear();
+      snapshot.docs.forEach(docSnap => gstEvents.set(docSnap.id, { id: docSnap.id, _isGuestOnly: true, ...docSnap.data() }));
+      flushEvents();
     });
   }
 
@@ -597,13 +640,29 @@ let _guestFilter='all';
 let _guestSearch='';
 let _exportEventId=null;
 
-function switchTab(tab){
-  _tab=tab;
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('scr-'+tab).classList.add('active');
-  document.getElementById('tab-'+tab).classList.add('active');
-  document.getElementById('main-scroll').scrollTop=0;
+function switchTab(tab) {
+  const ev = DB.events.find(e => e.id === DB.activeEvent);
+  const isGuestOnly = ev && ev._isGuestOnly;
+
+  if (isGuestOnly && tab !== 'events' && tab !== 'guest-portal' && tab !== 'settings') {
+    tab = 'guest-portal';
+  }
+
+  _tab = tab;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  
+  const scr = document.getElementById('scr-' + tab);
+  if (scr) scr.classList.add('active');
+  const tabEl = document.getElementById('tab-' + tab);
+  if (tabEl) tabEl.classList.add('active');
+  
+  const mainScroll = document.getElementById('main-scroll');
+  if (mainScroll) mainScroll.scrollTop = 0;
+  
+  const navTabs = document.querySelector('.tabs');
+  if (navTabs) navTabs.style.display = isGuestOnly ? 'none' : 'flex';
+  
   render();
 }
 
@@ -615,6 +674,7 @@ function renderEvents(){
   const sess=Auth.currentSession();
   // Only show events where the current user is a team member
   const myEvents=DB.events.filter(ev=>{
+    if (ev._isGuestOnly) return true;
     const team=Cloud.hydrateTeamForSession(Auth.getTeam(ev.id), sess);
     return team.some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase()));
   });
@@ -645,9 +705,10 @@ function renderEvents(){
       <div class="dash-hero-event">${TYPE_LABEL[ae.type]||ae.type}</div>
       <div class="dash-hero-title">${ae.name}</div>
       <div class="dash-hero-stats">
-        <div class="dash-stat"><span class="dash-stat-n">${gc.length}</span><span class="dash-stat-l">Guests</span></div>
+        ${ae._isGuestOnly ? `<div class="dash-stat"><span class="dash-stat-l">Invitation Access</span></div>` : 
+        `<div class="dash-stat"><span class="dash-stat-n">${gc.length}</span><span class="dash-stat-l">Guests</span></div>
         <div class="dash-stat"><span class="dash-stat-n">${attending}</span><span class="dash-stat-l">Attending</span></div>
-        <div class="dash-stat"><span class="dash-stat-n">${giftc.length}</span><span class="dash-stat-l">Gifts</span></div>
+        <div class="dash-stat"><span class="dash-stat-n">${giftc.length}</span><span class="dash-stat-l">Gifts</span></div>`}
       </div>
       ${days!==null?`<div class="dash-cd">${days>0?'⏳ '+days+' days away':days===0?'🎉 Today!':'✅ Past event'}</div>`:''}
     </div>`;
@@ -674,9 +735,10 @@ function renderEvents(){
           ${ev.location?`<span class="ev-meta-item"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.location)}" target="_blank" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">📍 ${ev.location}</a></span>`:''}
         </div>
         <div class="ev-stats">
-          <div class="ev-stat"><span class="ev-stat-n">${gc.length}</span><span class="ev-stat-l">Guests</span></div>
+          ${ev._isGuestOnly ? `<div class="ev-stat"><span class="ev-stat-l">My Invitation Access</span></div>` : 
+          `<div class="ev-stat"><span class="ev-stat-n">${gc.length}</span><span class="ev-stat-l">Guests</span></div>
           <div class="ev-stat"><span class="ev-stat-n">${att}</span><span class="ev-stat-l">Attending</span></div>
-          <div class="ev-stat"><span class="ev-stat-n">${giftc.length}</span><span class="ev-stat-l">Gifts</span></div>
+          <div class="ev-stat"><span class="ev-stat-n">${giftc.length}</span><span class="ev-stat-l">Gifts</span></div>`}
         </div>
         <div class="ev-footer">
           ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?'⏳ '+days+' days':days===0?'🎉 Today!':'✅ Past'}</span>`:'<span></span>'}
@@ -1302,9 +1364,10 @@ function saveGuest(){
   const roomNo=document.getElementById('g-room-no').value;
   if(_editing.guest){
     const g=DB.guests.find(x=>x.id===_editing.guest);
+    const gContact = document.getElementById('g-contact').value.trim();
     if(g){
       g.first=first;g.last=document.getElementById('g-last').value.trim();
-      g.contact=document.getElementById('g-contact').value.trim();
+      g.contact=gContact.includes('@') ? gContact.toLowerCase() : gContact;
       g.party=parseInt(document.getElementById('g-party').value)||1;
       g.rsvp=document.getElementById('g-rsvp').value;
       g.notes=document.getElementById('g-notes').value.trim();
@@ -1316,7 +1379,7 @@ function saveGuest(){
     DB.guests.push({
       id:uid(),eventId:DB.activeEvent,
       first,last:document.getElementById('g-last').value.trim(),
-      contact:document.getElementById('g-contact').value.trim(),
+      contact:gContact.includes('@') ? gContact.toLowerCase() : gContact,
       party:parseInt(document.getElementById('g-party').value)||1,
       rsvp:document.getElementById('g-rsvp').value,
       notes:document.getElementById('g-notes').value.trim(),

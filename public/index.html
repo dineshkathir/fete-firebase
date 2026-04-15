@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>fête – Event & Gift Tracker</title>
+<title>Plan with Flow - Event & Gift Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4049798836230099" crossorigin="anonymous"></script>
 <style>
@@ -397,7 +397,7 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
 <!-- ════ AUTH SCREEN ════ -->
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo">fête<em>.</em></div>
+    <div class="auth-logo">Plan with Flow</div>
     <div class="auth-tagline">Event & Gift Tracker</div>
 
     <button class="btn-google" onclick="Auth.googleLogin()">
@@ -440,10 +440,11 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
 
 <div id="app">
   <header class="hdr">
-    <div class="logo">fête<em>.</em></div>
+    <div class="logo">Plan with Flow</div>
     <div class="hdr-right">
       <button class="ib" onclick="App.openModal('search-global')" title="Search">🔍</button>
       <button class="ib" id="hdr-team-btn" onclick="App.openTeamModal()" title="Team" style="display:none">👥</button>
+      <button class="ib" onclick="App.switchTab('settings')" title="Settings" id="hdr-settings-btn">⚙️</button>
       <button class="ib" onclick="App.openUserMenu()" title="Account" id="hdr-user-btn">👤</button>
     </div>
   </header>
@@ -471,6 +472,8 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
     <div id="scr-settings" class="screen pad"></div>
     <!-- ROOMS -->
     <div id="scr-rooms" class="screen pad"></div>
+    <!-- GUEST PORTAL -->
+    <div id="scr-guest-portal" class="screen pad"></div>
   </div>
 
   <div class="ad-bot">
@@ -500,11 +503,6 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
       <span class="tab-dot"></span>
       <span class="tab-ico">🎁</span>
       <span class="tab-lbl">Gifts</span>
-    </button>
-    <button class="tab" id="tab-settings" onclick="App.switchTab('settings')">
-      <span class="tab-dot"></span>
-      <span class="tab-ico">⚙️</span>
-      <span class="tab-lbl">Settings</span>
     </button>
     <button class="tab" id="tab-rooms" onclick="App.switchTab('rooms')">
       <span class="tab-dot"></span>
@@ -765,7 +763,7 @@ html,body{height:100%;background:#E8E0D4;font-family:'Plus Jakarta Sans',sans-se
   <div class="ms" style="text-align:center;padding:24px 22px 32px">
     <div class="m-handle"></div>
     <div style="font-size:44px;margin-bottom:12px">✨</div>
-    <div class="m-title" style="text-align:center">fête Premium</div>
+    <div class="m-title" style="text-align:center">Plan with Flow Premium</div>
     <p style="font-size:13px;color:var(--txt2);margin-bottom:20px;line-height:1.6">Remove all ads forever and unlock Digital RSVP Links, Collaborator Mode, and priority support.</p>
     <div style="background:var(--rose-l);border-radius:var(--rs);padding:16px;margin-bottom:18px">
       <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--rose-d)">₹499</div>

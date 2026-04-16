@@ -1333,6 +1333,7 @@ let _masterGuestConflictResolver=null;
 let _guestSwipeTapBlockUntil=0;
 let _guestSwipeOpenId=null;
 let _guestSwipeActionGuestId=null;
+let _directRoomAssignGuestId='';
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
 const GUEST_SWIPE_LEFT_REVEAL=196;
@@ -1425,7 +1426,7 @@ function swipeAllocateRoom(guestId){
   const targetId=guestId||_guestSwipeActionGuestId;
   closeOpenGuestSwipe();
   closeModal('guest-swipe-actions');
-  prepareGuestRoomAssignment(targetId);
+  prepareGuestRoomAssignment(targetId,{silent:true,directAssign:true});
 }
 
 function openAddGiftForGuest(guestId){
@@ -1441,6 +1442,21 @@ function swipeAddGift(guestId){
   const targetId=guestId||_guestSwipeActionGuestId;
   closeModal('guest-swipe-actions');
   openAddGiftForGuest(targetId);
+}
+
+function openAddCashGiftForGuest(guestId){
+  if(!Auth.isCash(DB.activeEvent)){toast('⚠️ Only Organisers or Cash Collectors can add cash gifts');return;}
+  const guest=DB.guests.find(item=>item.id===guestId);
+  if(!guest){toast('⚠️ Guest not found');return;}
+  closeOpenGuestSwipe();
+  openAddMoi();
+  document.getElementById('moi-from').value=fullGuestName(guest)||guest.first||'';
+}
+
+function swipeAddCashGift(guestId){
+  const targetId=guestId||_guestSwipeActionGuestId;
+  closeModal('guest-swipe-actions');
+  openAddCashGiftForGuest(targetId);
 }
 
 function openGuestSwipeActions(guestId){
@@ -3421,6 +3437,24 @@ let _roomAllocNo='';
 let _preferredRoomGuestId='';
 
 function openRoomDetail(locName,roomNo){
+  if(_directRoomAssignGuestId){
+    const gid=_directRoomAssignGuestId;
+    _directRoomAssignGuestId='';
+    const g=DB.guests.find(x=>x.id===gid);
+    if(!g){toast('⚠️ Guest not found');return;}
+    if(getGuestRoomAssignments(g).some(room=>room.loc===locName&&room.no===roomNo)){
+      toast(`${g.first} is already assigned to ${locName} Room ${roomNo}`);
+      return;
+    }
+    ensureGuestRequestDefaults(g);
+    addGuestRoomAssignment(g,locName,roomNo);
+    recomputeGuestRoomRequestStatus(g);
+    save();syncActiveEventData();
+    _preferredRoomGuestId='';
+    toast(`${g.first} assigned to ${locName} Room ${roomNo}`);
+    renderRooms();
+    return;
+  }
   _roomAllocLoc=locName;
   _roomAllocNo=roomNo;
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
@@ -3520,12 +3554,13 @@ function clearGuestRooms(gid){
   toast(`Cleared all rooms for ${g.first}`);
 }
 
-function prepareGuestRoomAssignment(gid){
+function prepareGuestRoomAssignment(gid,{silent=false,directAssign=false}={}){
   const g=DB.guests.find(x=>x.id===gid);
   if(!g){toast('⚠️ Guest not found');return;}
   _preferredRoomGuestId=gid;
+  _directRoomAssignGuestId=directAssign?gid:'';
   switchTab('rooms');
-  toast(`Choose a room for ${g.first} ${g.last}`);
+  if(!silent) toast(`Choose a room for ${g.first} ${g.last}`);
 }
 
 function resolveGuestRoomRequest(gid,outcome){
@@ -4235,7 +4270,7 @@ window.App={
   openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,saveEvent,confirmDeleteEvent:confirmDeleteEventGated,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
-  confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,openGuestSwipeActions,
+  confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,
   openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,

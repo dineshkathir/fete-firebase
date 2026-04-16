@@ -1334,7 +1334,7 @@ let _guestSwipeTapBlockUntil=0;
 let _guestSwipeOpenId=null;
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
-const GUEST_SWIPE_LEFT_REVEAL=156;
+const GUEST_SWIPE_LEFT_REVEAL=196;
 
 function syncTabHistory(tab,{fromPop=false}={}) {
   if (fromPop || !window.history || !window.history.replaceState) return;
@@ -2613,9 +2613,15 @@ async function exportCurrentEventToMaster(){
       else skipped++;
       continue;
     }
+    if(match.type==='email' || match.type==='phone'){
+      const result=saveMasterGuestRecord(candidate,{updateId:match.existing.id});
+      if(result.saved) updated++;
+      else skipped++;
+      continue;
+    }
     const choice=await openMasterGuestConflictModal({
       title:'Matching Saved Guest Found',
-      sub:'This guest already matches the master guest list. Do you want to update the existing saved guest or create a new entry?',
+      sub:'A duplicate guest was found in the master guest list. Do you want to update the existing saved guest or create a new entry?',
       candidate,
       existing:match.existing,
       updateLabel:'Update Existing',

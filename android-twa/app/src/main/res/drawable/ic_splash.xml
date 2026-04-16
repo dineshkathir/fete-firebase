@@ -1,7 +1,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
   <item
-      android:width="128dp"
-      android:height="128dp"
+      android:width="300dp"
+      android:height="100dp"
       android:gravity="center"
-      android:drawable="@drawable/ic_logo" />
+      android:drawable="@drawable/splash_wordmark" />
 </layer-list>

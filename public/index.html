@@ -467,8 +467,13 @@ html.boot-authenticated #auth-screen{display:none}
 .event-contact-view-role{font-size:13px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:7px}
 .event-contact-view-name{font-size:13.5px;color:var(--txt);font-weight:500}
 .event-contact-view-meta{font-size:11.5px;color:var(--txt3);line-height:1.6}
+.event-contact-view-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .event-contact-share-btn{border:none;border-radius:999px;background:var(--rose-l);color:var(--rose-d);padding:8px 12px;font-size:11.5px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
 .event-contact-share-btn:hover{background:var(--rose-m)}
+.event-contact-call-btn{background:var(--sage-l);color:var(--sage-d)}
+.event-contact-call-btn:hover{background:var(--sage-m)}
+.event-contact-wa-btn{background:#E9F9EF;color:#167C43}
+.event-contact-wa-btn:hover{background:#D6F4E2}
 @media (max-width:380px){
   .event-contact-grid{grid-template-columns:1fr}
 }
@@ -634,8 +639,8 @@ html.boot-authenticated #auth-screen{display:none}
       <button class="add-loc-btn" id="ev-food-menu-add-btn" onclick="App.addEventMenu()">ï¼‹ Add Menu Section</button>
     </div>
     <div class="fg">
-      <label class="fl">Event Contacts</label>
-      <div id="ev-contacts"></div>
+      <label class="fl" style="display:none">Event Contacts</label>
+      <div id="ev-contacts" style="display:none"></div>
       <button class="add-loc-btn" id="ev-contact-add-btn" onclick="App.addEventContact()">＋ Add Event Contact</button>
     </div>
     <div class="fg">
@@ -669,7 +674,9 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-title" id="mo-event-contacts-title">Event Contacts</div>
     <div id="event-contacts-sub" style="font-size:12.5px;color:var(--txt3);line-height:1.6;margin-bottom:14px"></div>
+    <button class="btn-p" id="event-contact-add-btn" style="margin-bottom:12px" onclick="App.addEventContact()">＋ Add Contact</button>
     <div id="event-contacts-list" class="event-contacts-list"></div>
+    <button class="btn-p" id="event-contact-save-btn" onclick="App.saveEventContacts()">Save Contacts</button>
     <button class="btn-s" onclick="App.closeModal('event-contacts')">Close</button>
   </div>
 </div>

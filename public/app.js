@@ -2864,41 +2864,70 @@ function setActive(id){
 function openAddGuest(){
   if(!DB.activeEvent){toast('⚠️ Please select an event first');return;}
   _editing.guest=null;
-  document.getElementById('mo-guest-title').textContent='Add Guest';
-  ['g-first','g-last','g-contact','g-email','g-notes','g-table'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('g-party').value='1';
-  document.getElementById('g-rsvp').value='invited';
-  document.getElementById('del-guest-btn').style.display='none';
-  document.getElementById('send-invite-btn').style.display='none';
-  document.getElementById('guest-master-pick-btn').style.display='block';
-  document.getElementById('guest-master-update-btn').style.display='none';
+  const titleEl=document.getElementById('mo-guest-title');
+  if(titleEl) titleEl.textContent='Add Guest';
+  ['g-first','g-last','g-contact','g-email','g-notes','g-table'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value='';
+  });
+  const partyEl=document.getElementById('g-party');
+  if(partyEl) partyEl.value='1';
+  const rsvpEl=document.getElementById('g-rsvp');
+  if(rsvpEl) rsvpEl.value='invited';
+  const deleteBtn=document.getElementById('del-guest-btn');
+  if(deleteBtn) deleteBtn.style.display='none';
+  const inviteBtn=document.getElementById('send-invite-btn');
+  if(inviteBtn) inviteBtn.style.display='none';
+  const masterPickBtn=document.getElementById('guest-master-pick-btn');
+  if(masterPickBtn) masterPickBtn.style.display='block';
+  const masterUpdateBtn=document.getElementById('guest-master-update-btn');
+  if(masterUpdateBtn) masterUpdateBtn.style.display='none';
   populateRoomSelects();
-  document.getElementById('g-room-loc').value='';
-  document.getElementById('g-room-no').value='';
+  const roomLocEl=document.getElementById('g-room-loc');
+  const roomNoEl=document.getElementById('g-room-no');
+  if(roomLocEl) roomLocEl.value='';
+  if(roomNoEl) roomNoEl.value='';
+  const conflictEl=document.getElementById('room-conflict-indicator');
+  if(conflictEl) conflictEl.style.display='none';
   openModal('add-guest');
+  document.getElementById('g-first')?.focus();
 }
 
 function openEditGuest(id){
   const g=DB.guests.find(x=>x.id===id);
   if(!g)return;
   _editing.guest=id;
-  document.getElementById('mo-guest-title').textContent='Edit Guest';
-  document.getElementById('g-first').value=g.first||'';
-  document.getElementById('g-last').value=g.last||'';
-  document.getElementById('g-contact').value=g.contact||'';
-  document.getElementById('g-email').value=g.email||'';
-  document.getElementById('g-party').value=g.party||1;
-  document.getElementById('g-rsvp').value=g.rsvp||'invited';
-  document.getElementById('g-notes').value=g.notes||'';
-  document.getElementById('g-table').value=g.table||'';
-  document.getElementById('del-guest-btn').style.display='block';
-  document.getElementById('guest-master-pick-btn').style.display='none';
-  document.getElementById('guest-master-update-btn').style.display='block';
+  const titleEl=document.getElementById('mo-guest-title');
+  if(titleEl) titleEl.textContent='Edit Guest';
+  const firstEl=document.getElementById('g-first');
+  const lastEl=document.getElementById('g-last');
+  const contactEl=document.getElementById('g-contact');
+  const emailEl=document.getElementById('g-email');
+  const partyEl=document.getElementById('g-party');
+  const rsvpEl=document.getElementById('g-rsvp');
+  const notesEl=document.getElementById('g-notes');
+  const groupEl=document.getElementById('g-table');
+  if(firstEl) firstEl.value=g.first||'';
+  if(lastEl) lastEl.value=g.last||'';
+  if(contactEl) contactEl.value=g.contact||'';
+  if(emailEl) emailEl.value=g.email||'';
+  if(partyEl) partyEl.value=g.party||1;
+  if(rsvpEl) rsvpEl.value=g.rsvp||'invited';
+  if(notesEl) notesEl.value=g.notes||'';
+  if(groupEl) groupEl.value=g.table||'';
+  const deleteBtn=document.getElementById('del-guest-btn');
+  if(deleteBtn) deleteBtn.style.display='block';
+  const masterPickBtn=document.getElementById('guest-master-pick-btn');
+  if(masterPickBtn) masterPickBtn.style.display='none';
+  const masterUpdateBtn=document.getElementById('guest-master-update-btn');
+  if(masterUpdateBtn) masterUpdateBtn.style.display='block';
   const hasPhone=g.contact&&g.contact.replace(/\D/g,'').length>=10;
-  document.getElementById('send-invite-btn').style.display=hasPhone?'block':'none';
+  const inviteBtn=document.getElementById('send-invite-btn');
+  if(inviteBtn) inviteBtn.style.display=hasPhone?'block':'none';
   const primaryRoom=getGuestRoomAssignments(g)[0]||{loc:g.roomLoc||'',no:g.roomNo||''};
   populateRoomSelects(primaryRoom.loc,primaryRoom.no);
   openModal('add-guest');
+  document.getElementById('g-first')?.focus();
 }
 
 function saveGuest(){

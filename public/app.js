@@ -646,7 +646,7 @@ let DB = {
   activeEvent: STORE.get('activeEvent')||null,
   profile: STORE.get('profile')||{name:'',email:''},
   premium: STORE.get('premium')||false,
-  settings: STORE.get('settings')||{rsvpReminders:true,tyReminders:true,exportNotes:true,removeGuestConfirmation:true},
+  settings: {...{rsvpReminders:true,tyReminders:true,exportNotes:true,removeGuestConfirmation:true,currency:'INR'},...(STORE.get('settings')||{})},
 };
 
 function save(){
@@ -671,6 +671,23 @@ const COLORS={
   gold:{accent:'#C09050',light:'#FBF6EC',chip:'background:var(--gold-l);color:var(--gold-d)'},
   slate:{accent:'#5B7FA6',light:'#EBF2F9',chip:'background:var(--slate-l);color:var(--slate-d)'},
 };
+const CURRENCY_META={
+  INR:{code:'INR',label:'Indian Rupee',symbol:'₹',locale:'en-IN'},
+  USD:{code:'USD',label:'US Dollar',symbol:'$',locale:'en-US'},
+  EUR:{code:'EUR',label:'Euro',symbol:'€',locale:'de-DE'},
+  GBP:{code:'GBP',label:'British Pound',symbol:'£',locale:'en-GB'},
+  AED:{code:'AED',label:'UAE Dirham',symbol:'AED ',locale:'en-AE'},
+};
+function currentCurrencyCode(){
+  const code=(DB.settings?.currency||'INR').toUpperCase();
+  return CURRENCY_META[code]?code:'INR';
+}
+function currentCurrencyMeta(){
+  return CURRENCY_META[currentCurrencyCode()];
+}
+function currencySymbol(){
+  return currentCurrencyMeta().symbol;
+}
 const AV_BG=['#FFEAEE','#E8F5E9','#E3EEF9','#FFF6E1','#F4EAF5','#E1F4F0'];
 const AV_C=['#8B3A52','#3D6B50','#2F5380','#8A6020','#6A2B8A','#1A6B5A'];
 function uiIcon(name,size=14){
@@ -759,16 +776,22 @@ function fmtVal(v){
   if(v===null||v===undefined||v===''||isNaN(v))return '—';
   const amount=Number(v);
   const abs=Math.abs(amount);
-  if(abs>1000000000)return '100Cr+';
+  const currency=currentCurrencyMeta();
+  if(currency.code==='INR' && abs>1000000000)return `${currency.symbol}100Cr+`;
   const formatCompact=(value,suffix)=>{
     const rounded=value>=100?Math.round(value):Math.round(value*10)/10;
     const text=Number.isInteger(rounded)?String(rounded):rounded.toFixed(1).replace(/\.0$/,'');
-    return `₹${text}${suffix}`;
+    return `${currency.symbol}${text}${suffix}`;
   };
-  if(abs>=10000000)return formatCompact(amount/10000000,'Cr');
-  if(abs>=100000)return formatCompact(amount/100000,'L');
-  if(abs>=1000)return formatCompact(amount/1000,'k');
-  return '₹'+amount.toLocaleString('en-IN');
+  if(currency.code==='INR'){
+    if(abs>=10000000)return formatCompact(amount/10000000,'Cr');
+    if(abs>=100000)return formatCompact(amount/100000,'L');
+    return currency.symbol+amount.toLocaleString(currency.locale);
+  }
+  if(abs>=1000000){
+    return new Intl.NumberFormat(currency.locale,{style:'currency',currency:currency.code,notation:'compact',maximumFractionDigits:1}).format(amount);
+  }
+  return new Intl.NumberFormat(currency.locale,{style:'currency',currency:currency.code,maximumFractionDigits:0}).format(amount);
 }
 function initials(first,last){return((first||'')[0]||(last||'')[0]||'?').toUpperCase()+((last||'')[0]||'').toUpperCase()}
 function avStyle(id){const i=Math.abs(id.charCodeAt?[...id].reduce((a,c)=>a+c.charCodeAt(0),0):0)%6;return`background:${AV_BG[i]};color:${AV_C[i]}`}
@@ -2483,8 +2506,21 @@ function renderGifts(){
 function renderSettings(){
   const el=document.getElementById('scr-settings');
   const canManageGuestDelete=Auth.isOrganizer(DB.activeEvent);
+  const currency=currentCurrencyCode();
   el.innerHTML=`
   <div class="ph"><div class="ph-title">Settings</div></div>
+  <div class="set-sec">
+    <div class="set-sec-t">Preferences</div>
+    <div class="set-item" style="align-items:flex-start">
+      <div class="set-left">
+        <div class="set-ico" style="background:var(--sage-l)">${currencySymbol().trim()||'¤'}</div>
+        <div><div class="set-lbl">Currency</div><div class="set-sub">Used in gifts and cash gift amounts</div></div>
+      </div>
+      <select class="fi" style="width:148px;min-width:148px;padding:10px 12px" onchange="App.setCurrency(this.value)">
+        ${Object.values(CURRENCY_META).map(item=>`<option value="${item.code}" ${currency===item.code?'selected':''}>${item.code}</option>`).join('')}
+      </select>
+    </div>
+  </div>
   <div class="set-sec">
     <div class="set-sec-t">Notifications</div>
     <div class="set-item">
@@ -2576,6 +2612,7 @@ function render(){
   else if(_tab==='settings') renderSettings();
   else if(_tab==='rooms') renderRooms();
   else if(_tab==='guest-portal') renderGuestPortal();
+  applyCurrencyUI();
   updateBadges();
 }
 
@@ -4296,7 +4333,7 @@ function exportGifts(){
   const ev=DB.events.find(e=>e.id===evId);
   const gifts=DB.gifts.filter(g=>g.eventId===evId);
   if(gifts.length===0){toast('⚠️ No gifts to export');return;}
-  const rows=[['Description','From','Category','Estimated Value (₹)','Thank-You Status','Notes']];
+  const rows=[['Description','From','Category',`Estimated Value (${currentCurrencyCode()})`,'Thank-You Status','Notes']];
   gifts.forEach(g=>{
     const meta=CAT_META[normalizeGiftCategory(g.cat)]||CAT_META.other;
     rows.push([g.desc,g.from,meta.label,g.value,g.ty,g.notes]);
@@ -4327,6 +4364,28 @@ function toggleSetting(key,btn){
   DB.settings[key]=!DB.settings[key];
   btn.classList.toggle('on',DB.settings[key]);
   save();
+}
+function applyCurrencyUI(){
+  const symbol=currencySymbol();
+  const amountLabels=[document.getElementById('ca-amount-label'),document.getElementById('moi-amount-label')];
+  amountLabels.forEach(label=>{ if(label) label.textContent=`Amount (${symbol.trim()}) *`; });
+  const iconEls=[document.getElementById('ca-currency-badge'),document.getElementById('moi-currency-symbol')];
+  iconEls.forEach(el=>{ if(el) el.textContent=symbol.trim(); });
+  const cashEmpty=document.getElementById('cash-empty-currency');
+  if(cashEmpty) cashEmpty.textContent=symbol.trim();
+  document.querySelectorAll('[data-quick-amount]').forEach(btn=>{
+    const amount=Number(btn.getAttribute('data-quick-amount')||0);
+    btn.textContent=fmtVal(amount);
+  });
+}
+function setCurrency(code){
+  const normalized=(code||'INR').toUpperCase();
+  if(!CURRENCY_META[normalized]) return;
+  DB.settings.currency=normalized;
+  save();
+  applyCurrencyUI();
+  render();
+  toast(`Currency changed to ${normalized}`);
 }
 
 function unlockPremium(){
@@ -4470,61 +4529,96 @@ function setGiftTab(t){_giftTab=t;_giftCatFilter='all';renderGifts();}
 function openAddMoi(){
   if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
   _editing.gift=null;
+  applyCurrencyUI();
   document.getElementById('mo-moi-title').textContent='Add Cash Gift Entry';
+  const saveBtn=document.getElementById('moi-save-btn');
+  const doneBtn=document.getElementById('moi-done-btn');
+  if(saveBtn){
+    saveBtn.textContent='Save & Next';
+    saveBtn.setAttribute('onclick',"App.saveMoi({keepOpen:true})");
+  }
+  if(doneBtn) doneBtn.textContent='Done';
   document.getElementById('moi-from').value='';
   document.getElementById('moi-amount').value='';
   const notesEl=document.getElementById('moi-notes');
-  if(notesEl)notesEl.value='';
+  if(notesEl)notesEl.value='Cash Envelope';
+  const notesInlineEl=document.getElementById('moi-notes-inline');
+  if(notesInlineEl) notesInlineEl.value='Cash Envelope';
   document.getElementById('moi-ty').value='pending';
-  // Reset TY picker buttons
-  document.querySelectorAll('.moi-ty-pick-btn').forEach(b=>{
-    const active=b.dataset.val==='pending';
-    b.style.borderColor=active?'var(--gold-d)':'var(--bord)';
-    b.style.background=active?'var(--gold-l)':'var(--surf)';
-    b.style.color=active?'var(--gold-d)':'var(--txt3)';
-  });
   document.getElementById('del-moi-btn').style.display='none';
   hideAllGuestPickers();
   openModal('add-moi');
+  setTimeout(()=>document.getElementById('moi-from')?.focus(),20);
 }
 
 function openEditMoi(id){
   const g=DB.gifts.find(x=>x.id===id);
   if(!g)return;
   _editing.gift=id;
+  applyCurrencyUI();
   document.getElementById('mo-moi-title').textContent='Edit Cash Gift Entry';
+  const saveBtn=document.getElementById('moi-save-btn');
+  const doneBtn=document.getElementById('moi-done-btn');
+  if(saveBtn){
+    saveBtn.textContent='Save Changes';
+    saveBtn.setAttribute('onclick',"App.saveMoi()");
+  }
+  if(doneBtn) doneBtn.textContent='Done';
   document.getElementById('moi-from').value=g.from||'';
   document.getElementById('moi-amount').value=g.value||'';
   const notesEl=document.getElementById('moi-notes');
-  if(notesEl)notesEl.value=g.notes||'';
-  const tyVal=g.ty||'pending';
-  document.getElementById('moi-ty').value=tyVal;
-  // Sync TY picker buttons
-  document.querySelectorAll('.moi-ty-pick-btn').forEach(b=>{
-    const active=b.dataset.val===tyVal;
-    b.style.borderColor=active?'var(--gold-d)':'var(--bord)';
-    b.style.background=active?'var(--gold-l)':'var(--surf)';
-    b.style.color=active?'var(--gold-d)':'var(--txt3)';
-  });
+  if(notesEl)notesEl.value=g.notes||'Cash Envelope';
+  const notesInlineEl=document.getElementById('moi-notes-inline');
+  if(notesInlineEl) notesInlineEl.value=g.notes||'Cash Envelope';
+  document.getElementById('moi-ty').value='pending';
   document.getElementById('del-moi-btn').style.display='block';
   hideAllGuestPickers();
   openModal('add-moi');
 }
 
-function saveMoi(){
+function _saveMoiEntry(opts={}){
+  const keepOpen=!!opts.keepOpen;
   const from=document.getElementById('moi-from').value.trim();
   const amount=parseFloat(document.getElementById('moi-amount').value)||0;
+  const paymentMode=(document.getElementById('moi-notes-inline')?.value || document.getElementById('moi-notes')?.value || 'Cash Envelope').trim() || 'Cash Envelope';
   if(!from){toast('⚠️ Please enter a name');return;}
   if(!amount){toast('⚠️ Please enter the amount');return;}
+  const wasEditing=!!_editing.gift;
   if(_editing.gift){
     const g=DB.gifts.find(x=>x.id===_editing.gift);
-    if(g){g.from=from;g.value=amount;g.notes=document.getElementById('moi-notes').value.trim();g.ty=document.getElementById('moi-ty').value;}
+    if(g){g.from=from;g.value=amount;g.notes=paymentMode;g.ty='pending';}
     toast('Cash gift entry updated');
   } else {
-    DB.gifts.push({id:uid(),eventId:DB.activeEvent,isMoi:true,desc:'Cash Gift',from,value:amount,cat:'cash_gift',ty:document.getElementById('moi-ty').value,notes:document.getElementById('moi-notes').value.trim(),createdAt:Date.now()});
-    toast(`Cash gift of ₹${amount.toLocaleString('en-IN')} from ${from} recorded`);
+    DB.gifts.push({id:uid(),eventId:DB.activeEvent,isMoi:true,desc:'Cash Gift',from,value:amount,cat:'cash_gift',ty:'pending',notes:paymentMode,createdAt:Date.now()});
+    toast(`Cash gift of ${fmtVal(amount)} from ${from} recorded`);
   }
-  save();syncActiveEventData();closeModal('add-moi');renderGifts();
+  save();syncActiveEventData();renderGifts();
+  if(keepOpen && !wasEditing){
+    document.getElementById('moi-from').value='';
+    document.getElementById('moi-amount').value='';
+    const notesEl=document.getElementById('moi-notes');
+    if(notesEl)notesEl.value='Cash Envelope';
+    const notesInlineEl=document.getElementById('moi-notes-inline');
+    if(notesInlineEl) notesInlineEl.value='Cash Envelope';
+    hideAllGuestPickers();
+    setTimeout(()=>document.getElementById('moi-from')?.focus(),20);
+    return true;
+  }
+  closeModal('add-moi');
+  return true;
+}
+function saveMoi(opts){return _saveMoiEntry(opts);}
+function handleMoiFieldEnter(field,e){
+  if(e.key!=='Enter') return;
+  e.preventDefault();
+  if(field==='from'){
+    document.getElementById('moi-amount')?.focus();
+    document.getElementById('moi-amount')?.select?.();
+    return;
+  }
+  if(field==='amount'){
+    saveMoi({keepOpen:!_editing.gift});
+  }
 }
 
 
@@ -4666,7 +4760,7 @@ window.App={
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,
   setGiftTab,setGiftCatFilter,selectCat,
-  openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,filterMoi,setMoiFilter,setMoiTy,
+  openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,handleMoiFieldEnter,filterMoi,setMoiFilter,setMoiTy,
   _editingGift:()=>_editing.gift,
   openGuestRequestModal,openGuestFeedbackModal,openGuestFoodMenuModal,
   submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireOrganizer(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireOrganizer(resolveGuestRoomRequest),
@@ -4674,7 +4768,7 @@ window.App={
   showGuestPicker,filterGuestPicker,pickGuest,showGroupPicker,filterGroupPicker,pickGroup,
   openGroupInviteModal,filterGroupInvite,importMasterGroup,importMasterGuest,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
-  openProfileModal,toggleSetting,unlockPremium,clearAllData,
+  openProfileModal,toggleSetting,setCurrency,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,
   limitPhoneDigits,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,

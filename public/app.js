@@ -430,24 +430,33 @@ const Auth = (() => {
 
   async function logout() {
     try { await fbSignOut(_fbAuth); } catch(e) {}
-    document.getElementById('auth-screen').style.display='flex';
-    document.getElementById('app').style.display='none';
-    document.getElementById('hdr-team-btn').style.display='none';
+    showAuthScreen();
     document.getElementById('auth-email').value='';
     document.getElementById('auth-pass').value='';
     clearError();
     Cloud.unsubscribeAll();
   }
 
-  function _onLogin(sess, isFirstUser) {
-    // If first ever user — make them organizer of all events automatically
+  function showAppShell() {
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='flex';
-    // Show team btn only for organizers (checked per event later)
     document.getElementById('hdr-team-btn').style.display='block';
+    document.documentElement.classList.add('boot-authenticated');
+  }
+
+  function showAuthScreen() {
+    document.getElementById('auth-screen').style.display='flex';
+    document.getElementById('app').style.display='none';
+    document.getElementById('hdr-team-btn').style.display='none';
+    document.documentElement.classList.remove('boot-authenticated');
+  }
+
+  function _onLogin(sess, showWelcomeToast=true) {
+    // If first ever user — make them organizer of all events automatically
+    showAppShell();
     Cloud.migrateLocalEvents(sess).catch(()=>Cloud.loadEventsForSession(sess).catch(()=>{}));
     render();
-    toast(`Welcome, ${sess.name}!`);
+    if(showWelcomeToast) toast(`Welcome, ${sess.name}!`);
   }
 
   // Role resolution: returns 'organizer'|'cash'|'room'|null for current user + active event
@@ -555,6 +564,16 @@ const Auth = (() => {
   }
 
   function init() {
+    const cachedSession = getSession();
+    if(cachedSession){
+      DB.profile.name=cachedSession.name||DB.profile.name||'';
+      DB.profile.email=cachedSession.email||DB.profile.email||'';
+      save();
+      showAppShell();
+      render();
+    } else {
+      showAuthScreen();
+    }
     onAuthStateChanged(_fbAuth, user => {
       if(user){
         const sess = {
@@ -568,14 +587,13 @@ const Auth = (() => {
         DB.profile.name=sess.name||DB.profile.name||'';
         DB.profile.email=sess.email||DB.profile.email||'';
         save();
-        _onLogin(sess, false);
+        const shouldWelcome=!cachedSession || cachedSession.id!==sess.id;
+        _onLogin(sess, shouldWelcome);
       } else {
         clearSession();
         DB.events=[];DB.guests=[];DB.gifts=[];DB.activeEvent=null;
         save();
-        document.getElementById('auth-screen').style.display='flex';
-        document.getElementById('app').style.display='none';
-        document.getElementById('hdr-team-btn').style.display='none';
+        showAuthScreen();
       }
     });
   }
@@ -718,6 +736,8 @@ function normalizeMasterGuestCandidate(candidate){
     last: (candidate.last||'').trim(),
     email: normalizeEmailValue(candidate.email||''),
     contact: (candidate.contact||'').trim(),
+    notes: (candidate.notes||'').trim(),
+    group: (candidate.group||candidate.table||'').trim(),
     createdAt: candidate.createdAt || Date.now()
   };
 }
@@ -1351,6 +1371,8 @@ function renderGuests(){
   const isOrg=Auth.isOrganizer(DB.activeEvent);
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <button class="fab" style="margin-bottom:0;flex:1 1 180px" onclick="App.openAddGuest()">＋ Add Guest</button>
+      <button class="btn-s" style="margin:0;flex:1 1 220px" onclick="App.exportCurrentEventToMaster()">Export Guests to Master Guest List</button>
+      <button class="btn-s" style="margin:0;flex:1 1 220px" onclick="App.openGroupInviteModal()">Invite Group</button>
       ${feedbackGuests.length?`<button class="fchip" style="padding:8px 14px;font-size:12px" onclick="App.scrollGuestsToFeedback()">Jump to Feedback</button>`:''}
     </div>`:'';
   let listHtml='';
@@ -2219,7 +2241,9 @@ function getGuestFormCandidate(){
     first: document.getElementById('g-first')?.value.trim()||'',
     last: document.getElementById('g-last')?.value.trim()||'',
     contact: document.getElementById('g-contact')?.value.trim()||'',
-    email: document.getElementById('g-email')?.value.trim().toLowerCase()||''
+    email: document.getElementById('g-email')?.value.trim().toLowerCase()||'',
+    notes: document.getElementById('g-notes')?.value.trim()||'',
+    group: document.getElementById('g-table')?.value.trim()||''
   };
 }
 
@@ -2263,7 +2287,10 @@ function renderMasterGuestList(){
   }
   container.innerHTML=items.map(guest=>{
     const name=fullGuestName(guest)||'Unknown guest';
-    const sub=guest.email||guest.contact||'No email or phone saved';
+    const subParts=[guest.email||guest.contact||'No email or phone saved'];
+    if(guest.group) subParts.push(`Group: ${guest.group}`);
+    if(guest.notes) subParts.push(guest.notes);
+    const sub=subParts.join(' · ');
     const action=_masterGuestMode==='pick'
       ? `<button class="ev-btn" style="padding:6px 10px" onclick="event.stopPropagation();App.pickMasterGuest('${guest.id}')">Use</button>`
       : '';
@@ -2309,8 +2336,79 @@ function pickMasterGuest(id){
   document.getElementById('g-last').value=guest.last||'';
   document.getElementById('g-contact').value=guest.contact||'';
   document.getElementById('g-email').value=guest.email||'';
+  document.getElementById('g-notes').value=guest.notes||'';
+  document.getElementById('g-table').value=guest.group||'';
   closeModal('master-guests');
   toast('Guest details filled from master list');
+}
+
+function getEventGroups(){
+  if(!DB.activeEvent) return [];
+  const groups=new Map();
+  DB.guests
+    .filter(guest=>guest.eventId===DB.activeEvent && (guest.table||'').trim())
+    .forEach(guest=>{
+      const name=(guest.table||'').trim();
+      if(!groups.has(name)) groups.set(name, []);
+      groups.get(name).push(guest);
+    });
+  return Array.from(groups.entries())
+    .map(([name, guests])=>({ name, guests }))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+function renderGroupInviteModal(){
+  const container=document.getElementById('group-invite-list');
+  if(!container) return;
+  const groups=getEventGroups();
+  if(!groups.length){
+    container.innerHTML=`<div class="empty" style="padding:24px 16px"><div class="empty-t" style="font-size:18px">No groups yet</div><div class="empty-s">Add a group while creating guests, then you can invite everyone in that group from here.</div></div>`;
+    return;
+  }
+  container.innerHTML=groups.map(group=>{
+    const total=group.guests.length;
+    const inviteable=group.guests.filter(guest=>(guest.contact||'').replace(/\D/g,'').length>=10).length;
+    const dietaryCount=group.guests.filter(guest=>(guest.notes||'').trim()).length;
+    return `<div class="g-row" style="align-items:flex-start">
+      <div class="g-av" style="${avStyle(group.name)}">${initials(group.name)}</div>
+      <div class="g-info">
+        <div class="g-name">${group.name}</div>
+        <div class="g-detail">${total} guest${total!==1?'s':''} · ${inviteable} with WhatsApp number${dietaryCount?` · ${dietaryCount} with dietary notes`:''}</div>
+      </div>
+      <div class="g-actions">
+        <button class="ev-btn" style="padding:6px 10px" onclick="event.stopPropagation();App.sendGroupInvite('${encodeURIComponent(group.name)}')">Invite All</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openGroupInviteModal(){
+  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
+  if(!Auth.isOrganizer(DB.activeEvent)){toast('⚠️ Only Organisers can invite a group');return;}
+  renderGroupInviteModal();
+  openModal('group-invite');
+}
+
+function sendGroupInvite(groupName){
+  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
+  const decodedName=decodeURIComponent(groupName||'').trim();
+  const guests=DB.guests.filter(guest=>guest.eventId===DB.activeEvent && (guest.table||'').trim()===decodedName);
+  if(!guests.length){toast('⚠️ No guests found in this group');return;}
+  const ev=DB.events.find(e=>e.id===DB.activeEvent);
+  if(!ev){toast('⚠️ No event selected');return;}
+  const inviteable=guests.filter(guest=>(guest.contact||'').replace(/\D/g,'').length>=10);
+  if(!inviteable.length){toast('⚠️ No valid phone numbers in this group');return;}
+  const evDate=ev.date?fmtDate(ev.date):'';
+  const venue=ev.location||'';
+  inviteable.forEach((guest,index)=>{
+    const phone=(guest.contact||'').replace(/\D/g,'');
+    const intlPhone=phone.startsWith('91')?phone:'91'+phone;
+    const rooms=getGuestRoomAssignments(guest);
+    const roomPart=rooms.length?`\nRooms: ${rooms.map(room=>`${room.loc} Room ${room.no}`).join(', ')}`:'';
+    const msg=`*You're Invited!*\n\nDear ${guest.first},\n\nWe joyfully invite you to *${ev.name}*\n\nDate: ${evDate}\nVenue: ${venue}\nGroup: ${decodedName}${roomPart}\n\nYour presence will make this celebration truly special. We look forward to seeing you!\n\nWith warm regards`;
+    setTimeout(()=>window.open(`https://wa.me/${intlPhone}?text=${encodeURIComponent(msg)}`,'_blank'), index*250);
+  });
+  toast(`Opened ${inviteable.length} WhatsApp invite${inviteable.length!==1?'s':''} for ${decodedName}`);
 }
 
 function cycleRsvp(id){
@@ -2353,7 +2451,7 @@ function openGuestDetail(id){
       ${g.contact?`<div class="info-cell"><div class="info-lbl">Phone</div><div class="info-val">${g.contact}</div></div>`:''}
       ${g.email?`<div class="info-cell"><div class="info-lbl">Email</div><div class="info-val">${g.email}</div></div>`:''}
       <div class="info-cell"><div class="info-lbl">Peoples</div><div class="info-val">${g.party||1}</div></div>
-      ${g.table?`<div class="info-cell"><div class="info-lbl">Table / Group</div><div class="info-val">${g.table}</div></div>`:''}
+      ${g.table?`<div class="info-cell"><div class="info-lbl">Group</div><div class="info-val">${g.table}</div></div>`:''}
       ${getGuestRoomAssignments(g).length?`<div class="info-cell" style="grid-column:span 2"><div class="info-lbl">Assigned Rooms</div><div class="info-val">${formatGuestRooms(g)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Stay Request</div><div class="info-val">${roomRequestTypeLabel(g.roomRequestType)}</div></div>`:''}
       ${canViewRoomRequest&&g.roomRequestType!=='undecided'?`<div class="info-cell"><div class="info-lbl">Request Status</div><div class="info-val">${roomRequestStatusLabel(g.roomRequestStatus)}</div></div>`:''}
@@ -3191,7 +3289,7 @@ function exportGuests(){
   const ev=DB.events.find(e=>e.id===evId);
   const guests=DB.guests.filter(g=>g.eventId===evId);
   if(guests.length===0){toast('⚠️ No guests to export');return;}
-  const rows=[['First Name','Last Name','Phone','Email','Peoples','RSVP Status','Table/Group','Notes']];
+  const rows=[['First Name','Last Name','Phone','Email','Peoples','RSVP Status','Group','Dietary / Notes']];
   guests.forEach(g=>rows.push([g.first,g.last,g.contact,g.email,g.party,g.rsvp,g.table,g.notes]));
   downloadCSV(`${(ev?.name||'event').replace(/\s+/g,'_')}_guests.csv`,rows);
   toast('Guest list exported');
@@ -3525,7 +3623,7 @@ window.App={
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
   confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,
-  openMasterGuestModal,filterMasterGuests,pickMasterGuest,addCurrentGuestToMaster,exportCurrentEventToMaster,
+  openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,
   setGiftTab,setGiftCatFilter,selectCat,
@@ -3535,6 +3633,7 @@ window.App={
   submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireOrganizer(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireOrganizer(resolveGuestRoomRequest),
   toggleGuestFoodLike,toggleGuestFoodSectionLike,
   showGuestPicker,filterGuestPicker,pickGuest,
+  openGroupInviteModal,sendGroupInvite,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   openProfileModal,toggleSetting,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,

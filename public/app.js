@@ -700,7 +700,7 @@ function uiIcon(name,size=14){
     phone:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M7.8 4.8c.4-.4 1-.5 1.5-.2l2.2 1.3c.6.3.8 1 .6 1.6l-.8 2.1a1 1 0 0 0 .2 1c1 1.2 2.2 2.3 3.5 3.2a1 1 0 0 0 1 .1l2-1c.6-.3 1.3-.1 1.7.4l1.5 2.1c.4.5.3 1.1-.1 1.6l-1 1c-.9.9-2.3 1.2-3.5.8-2.5-.8-4.8-2.3-6.8-4.2-2-2-3.5-4.3-4.3-6.8-.4-1.2-.1-2.6.8-3.5l1.5-1.5Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>`,
     contact:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M7 5.5h10A1.5 1.5 0 0 1 18.5 7v10a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 17V7A1.5 1.5 0 0 1 7 5.5Z" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="10" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8 15c.7-1.6 1.8-2.4 3-2.4s2.3.8 3 2.4M8 3.5h8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     guests:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="9" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4.5 18c.6-2.7 2.5-4 4.5-4s3.9 1.3 4.5 4M13.5 18c.4-2 1.8-3.1 3.5-3.1 1.4 0 2.7.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
-    edit:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="m12.5 7.5 4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    edit:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M3.75 17.25V20.25H6.75L17.2 9.8L14.2 6.8L3.75 17.25Z" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.9 8.1L15.9 11.1" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.55 7.45L15.2 5.8C15.6 5.4 16.25 5.4 16.65 5.8L18.2 7.35C18.6 7.75 18.6 8.4 18.2 8.8L16.55 10.45" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     save:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8 4.5v5h7v-5M9 15.5h6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     export:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 20V10M8.5 13.5 12 10l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5.5h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     share:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="18" cy="5.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="6" cy="12" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="18" cy="18.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8 11l7.7-4.2M8 13l7.7 4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
@@ -2112,13 +2112,6 @@ function renderGuests(){
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
-        <div class="g-swipe-under-left">
-          <div class="g-swipe-hint">Swipe right to add to ${DB.settings.lastGuestGroup||'last group'}</div>
-        </div>
-        <div class="g-swipe-under-right">
-          <button class="g-swipe-action-btn g-swipe-action-room" onclick="event.stopPropagation();App.swipeAllocateRoom('${g.id}')">Allocate Room</button>
-          <button class="g-swipe-action-btn g-swipe-action-gift" onclick="event.stopPropagation();App.swipeAddGift('${g.id}')">Add Gift</button>
-        </div>
         <div class="g-row g-swipe-card anim" onclick="App.handleGuestRowTap(event,'${g.id}')">
           <div class="g-av" style="${avStyle(g.id)}">${ini}</div>
           <div class="g-info">

@@ -604,6 +604,7 @@ let DB = {
   events: STORE.get('events')||[],
   guests: STORE.get('guests')||[],
   gifts: STORE.get('gifts')||[],
+  masterGuests: STORE.get('masterGuests')||[],
   activeEvent: STORE.get('activeEvent')||null,
   profile: STORE.get('profile')||{name:'',email:''},
   premium: STORE.get('premium')||false,
@@ -614,6 +615,7 @@ function save(){
   STORE.set('events',DB.events);
   STORE.set('guests',DB.guests);
   STORE.set('gifts',DB.gifts);
+  STORE.set('masterGuests',DB.masterGuests);
   STORE.set('activeEvent',DB.activeEvent);
   STORE.set('profile',DB.profile);
   STORE.set('premium',DB.premium);
@@ -707,6 +709,61 @@ function fmtVal(v){
 function initials(first,last){return((first||'')[0]||(last||'')[0]||'?').toUpperCase()+((last||'')[0]||'').toUpperCase()}
 function avStyle(id){const i=Math.abs(id.charCodeAt?[...id].reduce((a,c)=>a+c.charCodeAt(0),0):0)%6;return`background:${AV_BG[i]};color:${AV_C[i]}`}
 function normalizeEmailValue(email){return(email||'').trim().toLowerCase()}
+function normalizePhoneValue(phone){return(phone||'').replace(/\D/g,'')}
+function fullGuestName(guest){return`${guest?.first||''} ${guest?.last||''}`.trim()}
+function normalizeMasterGuestCandidate(candidate){
+  return {
+    id: candidate.id || uid(),
+    first: (candidate.first||'').trim(),
+    last: (candidate.last||'').trim(),
+    email: normalizeEmailValue(candidate.email||''),
+    contact: (candidate.contact||'').trim(),
+    createdAt: candidate.createdAt || Date.now()
+  };
+}
+function isMasterGuestDuplicate(candidate, existing){
+  const candidateEmail=normalizeEmailValue(candidate.email);
+  const existingEmail=normalizeEmailValue(existing.email);
+  if(candidateEmail && existingEmail) return candidateEmail===existingEmail;
+  const candidateName=fullGuestName(candidate).toLowerCase();
+  const existingName=fullGuestName(existing).toLowerCase();
+  const candidatePhone=normalizePhoneValue(candidate.contact);
+  const existingPhone=normalizePhoneValue(existing.contact);
+  if(candidateName && candidateName===existingName && !candidateEmail && !existingEmail && !candidatePhone && !existingPhone){
+    return true;
+  }
+  return false;
+}
+function addGuestToMasterList(candidate,{silent=false}={}){
+  const normalized=normalizeMasterGuestCandidate(candidate);
+  if(!normalized.first){
+    if(!silent) toast('⚠️ Add at least a first name');
+    return { added:false, reason:'missing_name' };
+  }
+  const hasEmail=!!normalized.email;
+  const hasPhone=!!normalizePhoneValue(normalized.contact);
+  const existing=DB.masterGuests.find(item=>isMasterGuestDuplicate(normalized,item));
+  if(existing){
+    if(!silent) toast('Already in master guest list');
+    return { added:false, reason:'duplicate' };
+  }
+  if(!hasEmail && !hasPhone){
+    const sameNameWithoutContact=DB.masterGuests.find(item=>
+      fullGuestName(item).toLowerCase()===fullGuestName(normalized).toLowerCase() &&
+      !normalizeEmailValue(item.email) &&
+      !normalizePhoneValue(item.contact)
+    );
+    if(sameNameWithoutContact){
+      if(!silent) toast('⚠️ Same name without email or phone is not allowed twice');
+      return { added:false, reason:'duplicate_name_without_contact' };
+    }
+  }
+  DB.masterGuests.push(normalized);
+  DB.masterGuests.sort((a,b)=>fullGuestName(a).localeCompare(fullGuestName(b)));
+  save();
+  if(!silent) toast('Added to master guest list');
+  return { added:true, reason:'added' };
+}
 function guestMatchesSession(guest,session){
   const email=normalizeEmailValue(session?.email);
   if(!email||!guest)return false;
@@ -1074,6 +1131,9 @@ let _tab='events';
 let _guestFilter='all';
 let _guestSearch='';
 let _exportEventId=null;
+let _showPastPickerEvents=false;
+let _masterGuestMode='manage';
+let _masterGuestSearch='';
 
 function syncTabHistory(tab,{fromPop=false}={}) {
   if (fromPop || !window.history || !window.history.replaceState) return;
@@ -1757,6 +1817,13 @@ function renderSettings(){
   </div>
   <div class="set-sec">
     <div class="set-sec-t">Data & Export</div>
+    <div class="set-item" onclick="App.openMasterGuestModal('manage')">
+      <div class="set-left">
+        <div class="set-ico" style="background:var(--slate-l)">MG</div>
+        <div><div class="set-lbl">Master Guest List</div><div class="set-sub">${DB.masterGuests.length} saved guest${DB.masterGuests.length!==1?'s':''}</div></div>
+      </div>
+      <span class="chev">></span>
+    </div>
     <div class="set-item" onclick="App.openModal('export')">
       <div class="set-left">
         <div class="set-ico" style="background:var(--sage-l)">EX</div>
@@ -2145,6 +2212,105 @@ function saveGuest(){
     toast(`${first} added`);
   }
   save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();
+}
+
+function getGuestFormCandidate(){
+  return {
+    first: document.getElementById('g-first')?.value.trim()||'',
+    last: document.getElementById('g-last')?.value.trim()||'',
+    contact: document.getElementById('g-contact')?.value.trim()||'',
+    email: document.getElementById('g-email')?.value.trim().toLowerCase()||''
+  };
+}
+
+function addCurrentGuestToMaster(){
+  const candidate=getGuestFormCandidate();
+  const result=addGuestToMasterList(candidate);
+  if(result.added && document.getElementById('mo-master-guests')?.classList.contains('open')){
+    renderMasterGuestList();
+  }
+}
+
+function exportCurrentEventToMaster(){
+  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
+  const eventGuests=DB.guests.filter(g=>g.eventId===DB.activeEvent);
+  if(!eventGuests.length){toast('⚠️ No guests in this event');return;}
+  let added=0;
+  let skipped=0;
+  eventGuests.forEach(guest=>{
+    const result=addGuestToMasterList(guest,{silent:true});
+    if(result.added) added++;
+    else skipped++;
+  });
+  save();
+  renderMasterGuestList();
+  toast(added?`Added ${added} guest${added!==1?'s':''} to master list${skipped?` · ${skipped} skipped`:''}`:`No new guests added${skipped?` · ${skipped} skipped`:''}`);
+}
+
+function renderMasterGuestList(){
+  const container=document.getElementById('master-guest-list');
+  if(!container) return;
+  const q=_masterGuestSearch.trim().toLowerCase();
+  const items=DB.masterGuests.filter(guest=>{
+    const name=fullGuestName(guest).toLowerCase();
+    const email=normalizeEmailValue(guest.email);
+    const phone=normalizePhoneValue(guest.contact);
+    return !q || name.includes(q) || email.includes(q) || phone.includes(normalizePhoneValue(q));
+  });
+  if(!items.length){
+    container.innerHTML=`<div class="empty" style="padding:24px 16px"><div class="empty-t" style="font-size:18px">No saved guests</div><div class="empty-s">${_masterGuestSearch?'Try a different search term.':'Save guests here to reuse them in future events.'}</div></div>`;
+    return;
+  }
+  container.innerHTML=items.map(guest=>{
+    const name=fullGuestName(guest)||'Unknown guest';
+    const sub=guest.email||guest.contact||'No email or phone saved';
+    const action=_masterGuestMode==='pick'
+      ? `<button class="ev-btn" style="padding:6px 10px" onclick="event.stopPropagation();App.pickMasterGuest('${guest.id}')">Use</button>`
+      : '';
+    return `<div class="g-row" ${_masterGuestMode==='pick'?`onclick="App.pickMasterGuest('${guest.id}')"`:''}>
+      <div class="g-av" style="${avStyle(guest.id)}">${initials(guest.first,guest.last)}</div>
+      <div class="g-info">
+        <div class="g-name">${name}</div>
+        <div class="g-detail">${sub}</div>
+      </div>
+      ${action?`<div class="g-actions">${action}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openMasterGuestModal(mode='manage'){
+  if(mode==='manage' && DB.activeEvent && !Auth.isOrganizer(DB.activeEvent)){
+    toast('⚠️ Only Organisers can manage the master guest list');
+    return;
+  }
+  _masterGuestMode=mode;
+  _masterGuestSearch='';
+  const title=document.getElementById('master-guest-title');
+  const sub=document.getElementById('master-guest-sub');
+  const search=document.getElementById('master-guest-search');
+  const exportBtn=document.getElementById('master-guest-export-btn');
+  if(title) title.textContent=mode==='pick'?'Pick from Master Guest List':'Master Guest List';
+  if(sub) sub.textContent=mode==='pick'?'Choose a saved guest to fill this event guest form quickly.':'Save guests once and reuse them in future events.';
+  if(search) search.value='';
+  if(exportBtn) exportBtn.style.display=mode==='manage'?'block':'none';
+  renderMasterGuestList();
+  openModal('master-guests');
+}
+
+function filterMasterGuests(query){
+  _masterGuestSearch=query||'';
+  renderMasterGuestList();
+}
+
+function pickMasterGuest(id){
+  const guest=DB.masterGuests.find(item=>item.id===id);
+  if(!guest) return;
+  document.getElementById('g-first').value=guest.first||'';
+  document.getElementById('g-last').value=guest.last||'';
+  document.getElementById('g-contact').value=guest.contact||'';
+  document.getElementById('g-email').value=guest.email||'';
+  closeModal('master-guests');
+  toast('Guest details filled from master list');
 }
 
 function cycleRsvp(id){
@@ -2934,15 +3100,32 @@ function confirmDeleteGift(id){
 function renderEventPicker(){
   const el=document.getElementById('ep-list');
   const sess=Auth.currentSession();
-  const myEvents=DB.events.filter(ev=>Auth.getTeam(ev.id).some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase())));
-  if(myEvents.length===0){el.innerHTML=`<div class="empty"><div class="empty-ico">${uiIcon('event',42)}</div><div class="empty-t">No events yet</div></div>`;return;}
-  el.innerHTML=myEvents.map(ev=>{
+  const accessibleEvents=DB.events.filter(ev=>Auth.getTeam(ev.id).some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase())));
+  if(accessibleEvents.length===0){el.innerHTML=`<div class="empty"><div class="empty-ico">${uiIcon('event',42)}</div><div class="empty-t">No events yet</div></div>`;return;}
+  const upcomingEvents=accessibleEvents.filter(ev=>{
+    const days=daysUntil(ev.date);
+    return days===null || days>=0;
+  });
+  const pastEvents=accessibleEvents.filter(ev=>{
+    const days=daysUntil(ev.date);
+    return days!==null && days<0;
+  });
+  const myEvents=_showPastPickerEvents?[...upcomingEvents,...pastEvents]:upcomingEvents;
+  const pastToggle=pastEvents.length
+    ? `<button class="fchip ${_showPastPickerEvents?'on':''}" style="padding:8px 14px;font-size:12px;margin:0 0 12px" onclick="App.togglePastPickerEvents(${_showPastPickerEvents?'false':'true'})">${_showPastPickerEvents?'Hide Past Events':'View Past Events'} (${pastEvents.length})</button>`
+    : '';
+  el.innerHTML=pastToggle+myEvents.map(ev=>{
     const col=COLORS[ev.color]||COLORS.rose;
     return`<div class="ep-item ${ev.id===DB.activeEvent?'sel':''}" onclick="App.pickEvent('${ev.id}')">
       <div class="ep-dot" style="background:${col.accent}"></div>
       <div><div style="font-size:13.5px;font-weight:500">${ev.name}</div><div style="font-size:11.5px;color:var(--txt3)">${TYPE_LABEL[ev.type]} ${ev.date?'· '+fmtDate(ev.date):''}</div></div>
     </div>`;
   }).join('');
+}
+
+function togglePastPickerEvents(show){
+  _showPastPickerEvents=!!show;
+  renderEventPicker();
 }
 
 function pickEvent(id){
@@ -2957,7 +3140,10 @@ document.getElementById('mo-event-pick').addEventListener('click',e=>{
 // Open hook
 const _origOpen=openModal;
 window.openModal=function(id){
-  if(id==='event-pick')renderEventPicker();
+  if(id==='event-pick'){
+    _showPastPickerEvents=false;
+    renderEventPicker();
+  }
   if(id==='export'){
     const ev=DB.events.find(e=>e.id===DB.activeEvent);
     if(ev){_exportEventId=DB.activeEvent;document.getElementById('export-ev-name').textContent=ev.name;}
@@ -3062,7 +3248,7 @@ function unlockPremium(){
 function clearAllData(){
   openConfirm('Clear all data?','This will permanently delete all events, guests, and gifts. This cannot be undone.',()=>{
     const eventIds = DB.events.map(event => event.id);
-    DB.events=[];DB.guests=[];DB.gifts=[];DB.activeEvent=null;
+    DB.events=[];DB.guests=[];DB.gifts=[];DB.masterGuests=[];DB.activeEvent=null;
     save();
     Cloud.clearAllCloudData(eventIds).catch(()=>toast('⚠️ Could not delete cloud data'));
     render();toast('All data cleared');
@@ -3339,6 +3525,7 @@ window.App={
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
   confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,
+  openMasterGuestModal,filterMasterGuests,pickMasterGuest,addCurrentGuestToMaster,exportCurrentEventToMaster,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,
   setGiftTab,setGiftCatFilter,selectCat,
@@ -3356,6 +3543,7 @@ window.App={
   addRoomLocation:addRoomLocationGated,_updateLocName,_removeLocation,_addRoom,_removeRoom,
   populateRoomSelects,refreshRoomNumbers,checkRoomConflict,sendGuestInvite,
   renderRooms,openRoomDetail,
+  togglePastPickerEvents,
   assignGuestToRoom:assignGuestToRoomGated,
   onRoomAllocGuestChange,
   unassignGuestRoom:unassignGuestRoomGated,

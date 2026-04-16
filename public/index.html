@@ -684,6 +684,8 @@ body{overscroll-behavior:none}
     </div>
     <div id="room-conflict-indicator" style="display:none"></div>
     <button class="btn-p" onclick="App.saveGuest()">Save Guest</button>
+    <button class="btn-s" style="margin-top:8px" onclick="App.openMasterGuestModal('pick')">Use from Master Guest List</button>
+    <button class="btn-s" onclick="App.addCurrentGuestToMaster()">Add to Master Guest List</button>
     <button class="btn-p" style="background:var(--sage-d);margin-top:8px" id="send-invite-btn" onclick="App.sendGuestInvite()" style="display:none">Send WhatsApp Invite</button>
     <button class="btn-s" onclick="App.closeModal('add-guest')">Cancel</button>
     <button class="btn-s btn-danger" id="del-guest-btn" onclick="App.confirmDeleteGuest()" style="display:none">Remove Guest</button>
@@ -861,6 +863,22 @@ body{overscroll-behavior:none}
     <button class="btn-p" onclick="App.exportGuests()">Export Guest List (CSV)</button>
     <button class="btn-p" style="margin-top:8px;background:var(--sage-d)" onclick="App.exportGifts()">Export Gift Tracker (CSV)</button>
     <button class="btn-s" onclick="App.closeModal('export')">Cancel</button>
+  </div>
+</div>
+
+<!-- MASTER GUEST LIST -->
+<div class="mo" id="mo-master-guests">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="master-guest-title">Master Guest List</div>
+    <div style="font-size:12px;color:var(--txt3);margin:-8px 0 14px;line-height:1.6" id="master-guest-sub">Save guests once and reuse them in future events.</div>
+    <div class="search-wrap" style="margin-bottom:12px">
+      <span class="search-ico">⌕</span>
+      <input class="search-inp" id="master-guest-search" type="text" placeholder="Search by name, email, or phone" oninput="App.filterMasterGuests(this.value)" />
+    </div>
+    <button class="btn-p" id="master-guest-export-btn" onclick="App.exportCurrentEventToMaster()">Export Current Event Guests</button>
+    <div id="master-guest-list" style="margin-top:12px"></div>
+    <button class="btn-s" onclick="App.closeModal('master-guests')">Close</button>
   </div>
 </div>
 

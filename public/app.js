@@ -1675,34 +1675,37 @@ function initGuestSwipeRows(){
     let deltaX=0;
     let tracking=false;
     let horizontal=false;
-    wrap.addEventListener('touchstart',event=>{
-      if(event.touches.length!==1) return;
+    let activePointerId=null;
+
+    const beginSwipe=(clientX,clientY)=>{
       closeOpenGuestSwipe(wrap.dataset.guestId);
-      const touch=event.touches[0];
-      startX=touch.clientX;
-      startY=touch.clientY;
+      startX=clientX;
+      startY=clientY;
       deltaX=0;
       tracking=true;
       horizontal=false;
       card.style.transition='none';
-    },{passive:true});
-    wrap.addEventListener('touchmove',event=>{
-      if(!tracking || event.touches.length!==1) return;
-      const touch=event.touches[0];
-      const dx=touch.clientX-startX;
-      const dy=touch.clientY-startY;
+    };
+
+    const moveSwipe=(clientX,clientY,event)=>{
+      if(!tracking) return;
+      const dx=clientX-startX;
+      const dy=clientY-startY;
       if(!horizontal){
         if(Math.abs(dx)<8) return;
         if(Math.abs(dx)<=Math.abs(dy)) { tracking=false; card.style.transition=''; return; }
         horizontal=true;
       }
-      event.preventDefault();
+      if(event?.cancelable) event.preventDefault();
       deltaX=Math.max(-GUEST_SWIPE_LEFT_REVEAL, Math.min(GUEST_SWIPE_RIGHT_ACTION, dx));
       card.style.transform=`translateX(${deltaX}px)`;
-    },{passive:false});
+    };
+
     const finishSwipe=()=>{
       if(!tracking && !horizontal){ card.style.transition=''; return; }
       tracking=false;
+      horizontal=false;
+      activePointerId=null;
       card.style.transition='';
       if(deltaX>=64){
         _guestSwipeTapBlockUntil=Date.now()+250;
@@ -1718,8 +1721,40 @@ function initGuestSwipeRows(){
       }
       resetGuestSwipeRow(wrap);
     };
+
+    wrap.addEventListener('touchstart',event=>{
+      if(event.touches.length!==1) return;
+      const touch=event.touches[0];
+      beginSwipe(touch.clientX,touch.clientY);
+    },{passive:true});
+    wrap.addEventListener('touchmove',event=>{
+      if(event.touches.length!==1) return;
+      const touch=event.touches[0];
+      moveSwipe(touch.clientX,touch.clientY,event);
+    },{passive:false});
     wrap.addEventListener('touchend',finishSwipe,{passive:true});
     wrap.addEventListener('touchcancel',finishSwipe,{passive:true});
+
+    wrap.addEventListener('pointerdown',event=>{
+      if(event.pointerType==='mouse') return;
+      activePointerId=event.pointerId;
+      beginSwipe(event.clientX,event.clientY);
+    });
+    wrap.addEventListener('pointermove',event=>{
+      if(event.pointerType==='mouse') return;
+      if(activePointerId!==event.pointerId) return;
+      moveSwipe(event.clientX,event.clientY,event);
+    });
+    wrap.addEventListener('pointerup',event=>{
+      if(event.pointerType==='mouse') return;
+      if(activePointerId!==event.pointerId) return;
+      finishSwipe();
+    });
+    wrap.addEventListener('pointercancel',event=>{
+      if(event.pointerType==='mouse') return;
+      if(activePointerId!==event.pointerId) return;
+      finishSwipe();
+    });
   });
 }
 

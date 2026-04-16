@@ -40,8 +40,8 @@ body{overscroll-behavior:none}
 #app{width:100%;max-width:430px;height:100dvh;max-height:100dvh;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,0.25)}
 
 /* ── HEADER ── */
-.hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;position:relative;z-index:20}
-.logo{display:flex;align-items:center;color:var(--txt)}
+.hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 2px;flex-shrink:0;position:relative;z-index:20}
+.logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0}
 .logo .brand-lockup{display:block;height:108px;width:auto;max-width:220px}
 .brand-lockup{display:block;height:72px;width:auto}
 .brand-lockup.auth{height:136px}
@@ -624,7 +624,7 @@ html.boot-authenticated #auth-screen{display:none}
         </div>
       </label>
     </div>
-    <button class="btn-p" onclick="App.saveEvent()">Save Event</button>
+    <button class="btn-p" id="ev-bottom-save-btn" onclick="App.saveEvent()">Save Event</button>
     <button class="btn-s" onclick="App.closeModal('add-event')">Cancel</button>
     <button class="btn-s btn-danger" id="del-event-btn" onclick="App.confirmDeleteEvent()" style="display:none">Delete Event</button>
   </div>

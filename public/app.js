@@ -4471,11 +4471,6 @@ function openAddMoi(){
   if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
   _editing.gift=null;
   document.getElementById('mo-moi-title').textContent='Add Cash Gift Entry';
-<<<<<<< HEAD
-  const doneBtn=document.getElementById('moi-done-btn');
-  if(doneBtn) doneBtn.textContent='Done';
-=======
->>>>>>> parent of 70ca381 (currency options added)
   document.getElementById('moi-from').value='';
   document.getElementById('moi-amount').value='';
   const notesEl=document.getElementById('moi-notes');
@@ -4498,11 +4493,6 @@ function openEditMoi(id){
   if(!g)return;
   _editing.gift=id;
   document.getElementById('mo-moi-title').textContent='Edit Cash Gift Entry';
-<<<<<<< HEAD
-  const doneBtn=document.getElementById('moi-done-btn');
-  if(doneBtn) doneBtn.textContent='Close';
-=======
->>>>>>> parent of 70ca381 (currency options added)
   document.getElementById('moi-from').value=g.from||'';
   document.getElementById('moi-amount').value=g.value||'';
   const notesEl=document.getElementById('moi-notes');
@@ -4531,52 +4521,8 @@ function saveMoi(){
     if(g){g.from=from;g.value=amount;g.notes=document.getElementById('moi-notes').value.trim();g.ty=document.getElementById('moi-ty').value;}
     toast('Cash gift entry updated');
   } else {
-<<<<<<< HEAD
-    DB.gifts.push({id:uid(),eventId:DB.activeEvent,isMoi:true,desc:'Cash Gift',from,value:amount,cat:'cash_gift',ty:'pending',notes:paymentMode,createdAt:Date.now()});
-    toast(`Cash gift of ${fmtVal(amount)} from ${from} recorded`);
-  }
-  save();syncActiveEventData();renderGifts();
-  if(keepOpen && !wasEditing){
-    document.getElementById('moi-from').value='';
-    document.getElementById('moi-amount').value='';
-    const notesEl=document.getElementById('moi-notes');
-    if(notesEl)notesEl.value='Cash Envelope';
-    const notesInlineEl=document.getElementById('moi-notes-inline');
-    if(notesInlineEl) notesInlineEl.value='Cash Envelope';
-    hideAllGuestPickers();
-    setTimeout(()=>document.getElementById('moi-from')?.focus(),20);
-    return true;
-  }
-  closeModal('add-moi');
-  return true;
-}
-
-function saveMoi(opts){return _saveMoiEntry(opts);}
-
-function handleMoiDone(){
-  const from=(document.getElementById('moi-from')?.value||'').trim();
-  const amount=parseFloat(document.getElementById('moi-amount')?.value)||0;
-  if(!from && !amount){
-    closeModal('add-moi');
-    return;
-  }
-  saveMoi();
-}
-
-function handleMoiFieldEnter(field,e){
-  if(e.key!=='Enter') return;
-  e.preventDefault();
-  if(field==='from'){
-    document.getElementById('moi-amount')?.focus();
-    document.getElementById('moi-amount')?.select?.();
-    return;
-  }
-  if(field==='amount'){
-    saveMoi({keepOpen:!_editing.gift});
-=======
     DB.gifts.push({id:uid(),eventId:DB.activeEvent,isMoi:true,desc:'Cash Gift',from,value:amount,cat:'cash_gift',ty:document.getElementById('moi-ty').value,notes:document.getElementById('moi-notes').value.trim(),createdAt:Date.now()});
     toast(`Cash gift of ₹${amount.toLocaleString('en-IN')} from ${from} recorded`);
->>>>>>> parent of 70ca381 (currency options added)
   }
   save();syncActiveEventData();closeModal('add-moi');renderGifts();
 }
@@ -4720,11 +4666,7 @@ window.App={
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,
   setGiftTab,setGiftCatFilter,selectCat,
-<<<<<<< HEAD
-  openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,handleMoiDone,handleMoiFieldEnter,filterMoi,setMoiFilter,setMoiTy,
-=======
   openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,filterMoi,setMoiFilter,setMoiTy,
->>>>>>> parent of 70ca381 (currency options added)
   _editingGift:()=>_editing.gift,
   openGuestRequestModal,openGuestFeedbackModal,openGuestFoodMenuModal,
   submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireOrganizer(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireOrganizer(resolveGuestRoomRequest),

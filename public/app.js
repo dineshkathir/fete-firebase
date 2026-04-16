@@ -1917,6 +1917,29 @@ function renderEventContactsEditor(){
   if(addBtn) addBtn.style.display=canEdit?'block':'none';
   if(saveBtn) saveBtn.style.display=canEdit?'block':'none';
   if(_eventContactsTemp.length===0){
+    if(canEdit){
+      container.innerHTML=`<div class="event-contact-view">
+        <div class="event-contact-view-top">
+          <div style="flex:1;min-width:0">
+            <div class="event-contact-grid">
+              <div class="fg" style="margin-bottom:0">
+                <label class="fl">Name</label>
+                <input class="fi" type="text" placeholder="Makeup / Security / Cook / Driver" oninput="App._updateEventContact(0,'name',this.value)" />
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label class="fl">Phone Number</label>
+                <input class="fi" type="text" inputmode="tel" maxlength="15" placeholder="Phone number" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,15);App._updateEventContact(0,'phone',this.value)" />
+              </div>
+            </div>
+          </div>
+          <button class="event-contact-icon-btn" type="button" title="Remove contact" aria-label="Remove contact" onclick="App._removeEventContact(0)">✕</button>
+        </div>
+        <div class="event-contact-view-actions">
+          <button class="event-contact-share-btn" type="button" onclick="App.shareEventContact('${_editingEventContactsId}',0)">${uiIcon('share',14)} Share</button>
+        </div>
+      </div>`;
+      return;
+    }
     container.innerHTML='<div class="event-contact-empty">No event contacts saved yet. Add key numbers here and use call, WhatsApp, or share whenever needed.</div>';
     return;
   }
@@ -1927,9 +1950,11 @@ function renderEventContactsEditor(){
           ${canEdit
             ? `<div class="event-contact-grid">
                 <div class="fg" style="margin-bottom:0">
+                  <label class="fl">Name</label>
                   <input class="fi" type="text" placeholder="Camera Man / Security / Cook" value="${escapeHtml(contact.name||'')}" oninput="App._updateEventContact(${idx},'name',this.value)" />
                 </div>
                 <div class="fg" style="margin-bottom:0">
+                  <label class="fl">Phone Number</label>
                   <input class="fi" type="text" inputmode="tel" maxlength="15" placeholder="Phone number" value="${escapeHtml(contact.phone||'')}" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,15);App._updateEventContact(${idx},'phone',this.value)" />
                 </div>
               </div>`
@@ -1970,6 +1995,9 @@ function openEventContacts(eventId){
   if(!ev){toast('⚠️ Event not found');return;}
   _editingEventContactsId=eventId;
   _eventContactsTemp=JSON.parse(JSON.stringify(normalizeEventContacts(ev.eventContacts)));
+  if(Auth.isOrganizer(eventId) && _eventContactsTemp.length===0){
+    _eventContactsTemp=[{name:'',phone:''}];
+  }
   document.getElementById('mo-event-contacts-title').textContent=`${ev.name} Contacts`;
   document.getElementById('event-contacts-sub').textContent=Auth.isOrganizer(eventId)
     ? 'Manage event contact names and phone numbers here.'
@@ -1983,6 +2011,10 @@ async function saveEventContacts(){
   if(!ev){toast('⚠️ Event not found');return;}
   if(!Auth.isOrganizer(ev.id)){toast('⚠️ Only Organisers can update event contacts');return;}
   const normalized=normalizeEventContacts(_eventContactsTemp);
+  if(normalized.length===0){
+    toast('⚠️ Add at least one event contact');
+    return;
+  }
   if(normalized.some(contact=>!contact.name || !contact.phone)){
     toast('⚠️ Each contact needs a name and phone number');
     return;
@@ -1999,6 +2031,7 @@ async function saveEventContacts(){
   }
   render();
   renderEventContactsEditor();
+  closeModal('event-contacts');
   toast('Event contacts updated');
 }
 

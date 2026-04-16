@@ -715,7 +715,7 @@ function fmtVal(v){
   if(v===null||v===undefined||v===''||isNaN(v))return '—';
   const amount=Number(v);
   const abs=Math.abs(amount);
-  if(abs>1000000000)return ':face_with_peeking_eye:';
+  if(abs>1000000000)return '100Cr+';
   const formatCompact=(value,suffix)=>{
     const rounded=value>=100?Math.round(value):Math.round(value*10)/10;
     const text=Number.isInteger(rounded)?String(rounded):rounded.toFixed(1).replace(/\.0$/,'');

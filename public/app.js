@@ -661,6 +661,7 @@ function uiIcon(name,size=14){
     location:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 20s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>`,
     user:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="12" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 18c1-3 3.4-4.5 6.5-4.5S17.5 15 18.5 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     guests:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="9" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4.5 18c.6-2.7 2.5-4 4.5-4s3.9 1.3 4.5 4M13.5 18c.4-2 1.8-3.1 3.5-3.1 1.4 0 2.7.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    edit:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="m12.5 7.5 4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     export:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 4v10M8.5 10.5 12 14l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 18.5h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     gift:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 10h16v10H4zM12 10v10M4 14h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10s-3.8-1.5-3.8-3.9c0-1.3 1-2.2 2.2-2.2 1.1 0 1.9.6 2.6 2 .7-1.4 1.5-2 2.6-2 1.2 0 2.2.9 2.2 2.2C15.8 8.5 12 10 12 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>`,
     room:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 19V8.5A1.5 1.5 0 0 1 6.5 7h11A1.5 1.5 0 0 1 19 8.5V19M3 19h18M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M9 11h2v2H9zm4 0h2v2h-2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -729,6 +730,28 @@ function initials(first,last){return((first||'')[0]||(last||'')[0]||'?').toUpper
 function avStyle(id){const i=Math.abs(id.charCodeAt?[...id].reduce((a,c)=>a+c.charCodeAt(0),0):0)%6;return`background:${AV_BG[i]};color:${AV_C[i]}`}
 function normalizeEmailValue(email){return(email||'').trim().toLowerCase()}
 function normalizePhoneValue(phone){return(phone||'').replace(/\D/g,'')}
+function limitPhoneDigits(input){
+  if(!input) return;
+  const raw=input.value||'';
+  let digits=0;
+  let out='';
+  for(const ch of raw){
+    if(/\d/.test(ch)){
+      if(digits>=15) continue;
+      digits++;
+      out+=ch;
+      continue;
+    }
+    if(ch==='+' && out.length===0){
+      out+=ch;
+      continue;
+    }
+    if((ch===' ' || ch==='-' || ch==='(' || ch===')') && digits<15){
+      out+=ch;
+    }
+  }
+  input.value=out;
+}
 function fullGuestName(guest){return`${guest?.first||''} ${guest?.last||''}`.trim()}
 function normalizeMasterGuestCandidate(candidate){
   return {
@@ -1102,17 +1125,41 @@ function toast(msg){
 // MODAL SYSTEM
 // ═══════════════════════════════════════════════
 let _editing={event:null,guest:null,gift:null};
+let _editingMasterGuest=null;
 let _roomLocsTemp=[];
 let _eventMenusTemp=[];
 let _eventMenuEditorDisabled=false;
 let _giftPhotoData=null;
 let _showPastEvents=false;
+let _suppressOverlayPop=false;
 
-function openModal(id){document.getElementById('mo-'+id)?.classList.add('open')}
-function closeModal(id){document.getElementById('mo-'+id)?.classList.remove('open')}
+function getOpenModalIds(){
+  return Array.from(document.querySelectorAll('.mo.open'))
+    .map(el=>el.id.replace(/^mo-/,''));
+}
+
+function pushOverlayState(type,id){
+  if(!window.history || !window.history.pushState) return;
+  window.history.pushState({ tab:_tab, overlay:{ type, id } }, '', window.location.href);
+}
+
+function openModal(id,{fromPop=false}={}){
+  document.getElementById('mo-'+id)?.classList.add('open');
+  if(!fromPop) pushOverlayState('modal', id);
+}
+
+function closeModal(id,{fromPop=false}={}){
+  document.getElementById('mo-'+id)?.classList.remove('open');
+  if(!fromPop && window.history && window.history.state?.overlay?.type==='modal' && window.history.state.overlay.id===id){
+    _suppressOverlayPop=true;
+    window.history.back();
+  }
+}
 
 document.querySelectorAll('.mo').forEach(el=>{
-  el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')});
+  el.addEventListener('click',e=>{
+    if(e.target===el) closeModal(el.id.replace(/^mo-/,''));
+  });
 });
 
 // ═══════════════════════════════════════════════
@@ -1130,10 +1177,15 @@ function openConfirm(title,sub,cb){
     confirmOk.style.borderColor='var(--rose-d)';
   }
   _confirmCb=cb;
-  document.getElementById('confirm-ok').onclick=()=>{_confirmCb&&_confirmCb();closeConfirm()};
+  document.getElementById('confirm-ok').onclick=()=>{
+    const confirmCb=_confirmCb;
+    closeConfirm();
+    confirmCb&&confirmCb();
+  };
   document.getElementById('confirm-overlay').classList.add('open');
+  pushOverlayState('confirm','confirm');
 }
-function closeConfirm(){
+function closeConfirm({fromPop=false}={}){
   document.getElementById('confirm-overlay').classList.remove('open');
   const confirmOk=document.getElementById('confirm-ok');
   if(confirmOk){
@@ -1141,6 +1193,10 @@ function closeConfirm(){
     confirmOk.style.background='var(--rose-d)';
     confirmOk.style.color='white';
     confirmOk.style.borderColor='var(--rose-d)';
+  }
+  if(!fromPop && window.history && window.history.state?.overlay?.type==='confirm'){
+    _suppressOverlayPop=true;
+    window.history.back();
   }
 }
 document.getElementById('confirm-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('confirm-overlay'))closeConfirm()});
@@ -1155,6 +1211,7 @@ let _exportEventId=null;
 let _showPastPickerEvents=false;
 let _masterGuestMode='manage';
 let _masterGuestSearch='';
+let _groupInviteSearch='';
 
 function syncTabHistory(tab,{fromPop=false}={}) {
   if (fromPop || !window.history || !window.history.replaceState) return;
@@ -1200,6 +1257,19 @@ function switchTab(tab, options={}) {
 }
 
 window.addEventListener('popstate', (event) => {
+  if(_suppressOverlayPop){
+    _suppressOverlayPop=false;
+    return;
+  }
+  const openModals=getOpenModalIds();
+  if(document.getElementById('confirm-overlay')?.classList.contains('open')){
+    closeConfirm({fromPop:true});
+    return;
+  }
+  if(openModals.length){
+    closeModal(openModals[openModals.length-1], {fromPop:true});
+    return;
+  }
   const nextTab = event.state && event.state.tab ? event.state.tab : 'events';
   switchTab(nextTab, { fromPop: true });
 });
@@ -1372,8 +1442,8 @@ function renderGuests(){
   const isOrg=Auth.isOrganizer(DB.activeEvent);
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <button class="fab" style="margin-bottom:0;flex:1 1 180px" onclick="App.openAddGuest()">＋ Add Guest</button>
-      <button class="ev-btn" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 12px;margin:0;flex:0 0 auto;font-size:12px;font-weight:600" onclick="App.exportCurrentEventToMaster()">${uiIcon('export',14)} Export</button>
-      <button class="ev-btn" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 12px;margin:0;flex:0 0 auto;font-size:12px;font-weight:600" onclick="App.openGroupInviteModal()">${uiIcon('guests',14)} Invite Group</button>
+      <button class="ev-btn" title="Export guests to master guest list" aria-label="Export guests to master guest list" style="display:inline-flex;align-items:center;justify-content:center;padding:10px;margin:0;flex:0 0 auto;width:40px;height:40px" onclick="App.exportCurrentEventToMaster()">${uiIcon('export',16)}</button>
+      <button class="ev-btn" title="Add guests from master guest list" aria-label="Add guests from master guest list" style="display:inline-flex;align-items:center;justify-content:center;padding:10px;margin:0;flex:0 0 auto;width:40px;height:40px" onclick="App.openGroupInviteModal()">${uiIcon('guests',16)}</button>
       ${feedbackGuests.length?`<button class="fchip" style="padding:8px 14px;font-size:12px" onclick="App.scrollGuestsToFeedback()">Jump to Feedback</button>`:''}
     </div>`:'';
   let listHtml='';
@@ -2190,6 +2260,7 @@ function saveGuest(){
   if(!first){toast('⚠️ Please enter a first name');return;}
   const last=document.getElementById('g-last').value.trim();
   const gContact=document.getElementById('g-contact').value.trim();
+  if(normalizePhoneValue(gContact).length>15){toast('⚠️ Mobile number cannot be more than 15 digits');return;}
   const gEmail=document.getElementById('g-email').value.trim().toLowerCase();
   const roomLoc=document.getElementById('g-room-loc').value;
   const roomNo=document.getElementById('g-room-no').value;
@@ -2305,7 +2376,8 @@ function renderMasterGuestList(){
     const sub=subParts.join(' · ');
     const action=_masterGuestMode==='pick'
       ? `<button class="ev-btn" style="padding:6px 10px" onclick="event.stopPropagation();App.pickMasterGuest('${guest.id}')">Use</button>`
-      : '';
+      : `<button class="ev-btn" style="padding:6px 9px" onclick="event.stopPropagation();App.openMasterGuestEditor('${guest.id}')" title="Edit saved guest" aria-label="Edit saved guest">${uiIcon('edit',14)}</button>
+         <button class="ev-btn" style="padding:6px 9px;color:#932B2B" onclick="event.stopPropagation();App.confirmDeleteMasterGuest('${guest.id}')" title="Delete saved guest" aria-label="Delete saved guest">X</button>`;
     return `<div class="g-row" ${_masterGuestMode==='pick'?`onclick="App.pickMasterGuest('${guest.id}')"`:''}>
       <div class="g-av" style="${avStyle(guest.id)}">${initials(guest.first,guest.last)}</div>
       <div class="g-info">
@@ -2327,11 +2399,11 @@ function openMasterGuestModal(mode='manage'){
   const title=document.getElementById('master-guest-title');
   const sub=document.getElementById('master-guest-sub');
   const search=document.getElementById('master-guest-search');
-  const exportBtn=document.getElementById('master-guest-export-btn');
+  const addBtn=document.getElementById('master-guest-add-btn');
   if(title) title.textContent=mode==='pick'?'Pick from Master Guest List':'Master Guest List';
   if(sub) sub.textContent=mode==='pick'?'Choose a saved guest to fill this event guest form quickly.':'Save guests once and reuse them in future events.';
   if(search) search.value='';
-  if(exportBtn) exportBtn.style.display=mode==='manage'?'block':'none';
+  if(addBtn) addBtn.style.display=mode==='manage'?'block':'none';
   renderMasterGuestList();
   openModal('master-guests');
 }
@@ -2354,6 +2426,58 @@ function pickMasterGuest(id){
   toast('Guest details filled from master list');
 }
 
+function openMasterGuestEditor(id=null){
+  _editingMasterGuest=id;
+  const guest=id?DB.masterGuests.find(item=>item.id===id):null;
+  document.getElementById('master-guest-editor-title').textContent=guest?'Edit Saved Guest':'Add Saved Guest';
+  document.getElementById('mg-first').value=guest?.first||'';
+  document.getElementById('mg-last').value=guest?.last||'';
+  document.getElementById('mg-contact').value=guest?.contact||'';
+  document.getElementById('mg-email').value=guest?.email||'';
+  document.getElementById('mg-notes').value=guest?.notes||'';
+  document.getElementById('mg-group').value=guest?.group||'';
+  document.getElementById('master-guest-delete-btn').style.display=guest?'block':'none';
+  openModal('master-guest-editor');
+}
+
+function saveMasterGuest(){
+  const candidate=normalizeMasterGuestCandidate({
+    id:_editingMasterGuest||uid(),
+    first:document.getElementById('mg-first').value.trim(),
+    last:document.getElementById('mg-last').value.trim(),
+    contact:document.getElementById('mg-contact').value.trim(),
+    email:document.getElementById('mg-email').value.trim(),
+    notes:document.getElementById('mg-notes').value.trim(),
+    group:document.getElementById('mg-group').value.trim(),
+    createdAt:_editingMasterGuest?(DB.masterGuests.find(item=>item.id===_editingMasterGuest)?.createdAt||Date.now()):Date.now()
+  });
+  if(!candidate.first){toast('⚠️ Add at least a first name');return;}
+  if(normalizePhoneValue(candidate.contact).length>15){toast('⚠️ Mobile number cannot be more than 15 digits');return;}
+  const duplicate=DB.masterGuests.find(item=>item.id!==candidate.id&&isMasterGuestDuplicate(candidate,item));
+  if(duplicate){toast('⚠️ A matching saved guest already exists');return;}
+  const idx=DB.masterGuests.findIndex(item=>item.id===candidate.id);
+  if(idx>=0) DB.masterGuests[idx]=candidate;
+  else DB.masterGuests.push(candidate);
+  DB.masterGuests.sort((a,b)=>fullGuestName(a).localeCompare(fullGuestName(b)));
+  save();
+  renderMasterGuestList();
+  closeModal('master-guest-editor');
+  toast(idx>=0?'Saved guest updated':'Saved guest added');
+}
+
+function confirmDeleteMasterGuest(id){
+  const gid=id||_editingMasterGuest;
+  const guest=DB.masterGuests.find(item=>item.id===gid);
+  if(!guest) return;
+  openConfirm(`Delete ${fullGuestName(guest)||'saved guest'}?`,'This guest will be removed from the master guest list.',()=>{
+    DB.masterGuests=DB.masterGuests.filter(item=>item.id!==gid);
+    save();
+    renderMasterGuestList();
+    closeModal('master-guest-editor');
+    toast('Saved guest removed');
+  });
+}
+
 function deleteGuestById(gid){
   const g=DB.guests.find(x=>x.id===gid);
   if(!g) return;
@@ -2361,13 +2485,77 @@ function deleteGuestById(gid){
   save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();toast('Guest removed');
 }
 
-function getEventGroups(){
-  if(!DB.activeEvent) return [];
+function isEventGuestDuplicate(candidate){
+  if(!DB.activeEvent) return false;
+  const candidateEmail=normalizeEmailValue(candidate.email);
+  const candidatePhone=normalizePhoneValue(candidate.contact);
+  const candidateName=fullGuestName(candidate).toLowerCase();
+  return DB.guests.some(guest=>{
+    if(guest.eventId!==DB.activeEvent) return false;
+    const guestEmail=normalizeEmailValue(guest.email);
+    const guestPhone=normalizePhoneValue(guest.contact);
+    const guestName=fullGuestName(guest).toLowerCase();
+    if(candidateEmail && guestEmail && candidateEmail===guestEmail) return true;
+    if(candidatePhone && guestPhone && candidatePhone===guestPhone) return true;
+    if(candidateName && guestName===candidateName && !candidateEmail && !guestEmail && !candidatePhone && !guestPhone) return true;
+    return false;
+  });
+}
+
+function createEventGuestFromMaster(masterGuest){
+  return {
+    id: uid(),
+    eventId: DB.activeEvent,
+    first: (masterGuest.first||'').trim(),
+    last: (masterGuest.last||'').trim(),
+    contact: (masterGuest.contact||'').trim(),
+    email: normalizeEmailValue(masterGuest.email||''),
+    party: 1,
+    rsvp: 'invited',
+    notes: (masterGuest.notes||'').trim(),
+    table: (masterGuest.group||masterGuest.table||'').trim(),
+    roomLoc: '',
+    roomNo: '',
+    roomAssignments: [],
+    roomRequestType: 'undecided',
+    requestedRoomCount: 1,
+    requestedStayCount: 1,
+    roomRequestNote: '',
+    roomRequestStatus: 'none',
+    feedbackFoodRating: 0,
+    feedbackEventRating: 0,
+    feedbackRoomRating: 0,
+    feedbackMessage: '',
+    foodMenuLikes: [],
+    createdAt: Date.now()
+  };
+}
+
+function addMasterGuestsToActiveEvent(masterGuests){
+  if(!DB.activeEvent){toast('⚠️ Select an event first');return {added:0, skipped:0};}
+  let added=0;
+  let skipped=0;
+  masterGuests.forEach(masterGuest=>{
+    const normalized=normalizeMasterGuestCandidate(masterGuest);
+    if(!normalized.first){ skipped++; return; }
+    if(isEventGuestDuplicate(normalized)){ skipped++; return; }
+    DB.guests.push(createEventGuestFromMaster(normalized));
+    added++;
+  });
+  if(added){
+    save();
+    syncActiveEventData();
+    render();
+  }
+  return {added, skipped};
+}
+
+function getMasterGuestGroups(){
   const groups=new Map();
-  DB.guests
-    .filter(guest=>guest.eventId===DB.activeEvent && (guest.table||'').trim())
+  DB.masterGuests
+    .filter(guest=>(guest.group||'').trim())
     .forEach(guest=>{
-      const name=(guest.table||'').trim();
+      const name=(guest.group||'').trim();
       if(!groups.has(name)) groups.set(name, []);
       groups.get(name).push(guest);
     });
@@ -2379,55 +2567,105 @@ function getEventGroups(){
 function renderGroupInviteModal(){
   const container=document.getElementById('group-invite-list');
   if(!container) return;
-  const groups=getEventGroups();
-  if(!groups.length){
-    container.innerHTML=`<div class="empty" style="padding:24px 16px"><div class="empty-t" style="font-size:18px">No groups yet</div><div class="empty-s">Add a group while creating guests, then you can invite everyone in that group from here.</div></div>`;
+  const q=_groupInviteSearch.trim().toLowerCase();
+  const normalizedQueryPhone=normalizePhoneValue(q);
+  const groups=getMasterGuestGroups().filter(group=>{
+    if(!q) return true;
+    return group.name.toLowerCase().includes(q) || group.guests.some(guest=>{
+      const name=fullGuestName(guest).toLowerCase();
+      const email=normalizeEmailValue(guest.email);
+      const phone=normalizePhoneValue(guest.contact);
+      return name.includes(q) || email.includes(q) || (normalizedQueryPhone && phone.includes(normalizedQueryPhone));
+    });
+  });
+  const guests=DB.masterGuests.filter(guest=>{
+    if(!q) return true;
+    const name=fullGuestName(guest).toLowerCase();
+    const email=normalizeEmailValue(guest.email);
+    const phone=normalizePhoneValue(guest.contact);
+    const group=(guest.group||'').toLowerCase();
+    return name.includes(q) || email.includes(q) || group.includes(q) || (normalizedQueryPhone && phone.includes(normalizedQueryPhone));
+  });
+  if(!groups.length && !guests.length){
+    container.innerHTML=`<div class="empty" style="padding:24px 16px"><div class="empty-t" style="font-size:18px">No saved guests found</div><div class="empty-s">${_groupInviteSearch?'Try a different search term.':'Save guests in the master guest list first, then add them here.'}</div></div>`;
     return;
   }
-  container.innerHTML=groups.map(group=>{
-    const total=group.guests.length;
-    const inviteable=group.guests.filter(guest=>(guest.contact||'').replace(/\D/g,'').length>=10).length;
-    const dietaryCount=group.guests.filter(guest=>(guest.notes||'').trim()).length;
-    return `<div class="g-row" style="align-items:flex-start">
-      <div class="g-av" style="${avStyle(group.name)}">${initials(group.name)}</div>
-      <div class="g-info">
-        <div class="g-name">${group.name}</div>
-        <div class="g-detail">${total} guest${total!==1?'s':''} · ${inviteable} with WhatsApp number${dietaryCount?` · ${dietaryCount} with dietary notes`:''}</div>
-      </div>
-      <div class="g-actions">
-        <button class="ev-btn" style="padding:6px 10px" onclick="event.stopPropagation();App.sendGroupInvite('${encodeURIComponent(group.name)}')">Invite All</button>
-      </div>
-    </div>`;
-  }).join('');
+  const groupSection=groups.length?`
+    <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--txt3);margin:4px 0 10px">Groups</div>
+    ${groups.map(group=>{
+      const total=group.guests.length;
+      const existing=group.guests.filter(isEventGuestDuplicate).length;
+      const ready=Math.max(0,total-existing);
+      return `<div class="g-row" style="align-items:flex-start">
+        <div class="g-av" style="${avStyle(group.name)}">${initials(group.name)}</div>
+        <div class="g-info">
+          <div class="g-name">${group.name}</div>
+          <div class="g-detail">${total} saved guest${total!==1?'s':''}${existing?` · ${existing} already in event`:''}</div>
+        </div>
+        <div class="g-actions">
+          <button class="ev-btn" style="padding:6px 10px;${ready===0?'opacity:.5;cursor:not-allowed;':''}" onclick="event.stopPropagation();App.importMasterGroup('${encodeURIComponent(group.name)}')" ${ready===0?'disabled':''}>Add Group</button>
+        </div>
+      </div>`;
+    }).join('')}
+  `:'';
+  const guestSection=guests.length?`
+    <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--txt3);margin:${groups.length?'16px':'4px'} 0 10px">Individual Guests</div>
+    ${guests.map(guest=>{
+      const name=fullGuestName(guest)||'Unknown guest';
+      const subParts=[guest.email||guest.contact||'No email or phone saved'];
+      if(guest.group) subParts.push(`Group: ${guest.group}`);
+      if(guest.notes) subParts.push(guest.notes);
+      const exists=isEventGuestDuplicate(guest);
+      return `<div class="g-row" style="align-items:flex-start">
+        <div class="g-av" style="${avStyle(guest.id)}">${initials(guest.first,guest.last)}</div>
+        <div class="g-info">
+          <div class="g-name">${name}</div>
+          <div class="g-detail">${subParts.join(' · ')}${exists?' · Already in event':''}</div>
+        </div>
+        <div class="g-actions">
+          <button class="ev-btn" style="padding:6px 10px;${exists?'opacity:.5;cursor:not-allowed;':''}" onclick="event.stopPropagation();App.importMasterGuest('${guest.id}')" ${exists?'disabled':''}>Add</button>
+        </div>
+      </div>`;
+    }).join('')}
+  `:'';
+  container.innerHTML=groupSection+guestSection;
+}
+
+function filterGroupInvite(query){
+  _groupInviteSearch=query||'';
+  renderGroupInviteModal();
+}
+
+function importMasterGroup(groupName){
+  const decodedName=decodeURIComponent(groupName||'').trim();
+  const guests=DB.masterGuests.filter(guest=>(guest.group||'').trim()===decodedName);
+  if(!guests.length){toast('⚠️ No saved guests found in this group');return;}
+  const result=addMasterGuestsToActiveEvent(guests);
+  renderGroupInviteModal();
+  if(result.added){
+    toast(`Added ${result.added} guest${result.added!==1?'s':''} from ${decodedName}${result.skipped?` · ${result.skipped} skipped`:''}`);
+  } else {
+    toast(`No new guests added from ${decodedName}${result.skipped?` · ${result.skipped} already in event`:''}`);
+  }
+}
+
+function importMasterGuest(id){
+  const guest=DB.masterGuests.find(item=>item.id===id);
+  if(!guest){toast('⚠️ Saved guest not found');return;}
+  const result=addMasterGuestsToActiveEvent([guest]);
+  renderGroupInviteModal();
+  if(result.added) toast(`${fullGuestName(guest)||'Guest'} added to this event`);
+  else toast(`${fullGuestName(guest)||'Guest'} is already in this event`);
 }
 
 function openGroupInviteModal(){
   if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
-  if(!Auth.isOrganizer(DB.activeEvent)){toast('⚠️ Only Organisers can invite a group');return;}
+  if(!Auth.isOrganizer(DB.activeEvent)){toast('⚠️ Only Organisers can add guests from the master list');return;}
+  _groupInviteSearch='';
+  const search=document.getElementById('group-invite-search');
+  if(search) search.value='';
   renderGroupInviteModal();
   openModal('group-invite');
-}
-
-function sendGroupInvite(groupName){
-  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
-  const decodedName=decodeURIComponent(groupName||'').trim();
-  const guests=DB.guests.filter(guest=>guest.eventId===DB.activeEvent && (guest.table||'').trim()===decodedName);
-  if(!guests.length){toast('⚠️ No guests found in this group');return;}
-  const ev=DB.events.find(e=>e.id===DB.activeEvent);
-  if(!ev){toast('⚠️ No event selected');return;}
-  const inviteable=guests.filter(guest=>(guest.contact||'').replace(/\D/g,'').length>=10);
-  if(!inviteable.length){toast('⚠️ No valid phone numbers in this group');return;}
-  const evDate=ev.date?fmtDate(ev.date):'';
-  const venue=ev.location||'';
-  inviteable.forEach((guest,index)=>{
-    const phone=(guest.contact||'').replace(/\D/g,'');
-    const intlPhone=phone.startsWith('91')?phone:'91'+phone;
-    const rooms=getGuestRoomAssignments(guest);
-    const roomPart=rooms.length?`\nRooms: ${rooms.map(room=>`${room.loc} Room ${room.no}`).join(', ')}`:'';
-    const msg=`*You're Invited!*\n\nDear ${guest.first},\n\nWe joyfully invite you to *${ev.name}*\n\nDate: ${evDate}\nVenue: ${venue}\nGroup: ${decodedName}${roomPart}\n\nYour presence will make this celebration truly special. We look forward to seeing you!\n\nWith warm regards`;
-    setTimeout(()=>window.open(`https://wa.me/${intlPhone}?text=${encodeURIComponent(msg)}`,'_blank'), index*250);
-  });
-  toast(`Opened ${inviteable.length} WhatsApp invite${inviteable.length!==1?'s':''} for ${decodedName}`);
 }
 
 function cycleRsvp(id){
@@ -2467,7 +2705,7 @@ function openGuestDetail(id){
     <div class="detail-header">
       <div class="g-av" style="${avStyle(g.id)};width:44px;height:44px;font-size:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials(g.first,g.last)}</div>
       <div class="detail-title">${g.first} ${g.last}</div>
-      <button class="ib" onclick="App.openEditGuest('${g.id}');App.closeModal('guest-detail')">Edit</button>
+      <button class="ib" onclick="App.openEditGuest('${g.id}');App.closeModal('guest-detail')" title="Edit guest" aria-label="Edit guest">${uiIcon('edit',16)}</button>
     </div>
     <div class="info-grid">
       ${g.contact?`<div class="info-cell"><div class="info-lbl">Phone</div><div class="info-val">${g.contact}</div></div>`:''}
@@ -3337,7 +3575,7 @@ function exportGifts(){
 // ═══════════════════════════════════════════════
 // PROFILE & SETTINGS
 // ═══════════════════════════════════════════════
-function openProfileModal(){
+function openProfileModal(show=true){
   const sess=Auth.currentSession();
   const name=(sess&&sess.name)||DB.profile.name||'';
   const email=(sess&&sess.email)||DB.profile.email||'';
@@ -3348,7 +3586,7 @@ function openProfileModal(){
   if(nameEl) nameEl.textContent=name||'Guest Host';
   if(emailEl) emailEl.textContent=email||'Sign in to sync across devices';
   if(avatarEl) avatarEl.textContent=avatar;
-  openModal('profile');
+  if(show) openModal('profile');
 }
 
 function toggleSetting(key,btn){
@@ -3645,7 +3883,7 @@ window.App={
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
   confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,
-  openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,
+  openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,
   setGiftTab,setGiftCatFilter,selectCat,
@@ -3655,10 +3893,11 @@ window.App={
   submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireOrganizer(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireOrganizer(resolveGuestRoomRequest),
   toggleGuestFoodLike,toggleGuestFoodSectionLike,
   showGuestPicker,filterGuestPicker,pickGuest,
-  openGroupInviteModal,sendGroupInvite,
+  openGroupInviteModal,filterGroupInvite,importMasterGroup,importMasterGuest,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   openProfileModal,toggleSetting,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,
+  limitPhoneDigits,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,
   addEventMenu,_updateEventMenuTitle,_updateEventMenuItems,_removeEventMenu,
   addRoomLocation:addRoomLocationGated,_updateLocName,_removeLocation,_addRoom,_removeRoom,
@@ -3681,8 +3920,7 @@ window.setMoiFilter=setMoiFilter;
 // INIT
 // ═══════════════════════════════════════════════
 // Pre-populate profile modal
-openProfileModal();
-closeModal('profile');
+openProfileModal(false);
 if (window.history && window.history.replaceState) {
   window.history.replaceState({ tab: 'events' }, '', window.location.href);
 }

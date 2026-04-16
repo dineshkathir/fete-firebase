@@ -647,7 +647,7 @@ html.boot-authenticated #auth-screen{display:none}
     </div>
     <div class="fg">
       <label class="fl">Phone</label>
-      <input class="fi" type="text" id="g-contact" placeholder="+91 98000 00000" />
+      <input class="fi" type="text" id="g-contact" placeholder="+91 98000 00000" inputmode="tel" oninput="App.limitPhoneDigits(this)" />
     </div>
     <div class="fg">
       <label class="fl">Email</label>
@@ -879,6 +879,7 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-title" id="master-guest-title">Master Guest List</div>
     <div style="font-size:12px;color:var(--txt3);margin:-8px 0 14px;line-height:1.6" id="master-guest-sub">Save guests once and reuse them in future events.</div>
+    <button class="btn-p" id="master-guest-add-btn" style="margin-bottom:12px" onclick="App.openMasterGuestEditor()">＋ Add Saved Guest</button>
     <div class="search-wrap" style="margin-bottom:12px">
       <span class="search-ico">⌕</span>
       <input class="search-inp" id="master-guest-search" type="text" placeholder="Search by name, email, or phone" oninput="App.filterMasterGuests(this.value)" />
@@ -888,12 +889,53 @@ html.boot-authenticated #auth-screen{display:none}
   </div>
 </div>
 
+<!-- MASTER GUEST EDITOR -->
+<div class="mo" id="mo-master-guest-editor">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="master-guest-editor-title">Add Saved Guest</div>
+    <div class="fr">
+      <div class="fg">
+        <label class="fl">First Name *</label>
+        <input class="fi" type="text" id="mg-first" placeholder="Ananya" />
+      </div>
+      <div class="fg">
+        <label class="fl">Last Name</label>
+        <input class="fi" type="text" id="mg-last" placeholder="Kumar" />
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Phone</label>
+      <input class="fi" type="text" id="mg-contact" placeholder="+91 98000 00000" inputmode="tel" oninput="App.limitPhoneDigits(this)" />
+    </div>
+    <div class="fg">
+      <label class="fl">Email</label>
+      <input class="fi" type="email" id="mg-email" placeholder="guest@example.com" />
+    </div>
+    <div class="fg">
+      <label class="fl">Notes / Dietary</label>
+      <input class="fi" type="text" id="mg-notes" placeholder="Vegetarian, no nuts…" />
+    </div>
+    <div class="fg">
+      <label class="fl">Group</label>
+      <input class="fi" type="text" id="mg-group" placeholder="e.g. Family, VIP, Bride Side" />
+    </div>
+    <button class="btn-p" onclick="App.saveMasterGuest()">Save Guest</button>
+    <button class="btn-s" onclick="App.closeModal('master-guest-editor')">Cancel</button>
+    <button class="btn-s btn-danger" id="master-guest-delete-btn" onclick="App.confirmDeleteMasterGuest()" style="display:none">Delete Guest</button>
+  </div>
+</div>
+
 <!-- GROUP INVITE -->
 <div class="mo" id="mo-group-invite">
   <div class="ms">
     <div class="m-handle"></div>
-    <div class="m-title">Invite Group</div>
-    <div style="font-size:12px;color:var(--txt3);margin:-8px 0 14px;line-height:1.6">Select a group to invite every guest in that group using WhatsApp.</div>
+    <div class="m-title">Add From Master Guest List</div>
+    <div style="font-size:12px;color:var(--txt3);margin:-8px 0 14px;line-height:1.6">Add saved guests to this event by group or select individual guests.</div>
+    <div class="search-wrap" style="margin-bottom:12px">
+      <span class="search-ico">âŒ•</span>
+      <input class="search-inp" id="group-invite-search" type="text" placeholder="Search by name, email, phone, or group" oninput="App.filterGroupInvite(this.value)" />
+    </div>
     <div id="group-invite-list"></div>
     <button class="btn-s" onclick="App.closeModal('group-invite')">Close</button>
   </div>

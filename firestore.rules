@@ -89,5 +89,27 @@ service cloud.firestore {
       allow read, update, delete: if signedIn() && isEventMember(resource.data.eventId);
       allow create: if signedIn() && isEventMember(request.resource.data.eventId);
     }
+
+    match /masterGuestShares/{shareId} {
+      allow create: if signedIn()
+        && request.resource.data.senderEmail is string
+        && request.resource.data.recipientEmail is string
+        && request.resource.data.senderEmail.lower() == myEmail();
+
+      allow read: if signedIn() && (
+        resource.data.senderEmail.lower() == myEmail() ||
+        resource.data.recipientEmail.lower() == myEmail()
+      );
+
+      allow update: if signedIn() && (
+        resource.data.senderEmail.lower() == myEmail() ||
+        resource.data.recipientEmail.lower() == myEmail()
+      );
+
+      allow delete: if signedIn() && (
+        resource.data.senderEmail.lower() == myEmail() ||
+        resource.data.recipientEmail.lower() == myEmail()
+      );
+    }
   }
 }

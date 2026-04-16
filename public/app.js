@@ -19,13 +19,16 @@ const _gProvider = new GoogleAuthProvider();
 
 const Cloud = (() => {
   let _sessionToken = 0;
-  let _unsubs = { eventsMem: null, eventsGst: null, guests: [], gifts: [] };
+  let _unsubs = { eventsMem: null, eventsGst: null, guests: [], gifts: [], masterGuestInbox: null, masterGuestSent: null };
 
   function unsubscribeAll() {
     if (_unsubs.eventsMem) { _unsubs.eventsMem(); _unsubs.eventsMem = null; }
     if (_unsubs.eventsGst) { _unsubs.eventsGst(); _unsubs.eventsGst = null; }
+    if (_unsubs.masterGuestInbox) { _unsubs.masterGuestInbox(); _unsubs.masterGuestInbox = null; }
+    if (_unsubs.masterGuestSent) { _unsubs.masterGuestSent(); _unsubs.masterGuestSent = null; }
     _unsubs.guests.forEach(unsub => unsub()); _unsubs.guests = [];
     _unsubs.gifts.forEach(unsub => unsub()); _unsubs.gifts = [];
+    if (typeof setMasterGuestShareState === 'function') setMasterGuestShareState([], []);
   }
 
   function cleanData(value) {
@@ -40,6 +43,34 @@ const Cloud = (() => {
 
   function normalizeEmail(email) {
     return (email || '').trim().toLowerCase();
+  }
+
+  function listenMasterGuestShares(session) {
+    const email = normalizeEmail(session?.email);
+    if (_unsubs.masterGuestInbox) { _unsubs.masterGuestInbox(); _unsubs.masterGuestInbox = null; }
+    if (_unsubs.masterGuestSent) { _unsubs.masterGuestSent(); _unsubs.masterGuestSent = null; }
+    if (!email) {
+      if (typeof setMasterGuestShareState === 'function') setMasterGuestShareState([], []);
+      return;
+    }
+    const qInbox = query(collection(_fbDb, 'masterGuestShares'), where('recipientEmail', '==', email));
+    _unsubs.masterGuestInbox = onSnapshot(qInbox, snapshot => {
+      const items = snapshot.docs
+        .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+        .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+      if (typeof setMasterGuestShareState === 'function') {
+        setMasterGuestShareState(items, null);
+      }
+    });
+    const qSent = query(collection(_fbDb, 'masterGuestShares'), where('senderEmail', '==', email));
+    _unsubs.masterGuestSent = onSnapshot(qSent, snapshot => {
+      const items = snapshot.docs
+        .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+        .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+      if (typeof setMasterGuestShareState === 'function') {
+        setMasterGuestShareState(null, items);
+      }
+    });
   }
 
   function normalizeTeam(team, fallbackSession) {
@@ -290,6 +321,7 @@ function serializeEvent(event, team, session) {
     
     if (!email) {
       applyEventsToLocal([], session);
+      listenMasterGuestShares(session);
       render();
       return;
     }
@@ -320,6 +352,8 @@ function serializeEvent(event, team, session) {
       snapshot.docs.forEach(docSnap => gstEvents.set(docSnap.id, { id: docSnap.id, _isGuestOnly: true, ...docSnap.data() }));
       flushEvents();
     });
+
+    listenMasterGuestShares(session);
   }
 
   async function saveEvent(event, team, session) {
@@ -354,7 +388,15 @@ function serializeEvent(event, team, session) {
     }
   }
 
-  return { unsubscribeAll, loadEventsForSession, saveEvent, deleteEvent, migrateLocalEvents, hydrateTeamForSession, syncEventData, clearAllCloudData };
+  async function createMasterGuestShare(share) {
+    await setDoc(doc(_fbDb, 'masterGuestShares', share.id), cleanData(share), { merge: true });
+  }
+
+  async function updateMasterGuestShare(shareId, updates) {
+    await setDoc(doc(_fbDb, 'masterGuestShares', shareId), cleanData({ ...updates, updatedAt: Date.now() }), { merge: true });
+  }
+
+  return { unsubscribeAll, loadEventsForSession, saveEvent, deleteEvent, migrateLocalEvents, hydrateTeamForSession, syncEventData, clearAllCloudData, createMasterGuestShare, updateMasterGuestShare };
 })();
 
 // ═══════════════════════════════════════════════
@@ -711,8 +753,6 @@ function uiIcon(name,size=14){
   };
   return icons[name]||'';
 }
-const TYPE_LABEL={wedding:'Wedding',birthday:'Birthday',babyshower:'Baby Shower',party:'Party',other:'Other'};
-
 function daysUntil(dateStr){
   if(!dateStr)return null;
   const d=new Date(dateStr)-new Date();
@@ -747,6 +787,12 @@ function fmtTime(timeStr){
     return dt.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit',hour12:true});
   }
   return raw;
+}
+function fmtDateTime(ts){
+  if(!ts) return '';
+  const date=new Date(ts);
+  if(Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
 }
 function formatEventLocation(location){
   const raw=String(location||'').trim();
@@ -1090,7 +1136,6 @@ function setEventEditorMode(isOrganizerMode){
   const organizerOnlySections=[
     'ev-name-section',
     'ev-datetime-section',
-    'ev-type-section',
     'ev-location-section',
     'ev-color-section',
     'ev-food-section',
@@ -1411,6 +1456,7 @@ let _editingMasterGuest=null;
 let _roomLocsTemp=[];
 let _roomConfigEventId='';
 let _eventMenusTemp=[];
+let _eventFoodMenuModalEventId='';
 let _eventContactsTemp=[];
 let _editingEventContactsId='';
 let _eventContactsEditMode=false;
@@ -1445,6 +1491,9 @@ function closeModal(id,{fromPop=false}={}){
   }
   if(id==='room-config'){
     _roomConfigEventId='';
+  }
+  if(id==='event-food-menu'){
+    _eventFoodMenuModalEventId='';
   }
   if(id==='event-contact-actions'){
     _eventContactActionEventId='';
@@ -1518,6 +1567,9 @@ let _masterGuestMode='manage';
 let _masterGuestSearch='';
 let _groupInviteSearch='';
 let _masterGuestConflictResolver=null;
+let _masterGuestSelectedIds=new Set();
+let _incomingMasterGuestShares=[];
+let _sentMasterGuestShares=[];
 let _guestSwipeTapBlockUntil=0;
 let _guestSwipeOpenId=null;
 let _guestSwipeActionGuestId=null;
@@ -1527,6 +1579,14 @@ let _guestUndoState=null;
 let _guestUndoTimer=null;
 let _preserveGuestSearchFocus=false;
 let _showScrollTop=false;
+
+function setMasterGuestShareState(incoming, sent){
+  if(Array.isArray(incoming)) _incomingMasterGuestShares=incoming;
+  if(Array.isArray(sent)) _sentMasterGuestShares=sent;
+  if(_tab==='settings') renderSettings();
+  if(document.getElementById('mo-master-guests')?.classList.contains('open')) renderMasterGuestList();
+  if(document.getElementById('mo-master-guest-shares')?.classList.contains('open')) renderMasterGuestShares();
+}
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
 const GUEST_SWIPE_LEFT_REVEAL=196;
@@ -2731,7 +2791,7 @@ function renderGifts(){
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
         <div>
           <div style="font-size:9.5px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:5px">மொய் · Total Collected</div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;color:white;line-height:1">${moiTotal>0?fmtVal(moiTotal):'₹0'}</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;color:white;line-height:1">${moiTotal>0?fmtVal(moiTotal):`${currencySymbol()}0`}</div>
         </div>
         <div style="background:rgba(255,255,255,.12);border-radius:var(--rs);padding:6px 10px;text-align:center">
           <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:white;line-height:1">${moiGifts.length}</div>
@@ -2773,7 +2833,7 @@ function renderGifts(){
     }
 
     if(moiGifts.length===0){
-      body+=`<div class="empty"><div class="empty-ico" style="color:var(--gold-d)">₹</div><div class="empty-t">No entries yet</div><div class="empty-s">Record cash received from guests - tap above to start</div></div>`;
+      body+=`<div class="empty"><div class="empty-ico" style="color:var(--gold-d)">${escapeHtml(currencySymbol().trim()||'¤')}</div><div class="empty-t">No entries yet</div><div class="empty-s">Record cash received from guests - tap above to start</div></div>`;
     } else {
       body+=`<div class="search-wrap" style="margin-bottom:10px"><span class="search-ico">${uiIcon('search',14)}</span><input class="search-inp" type="text" placeholder="Search by name…" oninput="App.filterMoi(this.value)" id="moi-search-inp" /></div>`;
       body+=`<div class="moi-filter-row" id="moi-ty-filter">
@@ -2789,7 +2849,7 @@ function renderGifts(){
 
   const floatingGiftAction=_giftTab==='gifts'
     ? `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add gift" aria-label="Add gift" onclick="App.openAddGift()">${uiIcon('gift',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`
-    : `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add cash gift" aria-label="Add cash gift" onclick="App.openAddMoi()" style="background:var(--gold-d);border-color:var(--gold-d)"><span style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;line-height:1">₹</span><span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
+    : `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add cash gift" aria-label="Add cash gift" onclick="App.openAddMoi()" style="background:var(--gold-d);border-color:var(--gold-d)"><span style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;line-height:1">${escapeHtml(currencySymbol().trim()||'¤')}</span><span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
   el.innerHTML=evSelHtml+`<div class="ph" style="margin-bottom:12px"><div class="ph-title">Gift Tracker</div></div>`+tabBar+body+floatingGiftAction;
 }
 
@@ -2846,7 +2906,7 @@ function renderSettings(){
     <div class="set-item" onclick="App.openMasterGuestModal('manage')">
       <div class="set-left">
         <div class="set-ico" style="background:var(--slate-l)">MG</div>
-        <div><div class="set-lbl">Master Guest List</div><div class="set-sub">${DB.masterGuests.length} saved guest${DB.masterGuests.length!==1?'s':''}</div></div>
+        <div><div class="set-lbl">Master Guest List</div><div class="set-sub">${DB.masterGuests.length} saved guest${DB.masterGuests.length!==1?'s':''}${getPendingMasterGuestShareCount()?` · ${getPendingMasterGuestShareCount()} incoming share${getPendingMasterGuestShareCount()!==1?'s':''}`:''}</div></div>
       </div>
       <span class="chev">></span>
     </div>
@@ -2956,7 +3016,6 @@ function openAddEvent(){
     timeEl.disabled=false;
     timeEl.style.opacity='1';
   }
-  document.getElementById('ev-type').value='wedding';
   const locInp=document.getElementById('ev-loc');
   if(locInp){locInp.value='';locInp.dataset.lat='';locInp.dataset.lon='';}
   const sug=document.getElementById('loc-suggestions');
@@ -2975,11 +3034,13 @@ function openAddEvent(){
     legacyEventContactsButton.style.display='none';
     legacyEventContactsButton.closest('.fg')?.style.setProperty('display','none');
   }
+  const roomSection=document.getElementById('ev-room-section');
+  if(roomSection) roomSection.style.display='none';
+  const foodSection=document.getElementById('ev-food-section');
+  if(foodSection) foodSection.style.display='none';
   document.getElementById('del-event-btn').style.display='none';
   _roomLocsTemp=[];
   _eventMenusTemp=[];
-  renderRoomLocsEditor();
-  renderEventMenusEditor();
   openModal('add-event');
 }
 
@@ -3002,7 +3063,6 @@ function openEditEvent(id){
     timeEl.disabled=!isOrg;
     timeEl.style.opacity=isOrg?'1':'0.6';
   }
-  document.getElementById('ev-type').value=ev.type||'wedding';
   const locInp=document.getElementById('ev-loc');
   if(locInp){locInp.value=ev.location||'';}
   document.getElementById('ev-color').value=ev.color||'rose';
@@ -3023,8 +3083,12 @@ function openEditEvent(id){
     legacyEventContactsButton.style.display='none';
     legacyEventContactsButton.closest('.fg')?.style.setProperty('display','none');
   }
+  const roomSection=document.getElementById('ev-room-section');
+  if(roomSection) roomSection.style.display='none';
+  const foodSection=document.getElementById('ev-food-section');
+  if(foodSection) foodSection.style.display=isOrg?'':'none';
   // Disable core fields for non-organizers
-  ['ev-name', 'ev-date', 'ev-type', 'ev-loc', 'ev-color'].forEach(fid => {
+  ['ev-name', 'ev-date', 'ev-loc', 'ev-color'].forEach(fid => {
     const fel = document.getElementById(fid);
     if(fel) {
       fel.disabled = !isOrg;
@@ -3037,8 +3101,6 @@ function openEditEvent(id){
   _roomLocsTemp=JSON.parse(JSON.stringify(ev.roomLocs||[]));
   _eventMenuEditorDisabled=!isOrg;
   _eventMenusTemp=JSON.parse(JSON.stringify(normalizeEventMenus(ev.foodMenus)));
-  renderRoomLocsEditor();
-  renderEventMenusEditor();
   // restore map preview if coords saved
   if(ev.locLat&&ev.locLon){
     const frame=document.getElementById('loc-map-frame');
@@ -3054,6 +3116,18 @@ function openEditEvent(id){
     if(preview)preview.style.display='none';
   }
   openModal('add-event');
+}
+
+function openEventFoodMenuEditor(){
+  const eventId=_editing.event;
+  const ev=DB.events.find(e=>e.id===eventId);
+  if(!ev){toast('⚠️ Save the event first before editing food menu');return;}
+  if(!Auth.isOrganizer(ev.id)){toast('⚠️ Only Organisers can update food menu');return;}
+  _eventFoodMenuModalEventId=ev.id;
+  _eventMenusTemp=JSON.parse(JSON.stringify(normalizeEventMenus(ev.foodMenus)));
+  document.getElementById('event-food-menu-title').textContent=`${ev.name} Food Menu`;
+  renderEventMenusEditor();
+  openModal('event-food-menu');
 }
 
 function openRoomConfig(id){
@@ -3095,7 +3169,6 @@ async function saveEvent(){
         ev.name=name;
         ev.date=selectedDate;
         ev.time=eventTime;
-        ev.type=document.getElementById('ev-type').value;
         ev.location=locVal;
         ev.locLat=locLat;
         ev.locLon=locLon;
@@ -3116,7 +3189,6 @@ async function saveEvent(){
       id:uid(),name,
       date:selectedDate,
       time:eventTime,
-      type:document.getElementById('ev-type').value,
       location:locVal,
       locLat,locLon,
       color:document.getElementById('ev-color').value,
@@ -3164,6 +3236,25 @@ async function saveRoomConfig(){
   toast('Room configuration updated');
 }
 
+async function saveEventFoodMenus(){
+  const ev=DB.events.find(e=>e.id===_eventFoodMenuModalEventId);
+  if(!ev){toast('⚠️ Event not found');return;}
+  if(!Auth.isOrganizer(ev.id)){toast('⚠️ Only Organisers can update food menu');return;}
+  ev.foodMenus=JSON.parse(JSON.stringify(normalizeEventMenus(_eventMenusTemp)));
+  save();
+  try{
+    await Cloud.saveEvent(ev, Auth.getTeam(ev.id), Auth.currentSession());
+    await Cloud.loadEventsForSession(Auth.currentSession());
+  }catch(e){
+    toast('⚠️ Food menu saved locally, but cloud sync failed');
+    render();
+    return;
+  }
+  closeModal('event-food-menu');
+  render();
+  toast('Food menu updated');
+}
+
 function confirmDeleteEvent(){
   const ev=DB.events.find(e=>e.id===_editing.event);
   if(!ev)return;
@@ -3197,7 +3288,7 @@ function openAddGuest(){
   const partyEl=document.getElementById('g-party');
   if(partyEl) partyEl.value='1';
   const rsvpEl=document.getElementById('g-rsvp');
-  if(rsvpEl) rsvpEl.value='invited';
+  if(rsvpEl) rsvpEl.value='pending';
   const deleteBtn=document.getElementById('del-guest-btn');
   if(deleteBtn) deleteBtn.style.display='none';
   const inviteBtn=document.getElementById('send-invite-btn');
@@ -3236,7 +3327,7 @@ function openEditGuest(id){
   if(contactEl) contactEl.value=g.contact||'';
   if(emailEl) emailEl.value=g.email||'';
   if(partyEl) partyEl.value=g.party||1;
-  if(rsvpEl) rsvpEl.value=g.rsvp||'invited';
+  if(rsvpEl) rsvpEl.value=(g.rsvp==='invited'?'invited':'pending');
   if(notesEl) notesEl.value=g.notes||'';
   if(groupEl) groupEl.value=g.table||'';
   const deleteBtn=document.getElementById('del-guest-btn');
@@ -3393,31 +3484,265 @@ async function exportCurrentEventToMaster(){
   toast(`${added} added · ${updated} updated${skipped?` · ${skipped} skipped`:''}`);
 }
 
-function renderMasterGuestList(){
-  const container=document.getElementById('master-guest-list');
-  if(!container) return;
+function getPendingMasterGuestShareCount(){
+  return _incomingMasterGuestShares.filter(item=>item.status==='pending').length;
+}
+
+function getFilteredMasterGuests(){
   const q=_masterGuestSearch.trim().toLowerCase();
-  const items=DB.masterGuests.filter(guest=>{
+  const normalizedQueryPhone=normalizePhoneValue(q);
+  return DB.masterGuests.filter(guest=>{
     const name=fullGuestName(guest).toLowerCase();
     const email=normalizeEmailValue(guest.email);
     const phone=normalizePhoneValue(guest.contact);
-    return !q || name.includes(q) || email.includes(q) || phone.includes(normalizePhoneValue(q));
+    const group=(guest.group||'').trim().toLowerCase();
+    const notes=(guest.notes||'').trim().toLowerCase();
+    return !q || name.includes(q) || email.includes(q) || group.includes(q) || notes.includes(q) || (normalizedQueryPhone && phone.includes(normalizedQueryPhone));
   });
+}
+
+function getMasterGuestSections(items){
+  const grouped=new Map();
+  const ungrouped=[];
+  items.forEach(guest=>{
+    const group=(guest.group||'').trim();
+    if(group){
+      if(!grouped.has(group)) grouped.set(group, []);
+      grouped.get(group).push(guest);
+    } else {
+      ungrouped.push(guest);
+    }
+  });
+  const sections=Array.from(grouped.entries())
+    .sort((a,b)=>a[0].localeCompare(b[0]))
+    .map(([name, guests])=>({ key:`group:${name}`, label:name, guests:guests.sort((a,b)=>fullGuestName(a).localeCompare(fullGuestName(b))) }));
+  if(ungrouped.length){
+    sections.push({ key:'group:', label:'Ungrouped', guests:ungrouped.sort((a,b)=>fullGuestName(a).localeCompare(fullGuestName(b))) });
+  }
+  return sections;
+}
+
+function getSelectedMasterGuests(){
+  return DB.masterGuests.filter(guest=>_masterGuestSelectedIds.has(guest.id));
+}
+
+function updateMasterGuestShareButtonState(){
+  const shareBtn=document.getElementById('master-guest-share-btn');
+  if(!shareBtn) return;
+  const count=_masterGuestSelectedIds.size;
+  shareBtn.disabled=count===0;
+  shareBtn.style.opacity=count===0?'.55':'1';
+  shareBtn.textContent=count?`Share Selected (${count})`:'Share Selected';
+}
+
+function toggleMasterGuestSelection(id){
+  if(!_masterGuestSelectedIds.has(id)) _masterGuestSelectedIds.add(id);
+  else _masterGuestSelectedIds.delete(id);
+  renderMasterGuestList();
+}
+
+function toggleMasterGuestGroupSelection(encodedGroup){
+  const name=decodeURIComponent(encodedGroup||'');
+  const guests=DB.masterGuests.filter(item=>(item.group||'').trim()===name);
+  if(!guests.length) return;
+  const allSelected=guests.every(item=>_masterGuestSelectedIds.has(item.id));
+  guests.forEach(item=>{
+    if(allSelected) _masterGuestSelectedIds.delete(item.id);
+    else _masterGuestSelectedIds.add(item.id);
+  });
+  renderMasterGuestList();
+}
+
+function clearMasterGuestSelection(){
+  _masterGuestSelectedIds.clear();
+  updateMasterGuestShareButtonState();
+}
+
+function formatMasterGuestShareSummary(share){
+  const guestCount=Array.isArray(share?.guests)?share.guests.length:0;
+  const groupCount=Array.isArray(share?.groupNames)?share.groupNames.length:0;
+  if(groupCount && guestCount){
+    return `${guestCount} guest${guestCount!==1?'s':''} from ${groupCount} group${groupCount!==1?'s':''}`;
+  }
+  if(groupCount){
+    return `${groupCount} group${groupCount!==1?'s':''} shared`;
+  }
+  return `${guestCount} guest${guestCount!==1?'s':''} shared`;
+}
+
+function renderMasterGuestShares(){
+  const container=document.getElementById('master-guest-shares-list');
+  if(!container) return;
+  const incoming=_incomingMasterGuestShares;
+  const sent=_sentMasterGuestShares;
+  if(!incoming.length && !sent.length){
+    container.innerHTML='<div class="empty" style="padding:24px 16px"><div class="empty-t" style="font-size:18px">No shared lists yet</div><div class="empty-s">Shared guest lists you send or receive will show up here.</div></div>';
+    return;
+  }
+  const renderCard=(share,type)=>{
+    const peer=type==='incoming'?(share.senderName||share.senderEmail):(share.recipientEmail||'');
+    const status=(share.status||'pending').replace(/^\w/,m=>m.toUpperCase());
+    const action=type==='incoming' && share.status==='pending'
+      ? `<button class="ev-btn" style="padding:6px 10px" onclick="App.acceptMasterGuestShare('${share.id}')">Accept</button>`
+      : `<span class="chip" style="white-space:nowrap">${status}</span>`;
+    const groups=(share.groupNames||[]).length?`Groups: ${(share.groupNames||[]).join(', ')}`:'';
+    return `<div class="g-row" style="align-items:flex-start">
+      <div class="g-av" style="${avStyle(share.id)}">${type==='incoming'?'IN':'OU'}</div>
+      <div class="g-info">
+        <div class="g-name">${type==='incoming'?'From':'To'} ${peer}</div>
+        <div class="g-detail">${formatMasterGuestShareSummary(share)} · ${fmtDateTime(share.createdAt||Date.now())}${groups?` · ${groups}`:''}</div>
+      </div>
+      <div class="g-actions">${action}</div>
+    </div>`;
+  };
+  container.innerHTML=
+    (incoming.length?`<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--txt3);margin:4px 0 10px">Incoming</div>${incoming.map(item=>renderCard(item,'incoming')).join('')}`:'')+
+    (sent.length?`<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--txt3);margin:${incoming.length?'18px':'4px'} 0 10px">Sent</div>${sent.map(item=>renderCard(item,'sent')).join('')}`:'');
+}
+
+function openMasterGuestShares(){
+  renderMasterGuestShares();
+  openModal('master-guest-shares');
+}
+
+function openMasterGuestShareComposer(){
+  const selectedGuests=getSelectedMasterGuests();
+  if(!selectedGuests.length){
+    toast('⚠️ Select at least one guest or group');
+    return;
+  }
+  const groups=[...new Set(selectedGuests.map(item=>(item.group||'').trim()).filter(Boolean))];
+  const preview=document.getElementById('master-guest-share-preview');
+  const emailInput=document.getElementById('master-guest-share-email');
+  if(preview) preview.textContent=`${selectedGuests.length} guest${selectedGuests.length!==1?'s':''}${groups.length?` · Groups: ${groups.join(', ')}`:''}`;
+  if(emailInput) emailInput.value='';
+  openModal('master-guest-share');
+  setTimeout(()=>emailInput?.focus(),20);
+}
+
+async function sendMasterGuestShare(){
+  const session=Auth.currentSession();
+  if(!session){toast('⚠️ Sign in first');return;}
+  const emailInput=document.getElementById('master-guest-share-email');
+  const recipientEmail=normalizeEmailValue(emailInput?.value||'');
+  if(!recipientEmail || !/\S+@\S+\.\S+/.test(recipientEmail)){
+    toast('⚠️ Enter a valid Eventise user email');
+    return;
+  }
+  if(recipientEmail===normalizeEmailValue(session.email)){
+    toast('⚠️ Choose another Eventise user');
+    return;
+  }
+  const selectedGuests=getSelectedMasterGuests().map(guest=>normalizeMasterGuestCandidate(guest));
+  if(!selectedGuests.length){
+    toast('⚠️ Select at least one guest or group');
+    return;
+  }
+  const share={
+    id: uid(),
+    senderEmail: normalizeEmailValue(session.email),
+    senderName: session.name||session.email,
+    recipientEmail,
+    status:'pending',
+    createdAt:Date.now(),
+    updatedAt:Date.now(),
+    guests:selectedGuests,
+    guestIds:selectedGuests.map(item=>item.id),
+    groupNames:[...new Set(selectedGuests.map(item=>item.group).filter(Boolean))]
+  };
+  try{
+    await Cloud.createMasterGuestShare(share);
+    closeModal('master-guest-share');
+    clearMasterGuestSelection();
+    renderMasterGuestList();
+    toast(`Shared ${selectedGuests.length} guest${selectedGuests.length!==1?'s':''}`);
+  }catch(e){
+    toast('⚠️ Could not share guest list');
+  }
+}
+
+function importSharedMasterGuests(guests){
+  let added=0;
+  let updated=0;
+  let skipped=0;
+  (guests||[]).forEach(guest=>{
+    const candidate=normalizeMasterGuestCandidate(guest);
+    if(!candidate.first){
+      skipped++;
+      return;
+    }
+    const match=findMasterGuestMatch(candidate);
+    if(match?.type==='email'){
+      const result=saveMasterGuestRecord(candidate,{updateId:match.existing.id});
+      result.saved?updated++:skipped++;
+      return;
+    }
+    if(match?.type==='phone' && !normalizeEmailValue(candidate.email)){
+      const result=saveMasterGuestRecord(candidate,{updateId:match.existing.id});
+      result.saved?updated++:skipped++;
+      return;
+    }
+    if(match?.type==='name' && !normalizeEmailValue(candidate.email) && !normalizePhoneValue(candidate.contact)){
+      skipped++;
+      return;
+    }
+    const result=saveMasterGuestRecord(candidate,{forceNew:true});
+    result.saved?added++:skipped++;
+  });
+  return {added,updated,skipped};
+}
+
+async function acceptMasterGuestShare(id){
+  const share=_incomingMasterGuestShares.find(item=>item.id===id);
+  if(!share){toast('⚠️ Shared list not found');return;}
+  if(share.status!=='pending'){
+    toast('This shared list was already processed');
+    return;
+  }
+  const result=importSharedMasterGuests(share.guests||[]);
+  renderMasterGuestList();
+  try{
+    await Cloud.updateMasterGuestShare(id,{status:'accepted',acceptedAt:Date.now()});
+  }catch(e){}
+  toast(`${result.added} added · ${result.updated} updated${result.skipped?` · ${result.skipped} skipped`:''}`);
+}
+
+function renderMasterGuestList(){
+  const container=document.getElementById('master-guest-list');
+  if(!container) return;
+  const items=getFilteredMasterGuests();
+  updateMasterGuestShareButtonState();
   if(!items.length){
     container.innerHTML=`<div class="empty" style="padding:24px 16px"><div class="empty-t" style="font-size:18px">No saved guests</div><div class="empty-s">${_masterGuestSearch?'Try a different search term.':'Save guests here to reuse them in future events.'}</div></div>`;
     return;
   }
-  container.innerHTML=items.map(guest=>{
+  const sections=getMasterGuestSections(items);
+  container.innerHTML=sections.map(section=>{
+    const groupGuests=section.guests;
+    const isNamedGroup=section.label!=='Ungrouped';
+    const groupSelected=isNamedGroup && groupGuests.every(item=>_masterGuestSelectedIds.has(item.id));
+    const header=isNamedGroup || groupGuests.length!==items.length
+      ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:${section===sections[0]?'4px':'18px'} 0 10px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--txt3)">${section.label}</div>
+          ${_masterGuestMode==='manage'&&isNamedGroup?`<label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--txt3);cursor:pointer"><input type="checkbox" ${groupSelected?'checked':''} onchange="App.toggleMasterGuestGroupSelection('${encodeURIComponent(section.label)}')" /> Select group</label>`:''}
+        </div>`
+      : '';
+    const rows=groupGuests.map(guest=>{
     const name=fullGuestName(guest)||'Unknown guest';
     const subParts=[guest.email||guest.contact||'No email or phone saved'];
     if(guest.group) subParts.push(`Group: ${guest.group}`);
     if(guest.notes) subParts.push(guest.notes);
     const sub=subParts.join(' · ');
+    const selected=_masterGuestSelectedIds.has(guest.id);
+    const selector=_masterGuestMode==='manage'
+      ? `<label style="display:flex;align-items:center;padding-right:8px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${selected?'checked':''} onchange="App.toggleMasterGuestSelection('${guest.id}')" /></label>`
+      : '';
     const action=_masterGuestMode==='pick'
       ? `<button class="ev-btn" style="padding:6px 10px" onclick="event.stopPropagation();App.pickMasterGuest('${guest.id}')">Use</button>`
       : `<button class="ev-btn" style="padding:6px 9px" onclick="event.stopPropagation();App.openMasterGuestEditor('${guest.id}')" title="Edit saved guest" aria-label="Edit saved guest">${uiIcon('edit',14)}</button>
          <button class="ev-btn" style="padding:6px 9px;color:#932B2B" onclick="event.stopPropagation();App.confirmDeleteMasterGuest('${guest.id}')" title="Delete saved guest" aria-label="Delete saved guest">X</button>`;
     return `<div class="g-row" ${_masterGuestMode==='pick'?`onclick="App.pickMasterGuest('${guest.id}')"`:''}>
+      ${selector}
       <div class="g-av" style="${avStyle(guest.id)}">${initials(guest.first,guest.last)}</div>
       <div class="g-info">
         <div class="g-name">${name}</div>
@@ -3425,6 +3750,8 @@ function renderMasterGuestList(){
       </div>
       ${action?`<div class="g-actions">${action}</div>`:''}
     </div>`;
+    }).join('');
+    return header+rows;
   }).join('');
 }
 
@@ -3435,14 +3762,27 @@ function openMasterGuestModal(mode='manage'){
   }
   _masterGuestMode=mode;
   _masterGuestSearch='';
+  clearMasterGuestSelection();
   const title=document.getElementById('master-guest-title');
   const sub=document.getElementById('master-guest-sub');
   const search=document.getElementById('master-guest-search');
-  const addBtn=document.getElementById('master-guest-add-btn');
+  const addBtn=document.getElementById('master-guest-add-btn-replacement')||document.getElementById('master-guest-add-btn');
+  const originalAddBtn=document.getElementById('master-guest-add-btn');
+  const shareBtn=document.getElementById('master-guest-share-btn');
+  const inboxBtn=document.getElementById('master-guest-inbox-btn');
+  const pendingCount=document.getElementById('master-guest-inbox-count');
+  const pendingTotal=getPendingMasterGuestShareCount();
   if(title) title.textContent=mode==='pick'?'Pick from Master Guest List':'Master Guest List';
   if(sub) sub.textContent=mode==='pick'?'Choose a saved guest to fill this event guest form quickly.':'Save guests once and reuse them in future events.';
   if(search) search.value='';
   if(addBtn) addBtn.style.display=mode==='manage'?'block':'none';
+  if(originalAddBtn && originalAddBtn!==addBtn) originalAddBtn.style.display='none';
+  if(shareBtn) shareBtn.style.display=mode==='manage'?'block':'none';
+  if(inboxBtn) inboxBtn.style.display=mode==='manage'?'inline-flex':'none';
+  if(pendingCount){
+    pendingCount.textContent=pendingTotal?String(pendingTotal):'';
+    pendingCount.style.display=pendingTotal?'inline-flex':'none';
+  }
   renderMasterGuestList();
   openModal('master-guests');
 }
@@ -3594,7 +3934,7 @@ function createEventGuestFromMaster(masterGuest){
     contact: (masterGuest.contact||'').trim(),
     email: normalizeEmailValue(masterGuest.email||''),
     party: 1,
-    rsvp: 'invited',
+    rsvp: 'pending',
     notes: (masterGuest.notes||'').trim(),
     table: (masterGuest.group||masterGuest.table||'').trim(),
     roomLoc: '',
@@ -3754,7 +4094,7 @@ function openGroupInviteModal(){
 function cycleRsvp(id){
   const g=DB.guests.find(x=>x.id===id);
   if(!g)return;
-  const s=['invited','attending','pending','declined'];
+  const s=['pending','invited'];
   g.rsvp=s[(s.indexOf(g.rsvp)+1)%s.length];
   save();syncActiveEventData();render();toast(`${g.first}: ${g.rsvp}`);
 }
@@ -3789,7 +4129,7 @@ function openGuestDetail(id){
   ensureGuestFeedbackDefaults(g);
   const hasGuestFeedback=!!(g.feedbackMessage||g.feedbackUpdatedAt||g.feedbackFoodRating||g.feedbackEventRating||g.feedbackRoomRating);
   const linkedGifts=DB.gifts.filter(gi=>gi.eventId===DB.activeEvent&&gi.from&&gi.from.toLowerCase().includes((g.first+' '+g.last).toLowerCase().trim()));
-  const rsvpOpts=['invited','attending','declined','pending'];
+  const rsvpOpts=['pending','invited'];
   const el=document.getElementById('guest-detail-content');
   const hasPhone=g.contact&&g.contact.replace(/\D/g,'').length>=10;
   const canViewRoomRequest=Auth.isOrganizer(DB.activeEvent);
@@ -3826,7 +4166,7 @@ function openGuestDetail(id){
           :''}
       ${getGuestRoomAssignments(g).length?`<button class="request-btn secondary" onclick="App.clearGuestRooms('${g.id}');App.closeModal('guest-detail')">Remove Rooms</button>`:''}
     </div>`:''}
-    <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">RSVP Status</div>
+    <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Invite Status</div>
     <div class="rsvp-big">
       ${rsvpOpts.map(s=>`<button class="rsvp-opt ${g.rsvp===s?'sel-'+s:''}" onclick="App.setRsvpDirect('${g.id}','${s}')">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join('')}
     </div>
@@ -3852,8 +4192,9 @@ function renderEventMenusEditor(){
     addBtn.textContent='+ Add Menu Section';
   }
   if(!container) return;
-  const canViewLikes=!!_editing.event&&Auth.isOrganizer(_editing.event);
-  const likeCounts=canViewLikes?getEventFoodLikeCounts(_editing.event):new Map();
+  const targetEventId=_eventFoodMenuModalEventId||_editing.event;
+  const canViewLikes=!!targetEventId&&Auth.isOrganizer(targetEventId);
+  const likeCounts=canViewLikes?getEventFoodLikeCounts(targetEventId):new Map();
   if(_eventMenusTemp.length===0){
     container.innerHTML=`<div style="font-size:12px;color:var(--txt3);line-height:1.6">Add one or more menu sections like Breakfast, Lunch, or Evening Snacks.</div>`;
     return;
@@ -4602,7 +4943,7 @@ function renderEventPicker(){
     const col=COLORS[ev.color]||COLORS.rose;
     return`<div class="ep-item ${ev.id===DB.activeEvent?'sel':''}" onclick="App.pickEvent('${ev.id}')">
       <div class="ep-dot" style="background:${col.accent}"></div>
-      <div><div style="font-size:13.5px;font-weight:500">${ev.name}</div><div style="font-size:11.5px;color:var(--txt3)">${TYPE_LABEL[ev.type]} ${ev.date?'· '+fmtDate(ev.date):''}</div></div>
+      <div><div style="font-size:13.5px;font-weight:500">${ev.name}</div><div style="font-size:11.5px;color:var(--txt3)">${ev.date?fmtDate(ev.date):''}</div></div>
     </div>`;
   }).join('');
 }
@@ -4675,7 +5016,7 @@ function exportGuests(){
   const ev=DB.events.find(e=>e.id===evId);
   const guests=DB.guests.filter(g=>g.eventId===evId);
   if(guests.length===0){toast('⚠️ No guests to export');return;}
-  const rows=[['First Name','Last Name','Phone','Email','Peoples','RSVP Status','Group','Dietary / Notes']];
+  const rows=[['First Name','Last Name','Phone','Email','Peoples','Invite Status','Group','Dietary / Notes']];
   guests.forEach(g=>rows.push([g.first,g.last,g.contact,g.email,g.party,g.rsvp,g.table,g.notes]));
   downloadCSV(`${(ev?.name||'event').replace(/\s+/g,'_')}_guests.csv`,rows);
   toast('Guest list exported');
@@ -5046,7 +5387,7 @@ function renderTeamEventPicker(){
     const col=COLORS[ev.color]||COLORS.rose;
     return `<div class="ep-item ${ev.id===selectedId?'sel':''}" onclick="App.pickTeamEvent('${ev.id}')">
       <div class="ep-dot" style="background:${col.accent}"></div>
-      <div><div style="font-size:13.5px;font-weight:500">${ev.name}</div><div style="font-size:11.5px;color:var(--txt3)">${TYPE_LABEL[ev.type]} ${ev.date?'· '+fmtDate(ev.date):''}</div></div>
+      <div><div style="font-size:13.5px;font-weight:500">${ev.name}</div><div style="font-size:11.5px;color:var(--txt3)">${ev.date?fmtDate(ev.date):''}</div></div>
     </div>`;
   }).join('');
   picker.style.display=picker.style.display==='block'?'none':'block';
@@ -5124,12 +5465,12 @@ const unassignGuestRoomGated=_requireRoom(unassignGuestRoom);
 window.App={
   togglePastEvents(show){_showPastEvents=!!show; renderEvents();},
   switchTab,openModal: window.openModal,closeModal,
-  openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,openRoomConfig:_requireRoom(openRoomConfig),saveEvent,saveRoomConfig,confirmDeleteEvent:confirmDeleteEventGated,
+  openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,openRoomConfig:_requireRoom(openRoomConfig),openEventFoodMenuEditor,saveEvent,saveRoomConfig,saveEventFoodMenus,confirmDeleteEvent:confirmDeleteEventGated,
   addEventContact,_updateEventContact,_removeEventContact,openEventContacts,saveEventContacts,toggleEventContactsEditMode,handleEventContactsHeaderAction,handleEventContactPhoneKey,shareEventContact,callEventContact,whatsAppEventContact,openEventContactActions,callActiveEventContact,whatsAppActiveEventContact,shareActiveEventContact,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
   confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,toggleGuestRowEdit,saveGuestRowEdit,undoGuestRemoval,
-  openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,
+  openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,toggleMasterGuestSelection,toggleMasterGuestGroupSelection,openMasterGuestShareComposer,sendMasterGuestShare,openMasterGuestShares,acceptMasterGuestShare,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,
   setGiftTab,setGiftCatFilter,selectCat,
@@ -5165,7 +5506,65 @@ window.setMoiFilter=setMoiFilter;
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
+function setupMasterGuestSharingUi(){
+  const modal=document.getElementById('mo-master-guests');
+  if(!modal) return;
+  const addBtn=document.getElementById('master-guest-add-btn');
+  const search=document.getElementById('master-guest-search');
+  const searchIcon=modal.querySelector('.search-ico');
+  if(addBtn && !document.getElementById('master-guest-share-btn')){
+    const toolbar=document.createElement('div');
+    toolbar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';
+    toolbar.innerHTML=`
+      <button class="btn-p" id="master-guest-add-btn-replacement" style="margin:0;flex:1 1 180px" onclick="App.openMasterGuestEditor()">+ Add Saved Guest</button>
+      <button class="btn-s" id="master-guest-share-btn" style="margin:0;flex:1 1 180px" onclick="App.openMasterGuestShareComposer()">Share Selected</button>
+      <button class="btn-s" id="master-guest-inbox-btn" style="margin:0;display:inline-flex;align-items:center;justify-content:center;gap:8px" onclick="App.openMasterGuestShares()">Shared Lists <span id="master-guest-inbox-count" style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--rose-d);color:#fff;font-size:10px;display:inline-flex;align-items:center;justify-content:center"></span></button>
+    `;
+    addBtn.style.display='none';
+    addBtn.insertAdjacentElement('afterend', toolbar);
+  }
+  if(search){
+    search.placeholder='Search by name, email, phone, or group';
+  }
+  if(searchIcon) searchIcon.textContent='⌕';
+  if(!document.getElementById('mo-master-guest-share')){
+    modal.insertAdjacentHTML('afterend', `
+<div class="mo mo-center" id="mo-master-guest-share">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">Share Guest List</div>
+    <div style="font-size:12px;color:var(--txt3);margin:-8px 0 14px;line-height:1.6">Share selected guests or groups with another Eventise user. Once accepted, they will be added to that user's master guest list.</div>
+    <div class="fg">
+      <label class="fl">Selected</label>
+      <div class="fi" id="master-guest-share-preview" style="background:var(--surf2)"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Recipient Eventise Email</label>
+      <input class="fi" type="email" id="master-guest-share-email" placeholder="friend@example.com" />
+    </div>
+    <button class="btn-p" onclick="App.sendMasterGuestShare()">Send Share</button>
+    <button class="btn-s" onclick="App.closeModal('master-guest-share')">Cancel</button>
+  </div>
+</div>
+<div class="mo" id="mo-master-guest-shares">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">Shared Guest Lists</div>
+    <div style="font-size:12px;color:var(--txt3);margin:-8px 0 14px;line-height:1.6">Accept incoming shared lists to import them into your master guest list, or track the ones you have already sent.</div>
+    <div id="master-guest-shares-list"></div>
+    <button class="btn-s" onclick="App.closeModal('master-guest-shares')">Close</button>
+  </div>
+</div>`);
+    document.querySelectorAll('#mo-master-guest-share,#mo-master-guest-shares').forEach(el=>{
+      el.addEventListener('click',e=>{
+        if(e.target===el) closeModal(el.id.replace(/^mo-/,''));
+      });
+    });
+  }
+}
+
 // Pre-populate profile modal
+setupMasterGuestSharingUi();
 openProfileModal(false);
 const groupInviteSearchIcon=document.querySelector('#mo-group-invite .search-ico');
 if(groupInviteSearchIcon) groupInviteSearchIcon.textContent='⌕';

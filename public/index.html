@@ -130,7 +130,7 @@ body{overscroll-behavior:none}
 .floating-bubble:active{transform:scale(.97)}
 .floating-bubble-primary{background:var(--rose-d);color:#fff;border-color:var(--rose-d)}
 .floating-bubble svg{width:20px;height:20px;display:block}
-.floating-top-center{position:fixed;left:50%;bottom:calc(var(--tab) + 18px);transform:translateX(-50%) translateY(12px);width:40px;height:40px;border:none;border-radius:999px;background:rgba(255,251,246,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--txt2);box-shadow:0 6px 18px rgba(30,20,16,.12);border:1px solid rgba(143,117,95,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:34}
+.floating-top-center{position:fixed;left:50%;bottom:calc(var(--tab) + 18px);transform:translateX(-50%) translateY(12px);width:40px;height:40px;border:none;border-radius:999px;background:rgba(255,251,246,.44);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);color:rgba(70,52,42,.88);box-shadow:0 4px 14px rgba(30,20,16,.08);border:1px solid rgba(143,117,95,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:34}
 .floating-top-center.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
 .floating-top-center svg{width:16px;height:16px;display:block}
 
@@ -279,6 +279,7 @@ body{overscroll-behavior:none}
 .mo.open{opacity:1;pointer-events:all}
 .ms{background:var(--bg);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:430px;padding:18px 18px 30px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:92vh;overflow-y:auto}
 .mo.open .ms{transform:translateY(0)}
+.mo#mo-add-moi .ms{max-height:96vh;min-height:min(78vh,760px);padding-bottom:36px}
 .mo-center{align-items:center;padding:18px}
 .mo-center .ms{border-radius:var(--r);max-width:360px;max-height:min(88vh,640px);transform:translateY(18px) scale(.98);padding:18px 18px 22px}
 .mo-center.open .ms{transform:translateY(0) scale(1)}
@@ -633,18 +634,6 @@ html.boot-authenticated #auth-screen{display:none}
         <input class="fi" type="time" id="ev-time" />
       </div>
     </div>
-    <div class="fr">
-      <div class="fg">
-        <label class="fl">Type</label>
-        <select class="fi" id="ev-type">
-          <option value="wedding">Wedding</option>
-          <option value="birthday">Birthday</option>
-          <option value="babyshower">Baby Shower</option>
-          <option value="party">Party</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-    </div>
     <div class="fg">
       <label class="fl">Location</label>
       <div style="position:relative">
@@ -665,15 +654,14 @@ html.boot-authenticated #auth-screen{display:none}
         <option value="slate">Slate</option>
       </select>
     </div>
-    <div class="fg">
+    <div class="fg" id="ev-room-section">
       <label class="fl">Room Locations</label>
       <div id="ev-room-locs"></div>
       <button class="add-loc-btn" onclick="App.addRoomLocation()">＋ Add Location (Hall / Block / Floor)</button>
     </div>
-    <div class="fg">
+    <div class="fg" id="ev-food-section">
       <label class="fl">Food Menu</label>
-      <div id="ev-food-menus"></div>
-      <button class="add-loc-btn" id="ev-food-menu-add-btn" onclick="App.addEventMenu()">ï¼‹ Add Menu Section</button>
+      <button class="btn-s" id="ev-food-menu-open-btn" type="button" onclick="App.openEventFoodMenuEditor()">Food Menu</button>
     </div>
     <div class="fg">
       <label class="fl">Guest Room Requests</label>
@@ -698,6 +686,18 @@ html.boot-authenticated #auth-screen{display:none}
     <button class="btn-p" id="ev-bottom-save-btn" onclick="App.saveEvent()">Save Event</button>
     <button class="btn-s" onclick="App.closeModal('add-event')">Cancel</button>
     <button class="btn-s btn-danger" id="del-event-btn" onclick="App.confirmDeleteEvent()" style="display:none">Delete Event</button>
+  </div>
+</div>
+
+<div class="mo" id="mo-event-food-menu">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="event-food-menu-title">Food Menu</div>
+    <div id="event-food-menu-sub" style="font-size:12px;color:var(--txt3);margin:-10px 0 14px;line-height:1.6">Add one or more menu sections like Breakfast, Lunch, or Evening Snacks.</div>
+    <div id="event-food-menus"></div>
+    <button class="add-loc-btn" id="ev-food-menu-add-btn" onclick="App.addEventMenu()">＋ Add Menu Section</button>
+    <button class="btn-p" onclick="App.saveEventFoodMenus()">Save Food Menu</button>
+    <button class="btn-s" onclick="App.closeModal('event-food-menu')">Close</button>
   </div>
 </div>
 
@@ -730,12 +730,10 @@ html.boot-authenticated #auth-screen{display:none}
         <input class="fi" type="number" id="g-party" value="1" min="1" max="50" />
       </div>
       <div class="fg">
-        <label class="fl">RSVP</label>
+        <label class="fl">Invite Status</label>
         <select class="fi" id="g-rsvp">
-          <option value="invited">Invited</option>
-          <option value="attending">Attending</option>
-          <option value="declined">Declined</option>
           <option value="pending">Pending</option>
+          <option value="invited">Invited</option>
         </select>
       </div>
     </div>
@@ -854,7 +852,7 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-title" id="mo-cash-title">Log Cash / Card Gift</div>
     <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
-      <span style="font-size:18px;font-weight:700;color:var(--gold-d)">₹</span>
+      <span id="ca-currency-badge" style="font-size:18px;font-weight:700;color:var(--gold-d)">&#8377;</span>
       <div style="font-size:12px;color:var(--gold-d);line-height:1.5">Track cash envelopes, cheques, UPI transfers and gift cards in one place.</div>
     </div>
     <div class="fg">
@@ -1086,18 +1084,16 @@ html.boot-authenticated #auth-screen{display:none}
           <option value="UPI / GPay">UPI / GPay</option>
           <option value="Bank Transfer">Bank Transfer</option>
           <option value="Cheque">Cheque</option>
-          <option value="Gold / Jewellery">Gold / Jewellery</option>
         </select>
       </div>
     </div>
     <!-- Quick amount chips -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:-4px;margin-bottom:14px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;margin-bottom:14px">
       <span style="font-size:10.5px;color:var(--txt4);align-self:center;margin-right:2px">Quick:</span>
       <button data-quick-amount="501" onclick="document.getElementById('moi-amount').value=501" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">&#8377;501</button>
       <button data-quick-amount="1001" onclick="document.getElementById('moi-amount').value=1001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">&#8377;1,001</button>
       <button data-quick-amount="2001" onclick="document.getElementById('moi-amount').value=2001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">&#8377;2,001</button>
       <button data-quick-amount="5001" onclick="document.getElementById('moi-amount').value=5001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">&#8377;5,001</button>
-      <button data-quick-amount="10001" onclick="document.getElementById('moi-amount').value=10001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">&#8377;10,001</button>
     </div>
     <div class="fg" id="moi-ty-section" style="display:none">
       <label class="fl">Thank-You Status</label>

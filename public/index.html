@@ -608,6 +608,10 @@ html.boot-authenticated #auth-screen{display:none}
   </nav>
 </div>
 
+<button class="floating-top-center" id="global-scroll-top-btn" type="button" title="Scroll to top" aria-label="Scroll to top" onclick="App.scrollToTop()">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17V7M7.5 11.5 12 7l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+
 <!-- ════════════════════ MODALS ════════════════════ -->
 
 <!-- ADD / EDIT EVENT -->
@@ -766,6 +770,21 @@ html.boot-authenticated #auth-screen{display:none}
     <button class="btn-p" style="background:var(--sage-d);margin-top:8px" id="send-invite-btn" onclick="App.sendGuestInvite()" style="display:none">Send WhatsApp Invite</button>
     <button class="btn-s" onclick="App.closeModal('add-guest')">Cancel</button>
     <button class="btn-s btn-danger" id="del-guest-btn" onclick="App.confirmDeleteGuest()" style="display:none">Remove Guest</button>
+  </div>
+</div>
+
+<div class="mo" id="mo-room-config">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="mo-room-config-title">Configure Rooms</div>
+    <div id="mo-room-config-sub" style="font-size:12px;color:var(--txt3);margin:-10px 0 14px;line-height:1.6">Add room locations and room numbers for this event.</div>
+    <div class="fg">
+      <label class="fl">Room Locations</label>
+      <div id="room-config-locs"></div>
+      <button class="add-loc-btn" onclick="App.addRoomLocation()">＋ Add Location (Hall / Block / Floor)</button>
+    </div>
+    <button class="btn-p" onclick="App.saveRoomConfig()">Save Rooms</button>
+    <button class="btn-s" onclick="App.closeModal('room-config')">Close</button>
   </div>
 </div>
 
@@ -1044,43 +1063,41 @@ html.boot-authenticated #auth-screen{display:none}
       <div class="m-title" id="mo-moi-title" style="margin-bottom:0">Add Cash Gift Entry</div>
       <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rxs);padding:4px 10px;font-size:11px;font-weight:600;color:var(--gold-d)">Cash Gift</div>
     </div>
-    <div style="background:linear-gradient(135deg,var(--gold-l),#fff8ee);border:1px solid var(--gold-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
-      <span style="font-size:20px;flex-shrink:0;margin-top:1px">🪙</span>
-      <div style="font-size:12px;color:var(--gold-d);line-height:1.6">Record cash, cheque or digital transfers received from guests. Each entry is linked to your guest list for easy thank-you tracking.</div>
-    </div>
     <div class="fg">
       <label class="fl">Guest Name *</label>
       <div class="picker-wrap" style="position:relative">
+        <div class="picker-menu" id="moi-guest-picker" style="top:auto;bottom:calc(100% + 6px);border-radius:var(--rs) var(--rs) 0 0;border:1px solid var(--bord);border-bottom:none;box-shadow:0 -8px 20px rgba(30,20,16,.08)"></div>
         <input class="fi" type="text" id="moi-from" placeholder="e.g. Rajan & Family" autocomplete="off" style="padding-left:38px" oninput="App.filterGuestPicker('moi', this.value)" onfocus="App.showGuestPicker('moi')" onkeydown="App.handleMoiFieldEnter('from', event)" />
         <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;pointer-events:none;color:var(--gold-d)">ID</span>
-        <div class="picker-menu" id="moi-guest-picker"></div>
       </div>
     </div>
-    <div class="fg">
-      <label class="fl" id="moi-amount-label">Amount (₹) *</label>
-      <div style="position:relative">
-        <span id="moi-currency-symbol" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:600;color:var(--gold-d);font-family:'Cormorant Garamond',serif;pointer-events:none">₹</span>
-        <input class="fi" type="number" id="moi-amount" placeholder="e.g. 1001" min="0" inputmode="numeric" style="padding-left:28px;font-size:15px;font-weight:500" onkeydown="App.handleMoiFieldEnter('amount', event)" />
+    <div class="moi-entry-row">
+      <div class="fg" id="moi-amount-inline">
+        <label class="fl" id="moi-amount-label">Amount (&#8377;) *</label>
+        <div style="position:relative">
+          <span id="moi-currency-symbol" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:600;color:var(--gold-d);font-family:'Cormorant Garamond',serif;pointer-events:none">&#8377;</span>
+          <input class="fi" type="number" id="moi-amount" placeholder="e.g. 1001" min="0" inputmode="numeric" style="padding-left:28px;font-size:15px;font-weight:500" onkeydown="App.handleMoiFieldEnter('amount', event)" />
+        </div>
+      </div>
+      <div class="fg" id="moi-payment-inline">
+        <label class="fl">Payment Mode</label>
+        <select class="fi" id="moi-notes">
+          <option value="Cash Envelope">Cash Envelope</option>
+          <option value="UPI / GPay">UPI / GPay</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Cheque">Cheque</option>
+          <option value="Gold / Jewellery">Gold / Jewellery</option>
+        </select>
       </div>
     </div>
     <!-- Quick amount chips -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:-4px;margin-bottom:14px">
       <span style="font-size:10.5px;color:var(--txt4);align-self:center;margin-right:2px">Quick:</span>
-      <button data-quick-amount="501" onclick="document.getElementById('moi-amount').value=501" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹501</button>
-      <button data-quick-amount="1001" onclick="document.getElementById('moi-amount').value=1001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹1,001</button>
-      <button data-quick-amount="2001" onclick="document.getElementById('moi-amount').value=2001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹2,001</button>
-      <button data-quick-amount="5001" onclick="document.getElementById('moi-amount').value=5001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹5,001</button>
-      <button data-quick-amount="10001" onclick="document.getElementById('moi-amount').value=10001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹10,001</button>
-    </div>
-    <div class="fg">
-      <label class="fl">Payment Mode</label>
-      <select class="fi" id="moi-notes">
-        <option value="Cash Envelope">Cash Envelope</option>
-        <option value="UPI / GPay">UPI / GPay</option>
-        <option value="Bank Transfer">Bank Transfer</option>
-        <option value="Cheque">Cheque</option>
-        <option value="Gold / Jewellery">Gold / Jewellery</option>
-      </select>
+      <button data-quick-amount="501" onclick="document.getElementById('moi-amount').value=501" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">&#8377;501</button>
+      <button data-quick-amount="1001" onclick="document.getElementById('moi-amount').value=1001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">&#8377;1,001</button>
+      <button data-quick-amount="2001" onclick="document.getElementById('moi-amount').value=2001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">&#8377;2,001</button>
+      <button data-quick-amount="5001" onclick="document.getElementById('moi-amount').value=5001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">&#8377;5,001</button>
+      <button data-quick-amount="10001" onclick="document.getElementById('moi-amount').value=10001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">&#8377;10,001</button>
     </div>
     <div class="fg" id="moi-ty-section" style="display:none">
       <label class="fl">Thank-You Status</label>

@@ -1409,6 +1409,7 @@ function undoGuestRemoval(){
 let _editing={event:null,guest:null,gift:null};
 let _editingMasterGuest=null;
 let _roomLocsTemp=[];
+let _roomConfigEventId='';
 let _eventMenusTemp=[];
 let _eventContactsTemp=[];
 let _editingEventContactsId='';
@@ -1441,6 +1442,9 @@ function closeModal(id,{fromPop=false}={}){
   if(id==='event-contacts'){
     _editingEventContactsId='';
     _eventContactsEditMode=false;
+  }
+  if(id==='room-config'){
+    _roomConfigEventId='';
   }
   if(id==='event-contact-actions'){
     _eventContactActionEventId='';
@@ -1522,7 +1526,7 @@ let _guestListEditMode=false;
 let _guestUndoState=null;
 let _guestUndoTimer=null;
 let _preserveGuestSearchFocus=false;
-let _showGuestScrollTop=false;
+let _showScrollTop=false;
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
 const GUEST_SWIPE_LEFT_REVEAL=196;
@@ -1561,7 +1565,7 @@ function switchTab(tab, options={}) {
   
   const mainScroll = document.getElementById('main-scroll');
   if (mainScroll) mainScroll.scrollTop = 0;
-  _showGuestScrollTop=false;
+  _showScrollTop=false;
   
   const navTabs = document.querySelector('.tabs');
   if (navTabs) navTabs.style.display = 'flex';
@@ -1793,6 +1797,12 @@ window.addEventListener('popstate', (event) => {
 function renderEvents(){
   const el=document.getElementById('scr-events');
   const sess=Auth.currentSession();
+  const getRoomStats=eventId=>{
+    const eventGuests=DB.guests.filter(g=>g.eventId===eventId);
+    const bookedRooms=eventGuests.reduce((count,guest)=>count+getGuestRoomAssignments(guest).length,0);
+    const occupiedRooms=new Set(eventGuests.flatMap(guest=>getGuestRoomAssignments(guest).map(room=>`${room.loc}||${room.no}`))).size;
+    return { bookedRooms, occupiedRooms };
+  };
   // Only show events where the current user is a team member
   const accessibleEvents=DB.events.filter(ev=>{
     if (ev._isGuestOnly) return true;
@@ -1837,47 +1847,37 @@ function renderEvents(){
   let heroHtml='';
   if(ae){
     const gc=DB.guests.filter(g=>g.eventId===ae.id);
-    const giftc=DB.gifts.filter(g=>g.eventId===ae.id);
-    const contactc=normalizeEventContacts(ae.eventContacts).length;
-    const canManageContacts=Auth.isOrganizer(ae.id);
-    const attending=gc.filter(g=>g.rsvp==='attending').length;
+    const {bookedRooms,occupiedRooms}=getRoomStats(ae.id);
     const days=daysUntil(ae.date);
-    const col=COLORS[ae.color]||COLORS.rose;
     heroHtml=`<div class="dash-hero anim" onclick="${ae._isGuestOnly?(isRoomRequestEnabled(ae)?`App.setActive('${ae.id}');App.openGuestRequestModal('${ae.id}')`:`App.setActive('${ae.id}');App.switchTab('rooms')`):`App.setActive('${ae.id}');App.switchTab('guests')`}">
-      <div class="dash-hero-event">${TYPE_LABEL[ae.type]||ae.type}</div>
-      <div class="dash-hero-title">${ae.name}</div>
+      <div class="dash-hero-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">${ae.name}${Auth.isOrganizer(ae.id)?`<button class="g-edit" type="button" style="flex-shrink:0;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22);color:#fff" onclick="event.stopPropagation();App.openEditEvent('${ae.id}')">${uiIcon('edit',14)}</button>`:''}</div>
       <div class="dash-hero-stats">
         ${ae._isGuestOnly ? `<div class="dash-stat"><span class="dash-stat-l">Invitation Access</span></div>` : 
         `<div class="dash-stat"><span class="dash-stat-n">${gc.length}</span><span class="dash-stat-l">Guests</span></div>
-        <div class="dash-stat"><span class="dash-stat-n">${attending}</span><span class="dash-stat-l">Attending</span></div>
-        <div class="dash-stat"><span class="dash-stat-n">${giftc.length}</span><span class="dash-stat-l">Gifts</span></div>`}
+        <div class="dash-stat"><span class="dash-stat-n">${bookedRooms}/${occupiedRooms}</span><span class="dash-stat-l">Rooms Booked / Occupied</span></div>`}
       </div>
       ${days!==null?`<div class="dash-cd">${days>0?days+' days away':days===0?'Today':'Past event'}</div>`:''}
       ${ae._isGuestOnly?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()">
         ${normalizeEventMenus(ae.foodMenus).length?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFoodMenuModal('${ae.id}')">Food Menu</button>`:''}
         <button class="ev-btn" onclick="App.setActive('${ae.id}');${isRoomRequestEnabled(ae)?`App.openGuestRequestModal('${ae.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ae)?'Request Room':'View Rooms'}</button>
         ${isFeedbackEnabled(ae)?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFeedbackModal('${ae.id}')">Feedback</button>`:''}
-      </div>`:`${(contactc||canManageContacts)?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()"><button class="ev-btn" onclick="App.openEventContacts('${ae.id}')">Contacts${contactc?` (${contactc})`:''}</button></div>`:''}`}
+      </div>`:''}
     </div>`;
   }
   const cards=myEvents.map(ev=>{
     const gc=DB.guests.filter(g=>g.eventId===ev.id);
-    const giftc=DB.gifts.filter(g=>g.eventId===ev.id);
-    const att=gc.filter(g=>g.rsvp==='attending').length;
+    const {bookedRooms,occupiedRooms}=getRoomStats(ev.id);
     const days=daysUntil(ev.date);
-    const col=COLORS[ev.color]||COLORS.rose;
-    const eventContacts=normalizeEventContacts(ev.eventContacts);
-    const canManageContacts=Auth.isOrganizer(ev.id);
     const isAct=ev.id===DB.activeEvent;
-    const team=Auth.getTeam(ev.id);
-    const myRole=team.find(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase()))?.role||'';
-    const roleLbl=myRole==='organizer'?'Organizer':myRole==='cash'?'Cash':myRole==='room'?'Room':'';
+    const col=COLORS[ev.color]||COLORS.rose;
     return`<div class="ev-card anim ${isAct?'':''}">
       <div class="ev-accent" style="background:${col.accent}"></div>
       <div class="ev-body">
         <div class="ev-top">
-          <div class="ev-name">${ev.name}</div>
-          <span class="type-chip" style="${col.chip}">${TYPE_LABEL[ev.type]||ev.type} ${roleLbl}</span>
+          <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+            <div class="ev-name" style="margin:0;flex:1;min-width:0">${ev.name}</div>
+            ${Auth.isOrganizer(ev.id)?`<button class="g-edit" type="button" title="Edit event" aria-label="Edit event" onclick="event.stopPropagation();App.openEditEvent('${ev.id}')">${uiIcon('edit',14)}</button>`:''}
+          </div>
         </div>
         <div class="ev-meta">
           ${ev.date?`<span class="ev-meta-item">${uiIcon('calendar',12)} ${fmtDate(ev.date)}</span>`:''}
@@ -1887,11 +1887,9 @@ function renderEvents(){
         <div class="ev-stats">
           ${ev._isGuestOnly ? `<div class="ev-stat"><span class="ev-stat-l">My Invitation Access</span></div>` : 
           `<div class="ev-stat"><span class="ev-stat-n">${gc.length}</span><span class="ev-stat-l">Guests</span></div>
-          <div class="ev-stat"><span class="ev-stat-n">${att}</span><span class="ev-stat-l">Attending</span></div>
-          <div class="ev-stat"><span class="ev-stat-n">${giftc.length}</span><span class="ev-stat-l">Gifts</span></div>`}
+          <div class="ev-stat"><span class="ev-stat-n">${bookedRooms}</span><span class="ev-stat-l">Rooms Booked</span></div>
+          <div class="ev-stat"><span class="ev-stat-n">${occupiedRooms}</span><span class="ev-stat-l">Rooms Occupied</span></div>`}
         </div>
-        ${normalizeEventMenus(ev.foodMenus).length?`<div style="font-size:11.5px;color:var(--txt3);margin-top:10px">${uiIcon('gift',12)} ${normalizeEventMenus(ev.foodMenus).length} menu section${normalizeEventMenus(ev.foodMenus).length!==1?'s':''} added</div>`:''}
-        ${eventContacts.length?`<div style="font-size:11.5px;color:var(--txt3);margin-top:6px">${uiIcon('contact',12)} ${eventContacts.length} saved contact${eventContacts.length!==1?'s':''}</div>`:''}
         <div class="ev-footer">
           ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?days+' days':days===0?'Today':'Past'}</span>`:'<span></span>'}
           <div class="ev-actions">
@@ -1900,9 +1898,7 @@ function renderEvents(){
             ${isFeedbackEnabled(ev)?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFeedbackModal('${ev.id}')">Feedback</button>`:''}
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
               :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
-            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>
-            ${(eventContacts.length||canManageContacts)?`<button class="ev-btn" onclick="event.stopPropagation();App.openEventContacts('${ev.id}')">Contacts</button>`:''}`}
-            ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openEditEvent('${ev.id}')">Edit</button>`:''}
+            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>`}
           </div>
         </div>
       </div>
@@ -2403,8 +2399,7 @@ function renderGuests(){
     filtersHtml+listHtml+feedbackHtml+
     `<div class="floating-stack">
       ${isOrg?`<button class="floating-bubble floating-bubble-primary" type="button" title="Add guest" aria-label="Add guest" onclick="App.openAddGuest()">${uiIcon('guests',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button>`:''}
-    </div>`+
-    `<button class="floating-top-center ${_showGuestScrollTop?'show':''}" type="button" title="Scroll to top" aria-label="Scroll to top" onclick="App.scrollToTop()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17V7M7.5 11.5 12 7l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+    </div>`;
   if(_preserveGuestSearchFocus){
     window.requestAnimationFrame(()=>{
       const searchInput=document.getElementById('guest-search-input');
@@ -2912,7 +2907,7 @@ function render(){
   else if(_tab==='guest-portal') renderGuestPortal();
   applyCurrencyUI();
   updateBadges();
-  updateGuestScrollTopVisibility();
+  updateScrollTopVisibility();
 }
 
 function updateBadges(){
@@ -3061,6 +3056,17 @@ function openEditEvent(id){
   openModal('add-event');
 }
 
+function openRoomConfig(id){
+  const ev=DB.events.find(e=>e.id===id);
+  if(!ev){toast('⚠️ Event not found');return;}
+  if(!Auth.isRoom(id)){toast('⚠️ Only organisers or room coordinators can do this');return;}
+  _roomConfigEventId=id;
+  _roomLocsTemp=JSON.parse(JSON.stringify(ev.roomLocs||[]));
+  document.getElementById('mo-room-config-title').textContent=`${ev.name} Rooms`;
+  renderRoomLocsEditor();
+  openModal('room-config');
+}
+
 async function saveEvent(){
   const name=document.getElementById('ev-name').value.trim();
   if(!name){toast('⚠️ Please enter an event name');return;}
@@ -3137,6 +3143,25 @@ async function saveEvent(){
     }
   }
   closeModal('add-event');render();
+}
+
+async function saveRoomConfig(){
+  const ev=DB.events.find(e=>e.id===_roomConfigEventId);
+  if(!ev){toast('⚠️ Event not found');return;}
+  if(!Auth.isRoom(ev.id)){toast('⚠️ Only organisers or room coordinators can do this');return;}
+  ev.roomLocs=JSON.parse(JSON.stringify(_roomLocsTemp));
+  save();
+  try{
+    await Cloud.saveEvent(ev, Auth.getTeam(ev.id), Auth.currentSession());
+    await Cloud.loadEventsForSession(Auth.currentSession());
+  }catch(e){
+    toast('⚠️ Rooms saved locally, but cloud sync failed');
+    render();
+    return;
+  }
+  closeModal('room-config');
+  render();
+  toast('Room configuration updated');
 }
 
 function confirmDeleteEvent(){
@@ -3885,7 +3910,7 @@ function renderEventMenusDisplay(ev){
 }
 
 function renderRoomLocsEditor(){
-  const container=document.getElementById('ev-room-locs');
+  const container=document.getElementById(_roomConfigEventId?'room-config-locs':'ev-room-locs');
   if(!container)return;
   if(_roomLocsTemp.length===0){container.innerHTML='';return;}
   container.innerHTML=_roomLocsTemp.map((loc,li)=>`
@@ -3908,7 +3933,8 @@ function addRoomLocation(){
   _roomLocsTemp.push({name:'',rooms:[]});
   renderRoomLocsEditor();
   // focus the new name input
-  const inputs=document.querySelectorAll('#ev-room-locs .room-loc-name input');
+  const targetSelector=_roomConfigEventId?'#room-config-locs .room-loc-name input':'#ev-room-locs .room-loc-name input';
+  const inputs=document.querySelectorAll(targetSelector);
   if(inputs.length)inputs[inputs.length-1].focus();
 }
 
@@ -4054,8 +4080,8 @@ function renderRooms(){
   if(locs.length===0){
     el.innerHTML=evSelHtml+
       `<div class="ph"><div class="ph-title">Room Management</div></div>`+
-      `<div class="empty"><div class="empty-ico">${uiIcon('room',42)}</div><div class="empty-t">No rooms configured</div><div class="empty-s">Add room locations in the Event settings to manage guest room allocation.</div></div>`+
-      `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Configure rooms" aria-label="Configure rooms" onclick="App.openEditEvent('${ev.id}')" style="background:var(--slate-d);border-color:var(--slate-d)">${uiIcon('room',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
+      `<div class="empty"><div class="empty-ico">${uiIcon('room',42)}</div><div class="empty-t">No rooms configured</div><div class="empty-s">Add room locations here to manage guest room allocation.</div></div>`+
+      `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Configure rooms" aria-label="Configure rooms" onclick="App.openRoomConfig('${ev.id}')" style="background:var(--slate-d);border-color:var(--slate-d)">${uiIcon('room',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
     return;
   }
   // build stats
@@ -4128,7 +4154,7 @@ function renderRooms(){
     });
     html+=`</div></div>`;
   });
-  html+=`<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Configure rooms" aria-label="Configure rooms" onclick="App.openEditEvent('${ev.id}')" style="background:var(--slate-d);border-color:var(--slate-d)">${uiIcon('room',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
+  html+=`<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Configure rooms" aria-label="Configure rooms" onclick="App.openRoomConfig('${ev.id}')" style="background:var(--slate-d);border-color:var(--slate-d)">${uiIcon('room',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
   el.innerHTML=html;
 }
 
@@ -4844,12 +4870,12 @@ function scrollToTop(){
   mainScroll.scrollTo({top:0,behavior:'smooth'});
 }
 
-function updateGuestScrollTopVisibility(){
+function updateScrollTopVisibility(){
   const mainScroll=document.getElementById('main-scroll');
-  const shouldShow=!!mainScroll && _tab==='guests' && mainScroll.scrollTop>220;
-  if(_showGuestScrollTop===shouldShow) return;
-  _showGuestScrollTop=shouldShow;
-  const btn=document.querySelector('.floating-top-center');
+  const shouldShow=!!mainScroll && mainScroll.scrollTop>220;
+  if(_showScrollTop===shouldShow) return;
+  _showScrollTop=shouldShow;
+  const btn=document.getElementById('global-scroll-top-btn');
   if(btn) btn.classList.toggle('show', shouldShow);
 }
 
@@ -5098,7 +5124,7 @@ const unassignGuestRoomGated=_requireRoom(unassignGuestRoom);
 window.App={
   togglePastEvents(show){_showPastEvents=!!show; renderEvents();},
   switchTab,openModal: window.openModal,closeModal,
-  openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,saveEvent,confirmDeleteEvent:confirmDeleteEventGated,
+  openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,openRoomConfig:_requireRoom(openRoomConfig),saveEvent,saveRoomConfig,confirmDeleteEvent:confirmDeleteEventGated,
   addEventContact,_updateEventContact,_removeEventContact,openEventContacts,saveEventContacts,toggleEventContactsEditMode,handleEventContactsHeaderAction,handleEventContactPhoneKey,shareEventContact,callEventContact,whatsAppEventContact,openEventContactActions,callActiveEventContact,whatsAppActiveEventContact,shareActiveEventContact,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
@@ -5186,7 +5212,7 @@ Auth.init();
 render();
 
 document.getElementById('main-scroll')?.addEventListener('scroll',()=>{
-  updateGuestScrollTopVisibility();
+  updateScrollTopVisibility();
 },{passive:true});
 
 if ('serviceWorker' in navigator) {

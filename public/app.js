@@ -684,6 +684,7 @@ function uiIcon(name,size=14){
     contact:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M7 5.5h10A1.5 1.5 0 0 1 18.5 7v10a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 17V7A1.5 1.5 0 0 1 7 5.5Z" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="10" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8 15c.7-1.6 1.8-2.4 3-2.4s2.3.8 3 2.4M8 3.5h8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     guests:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="9" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4.5 18c.6-2.7 2.5-4 4.5-4s3.9 1.3 4.5 4M13.5 18c.4-2 1.8-3.1 3.5-3.1 1.4 0 2.7.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     edit:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="m12.5 7.5 4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    save:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8 4.5v5h7v-5M9 15.5h6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     export:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 20V10M8.5 13.5 12 10l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5.5h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     share:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="18" cy="5.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="6" cy="12" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="18" cy="18.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8 11l7.7-4.2M8 13l7.7 4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     whatsapp:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 4.5a7.5 7.5 0 0 0-6.5 11.3L4.5 20l4.4-1a7.5 7.5 0 1 0 3.1-14.5Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M9.4 9.3c.2-.4.5-.4.7-.4h.5c.2 0 .4.1.5.4l.5 1.3c.1.2.1.4 0 .5l-.4.6c-.1.2-.1.4 0 .6.5.8 1.2 1.5 2 2 .2.1.4.1.6 0l.6-.4c.2-.1.4-.1.5 0l1.3.5c.3.1.4.3.4.5v.5c0 .2 0 .5-.4.7-.5.3-1 .5-1.6.4-1.1-.1-2.4-.8-3.7-2.1s-2-2.6-2.1-3.7c-.1-.6.1-1.1.4-1.6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
@@ -1325,6 +1326,49 @@ function toast(msg){
   _toastTimer=setTimeout(()=>el.classList.remove('show'),2600);
 }
 
+function showGuestUndoSnack(name){
+  const el=document.getElementById('undo-snack');
+  const text=document.getElementById('undo-text');
+  if(!el||!text) return;
+  text.textContent=`${name} removed`;
+  el.classList.add('show');
+}
+
+function hideGuestUndoSnack(){
+  const el=document.getElementById('undo-snack');
+  if(el) el.classList.remove('show');
+}
+
+function scheduleGuestUndo(guest){
+  if(_guestUndoTimer){
+    clearTimeout(_guestUndoTimer);
+    _guestUndoTimer=null;
+  }
+  _guestUndoState={ guest: JSON.parse(JSON.stringify(guest)), eventId: guest.eventId };
+  showGuestUndoSnack(fullGuestName(guest)||guest.first||'Guest');
+  _guestUndoTimer=setTimeout(()=>{
+    _guestUndoState=null;
+    _guestUndoTimer=null;
+    hideGuestUndoSnack();
+  },3000);
+}
+
+function undoGuestRemoval(){
+  if(!_guestUndoState?.guest) return;
+  if(_guestUndoTimer){
+    clearTimeout(_guestUndoTimer);
+    _guestUndoTimer=null;
+  }
+  const restoredGuest=_guestUndoState.guest;
+  if(!DB.guests.some(item=>item.id===restoredGuest.id)) DB.guests.push(restoredGuest);
+  _guestUndoState=null;
+  hideGuestUndoSnack();
+  save();
+  syncActiveEventData();
+  render();
+  toast(`${restoredGuest.first||'Guest'} restored`);
+}
+
 // ═══════════════════════════════════════════════
 // MODAL SYSTEM
 // ═══════════════════════════════════════════════
@@ -1432,6 +1476,9 @@ let _guestSwipeTapBlockUntil=0;
 let _guestSwipeOpenId=null;
 let _guestSwipeActionGuestId=null;
 let _directRoomAssignGuestId='';
+let _guestRowEditId='';
+let _guestUndoState=null;
+let _guestUndoTimer=null;
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
 const GUEST_SWIPE_LEFT_REVEAL=196;
@@ -1997,6 +2044,7 @@ function renderGuests(){
       const rsvp=(g.rsvp||'invited').toLowerCase();
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
+      const isRowEdit=isOrg&&_guestRowEditId===g.id;
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
         <div class="g-swipe-under-left">
           <div class="g-swipe-hint">Swipe right to add to ${DB.settings.lastGuestGroup||'last group'}</div>
@@ -2013,7 +2061,11 @@ function renderGuests(){
           </div>
           <div class="g-actions">
             <button class="rsvp-btn r-${rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${rsvpLabel}</button>
-            <button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">X</button>
+            ${isOrg?`${isRowEdit
+              ?`<button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">X</button>
+                <button class="g-edit g-edit-save" title="Save actions" aria-label="Save actions" onclick="event.stopPropagation();App.saveGuestRowEdit('${g.id}')">${uiIcon('save',14)}</button>`
+              :`<button class="g-edit" title="Edit guest actions" aria-label="Edit guest actions" onclick="event.stopPropagation();App.toggleGuestRowEdit('${g.id}')">${uiIcon('edit',14)}</button>`}`
+              :''}
           </div>
         </div>
       </div>`;
@@ -2040,10 +2092,6 @@ function renderGuests(){
     organizerActions+
     `<div class="search-wrap"><span class="search-ico">${uiIcon('search',14)}</span><input class="search-inp" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
     filtersHtml+listHtml+feedbackHtml;
-  // Hide delete buttons for non-organisers
-  if(!isOrg){
-    el.querySelectorAll('.g-del').forEach(b=>b.style.display='none');
-  }
   initGuestSwipeRows();
 }
 
@@ -3121,7 +3169,9 @@ function confirmDeleteMasterGuest(id){
 function deleteGuestById(gid){
   const g=DB.guests.find(x=>x.id===gid);
   if(!g) return;
+  scheduleGuestUndo(g);
   DB.guests=DB.guests.filter(x=>x.id!==gid);
+  _guestRowEditId='';
   save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();toast('Guest removed');
 }
 
@@ -3327,6 +3377,16 @@ function confirmDeleteGuest(id){
   openConfirm(`Remove ${g.first} ${g.last}?`,'This guest will be removed from the list.',()=>{
     deleteGuestById(gid);
   });
+}
+
+function toggleGuestRowEdit(id){
+  _guestRowEditId=_guestRowEditId===id?'':id;
+  renderGuests();
+}
+
+function saveGuestRowEdit(id){
+  if(_guestRowEditId===id) _guestRowEditId='';
+  renderGuests();
 }
 
 function openGuestDetail(id){
@@ -4593,7 +4653,7 @@ window.App={
   addEventContact,_updateEventContact,_removeEventContact,openEventContacts,saveEventContacts,shareEventContact,callEventContact,whatsAppEventContact,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
-  confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,
+  confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,toggleGuestRowEdit,saveGuestRowEdit,undoGuestRemoval,
   openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,

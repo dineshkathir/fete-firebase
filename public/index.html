@@ -155,8 +155,11 @@ body{overscroll-behavior:none}
 .r-declined{background:#FEE8E8;color:#932B2B}
 .r-pending{background:var(--gold-l);color:var(--gold-d)}
 .r-invited{background:var(--surf2);color:var(--txt2)}
-.g-del{width:28px;height:28px;border-radius:50%;background:transparent;border:none;cursor:pointer;font-size:14px;color:var(--txt4);display:flex;align-items:center;justify-content:center;transition:background .15s}
+.g-del,.g-edit{width:28px;height:28px;border-radius:50%;background:transparent;border:none;cursor:pointer;font-size:14px;color:var(--txt4);display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s,border-color .15s}
 .g-del:hover{background:#FEE8E8;color:#932B2B}
+.g-edit:hover{background:var(--surf2);color:var(--txt2)}
+.g-edit-save{background:var(--sage-l);color:var(--sage-d);border:1px solid var(--sage-m)}
+.g-edit-save:hover{background:var(--sage-m);color:var(--sage-d)}
 
 /* ── GIFT CARDS ── */
 .gift-card{background:var(--surf);border-radius:var(--r);margin-bottom:8px;cursor:pointer;transition:box-shadow .2s,transform .15s;position:relative;overflow:hidden;box-shadow:var(--sh1)}
@@ -276,7 +279,13 @@ body{overscroll-behavior:none}
 .m-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--txt);margin-bottom:16px}
 .m-topbar{position:sticky;top:-18px;z-index:25;background:rgba(253,250,246,.98);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0 14px;margin:-6px 0 14px;border-bottom:1px solid var(--bord2)}
 .m-topbar .m-title{margin-bottom:0;flex:1}
-.m-top-save{width:auto;min-width:88px;margin:0;padding:10px 14px;flex-shrink:0}
+.m-top-save{width:auto;min-width:64px;margin:0;padding:8px 12px;flex-shrink:0;font-size:12px}
+
+#undo-snack{position:fixed;left:50%;bottom:calc(var(--tab) + 14px);transform:translateX(-50%) translateY(16px);background:var(--surf);border:1px solid var(--bord);box-shadow:var(--sh2);border-radius:999px;padding:8px 10px 8px 14px;display:flex;align-items:center;gap:10px;z-index:1000;opacity:0;pointer-events:none;transition:all .22s;max-width:calc(100% - 24px)}
+#undo-snack.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+#undo-text{font-size:12px;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#undo-btn{border:none;background:var(--rose-l);color:var(--rose-d);border-radius:999px;padding:7px 12px;font-size:11.5px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;flex-shrink:0}
+#undo-btn:hover{background:var(--rose-m)}
 .fg{margin-bottom:12px}
 .fl{font-size:11px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px}
 .fi{width:100%;padding:10px 13px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;color:var(--txt);outline:none;transition:border-color .15s;appearance:none}
@@ -1273,6 +1282,10 @@ html.boot-authenticated #auth-screen{display:none}
 
 <!-- TOAST -->
 <div id="toast"></div>
+<div id="undo-snack">
+  <div id="undo-text">Guest removed</div>
+  <button id="undo-btn" onclick="App.undoGuestRemoval()">Undo</button>
+</div>
 
 <script type="module" src="app.js"></script>
 

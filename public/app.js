@@ -731,6 +731,17 @@ function fmtTime(timeStr){
   }
   return raw;
 }
+function formatEventLocation(location){
+  const raw=String(location||'').trim();
+  if(!raw) return '';
+  const parts=raw
+    .split(',')
+    .map(part=>part.replace(/\b\d{6}\b/g,'').trim())
+    .filter(Boolean)
+    .filter(part=>part.toLowerCase()!=='india');
+  if(parts.length>=2) return `${parts[parts.length-2]}, ${parts[parts.length-1]}`;
+  return parts[0]||raw;
+}
 function toTimeInputValue(timeStr){
   const raw=String(timeStr||'').trim();
   if(!raw) return '';
@@ -1255,7 +1266,7 @@ function openGuestFeedbackModal(eventId){
   ensureGuestFeedbackDefaults(me);
   document.getElementById('gf-title').textContent='Event Feedback';
   document.getElementById('gf-event-name').textContent=ev.name;
-  document.getElementById('gf-event-meta').innerHTML=`${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}${ev.location?`${uiIcon('location',12)} ${ev.location}<br>`:''}${uiIcon('user',12)} ${me.first} ${me.last}`;
+  document.getElementById('gf-event-meta').innerHTML=`${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}${ev.location?`${uiIcon('location',12)} ${formatEventLocation(ev.location)}<br>`:''}${uiIcon('user',12)} ${me.first} ${me.last}`;
   document.getElementById('gf-content').innerHTML=renderGuestFeedbackSection(ev, me, 'gf-modal');
   openModal('guest-feedback');
 }
@@ -1302,7 +1313,7 @@ function renderGuestFoodMenuModalContent(eventId){
   if(!ev||!ev._isGuestOnly||!me||!contentEl) return;
   document.getElementById('gm-title').textContent='Food Menu';
   document.getElementById('gm-event-name').textContent=ev.name;
-  document.getElementById('gm-event-meta').innerHTML=`${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}${ev.location?`${uiIcon('location',12)} ${ev.location}<br>`:''}${uiIcon('user',12)} ${me.first} ${me.last}`;
+  document.getElementById('gm-event-meta').innerHTML=`${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}${ev.location?`${uiIcon('location',12)} ${formatEventLocation(ev.location)}<br>`:''}${uiIcon('user',12)} ${me.first} ${me.last}`;
   contentEl.innerHTML=renderGuestFoodMenuSection(ev, me, 'modal');
 }
 
@@ -1476,7 +1487,7 @@ let _guestSwipeTapBlockUntil=0;
 let _guestSwipeOpenId=null;
 let _guestSwipeActionGuestId=null;
 let _directRoomAssignGuestId='';
-let _guestRowEditId='';
+let _guestListEditMode=false;
 let _guestUndoState=null;
 let _guestUndoTimer=null;
 
@@ -1803,7 +1814,7 @@ function renderEvents(){
         <div class="ev-meta">
           ${ev.date?`<span class="ev-meta-item">${uiIcon('calendar',12)} ${fmtDate(ev.date)}</span>`:''}
           ${ev.time?`<span class="ev-meta-item">${uiIcon('time',12)} ${fmtTime(ev.time)}</span>`:''}
-          ${ev.location?`<span class="ev-meta-item"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.location)}" target="_blank" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">${uiIcon('location',12)} ${ev.location}</a></span>`:''}
+          ${ev.location?`<span class="ev-meta-item"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.location)}" target="_blank" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">${uiIcon('location',12)} ${formatEventLocation(ev.location)}</a></span>`:''}
         </div>
         <div class="ev-stats">
           ${ev._isGuestOnly ? `<div class="ev-stat"><span class="ev-stat-l">My Invitation Access</span></div>` : 
@@ -1858,11 +1869,9 @@ function renderEventContactsEditor(){
           ${canEdit
             ? `<div class="event-contact-grid">
                 <div class="fg" style="margin-bottom:0">
-                  <label class="fl">Name</label>
                   <input class="fi" type="text" placeholder="Camera Man / Security / Cook" value="${escapeHtml(contact.name||'')}" oninput="App._updateEventContact(${idx},'name',this.value)" />
                 </div>
                 <div class="fg" style="margin-bottom:0">
-                  <label class="fl">Phone Number</label>
                   <input class="fi" type="text" inputmode="tel" maxlength="15" placeholder="Phone number" value="${escapeHtml(contact.phone||'')}" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,15);App._updateEventContact(${idx},'phone',this.value)" />
                 </div>
               </div>`
@@ -2044,7 +2053,6 @@ function renderGuests(){
       const rsvp=(g.rsvp||'invited').toLowerCase();
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
-      const isRowEdit=isOrg&&_guestRowEditId===g.id;
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
         <div class="g-swipe-under-left">
           <div class="g-swipe-hint">Swipe right to add to ${DB.settings.lastGuestGroup||'last group'}</div>
@@ -2061,11 +2069,7 @@ function renderGuests(){
           </div>
           <div class="g-actions">
             <button class="rsvp-btn r-${rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${rsvpLabel}</button>
-            ${isOrg?`${isRowEdit
-              ?`<button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">X</button>
-                <button class="g-edit g-edit-save" title="Save actions" aria-label="Save actions" onclick="event.stopPropagation();App.saveGuestRowEdit('${g.id}')">${uiIcon('save',14)}</button>`
-              :`<button class="g-edit" title="Edit guest actions" aria-label="Edit guest actions" onclick="event.stopPropagation();App.toggleGuestRowEdit('${g.id}')">${uiIcon('edit',14)}</button>`}`
-              :''}
+            ${isOrg&&_guestListEditMode?`<button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">X</button>`:''}
           </div>
         </div>
       </div>`;
@@ -2087,7 +2091,7 @@ function renderGuests(){
       </div>`
     : '';
   el.innerHTML=evSelHtml+
-    `<div class="ph"><div class="ph-title">Guest List</div></div>`+
+    `<div class="ph" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div class="ph-title" style="margin-bottom:0">Guest List</div>${isOrg?`<button class="g-edit ${_guestListEditMode?'g-edit-save':''}" title="${_guestListEditMode?'Save guest actions':'Edit guest actions'}" aria-label="${_guestListEditMode?'Save guest actions':'Edit guest actions'}" onclick="App.${_guestListEditMode?'saveGuestRowEdit':'toggleGuestRowEdit'}()">${uiIcon(_guestListEditMode?'save':'edit',14)}</button>`:''}</div>`+
     statsHtml+
     organizerActions+
     `<div class="search-wrap"><span class="search-ico">${uiIcon('search',14)}</span><input class="search-inp" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
@@ -2130,7 +2134,7 @@ function renderGuestPortal(){
       <div class="guest-sub">
         ${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}
         ${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}
-        ${ev.location?`${uiIcon('location',12)} ${ev.location}<br>`:''}
+        ${ev.location?`${uiIcon('location',12)} ${formatEventLocation(ev.location)}<br>`:''}
         ${uiIcon('user',12)} ${me.first} ${me.last}
       </div>
     </div>`+
@@ -2139,7 +2143,7 @@ function renderGuestPortal(){
       <div style="font-size:13px;color:var(--txt2);line-height:1.7">
         ${ev.date?`Date: ${fmtDate(ev.date)}<br>`:''}
         ${ev.time?`Time: ${fmtTime(ev.time)}<br>`:''}
-        ${ev.location?`Location: ${ev.location}`:'Location will be shared by the organiser.'}
+        ${ev.location?`Location: ${formatEventLocation(ev.location)}`:'Location will be shared by the organiser.'}
       </div>
     </div>`+
     `<div class="guest-card anim">
@@ -2205,7 +2209,7 @@ function openGuestRequestModal(eventId){
   if(!me){toast('⚠️ Guest record not found');return;}
   document.getElementById('gr-title').textContent='Request Room';
   document.getElementById('gr-event-name').textContent=ev.name;
-  document.getElementById('gr-event-meta').innerHTML=`${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}${ev.location?`${uiIcon('location',12)} ${ev.location}<br>`:''}${uiIcon('user',12)} ${me.first} ${me.last}`;
+  document.getElementById('gr-event-meta').innerHTML=`${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}${ev.location?`${uiIcon('location',12)} ${formatEventLocation(ev.location)}<br>`:''}${uiIcon('user',12)} ${me.first} ${me.last}`;
   document.getElementById('gr-room-status').textContent=formatGuestRooms(me);
   document.getElementById('gr-room-request-type').value=me.roomRequestType||'undecided';
   document.getElementById('gr-requested-rooms').value=Math.max(1,parseInt(me.requestedRoomCount)||1);
@@ -2214,7 +2218,7 @@ function openGuestRequestModal(eventId){
   openModal('guest-request');
 }
 
-let _giftTab='gifts';
+let _giftTab='moi';
 let _giftCatFilter='all';
 
 const CAT_META={
@@ -3171,7 +3175,6 @@ function deleteGuestById(gid){
   if(!g) return;
   scheduleGuestUndo(g);
   DB.guests=DB.guests.filter(x=>x.id!==gid);
-  _guestRowEditId='';
   save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();toast('Guest removed');
 }
 
@@ -3379,13 +3382,13 @@ function confirmDeleteGuest(id){
   });
 }
 
-function toggleGuestRowEdit(id){
-  _guestRowEditId=_guestRowEditId===id?'':id;
+function toggleGuestRowEdit(){
+  _guestListEditMode=!_guestListEditMode;
   renderGuests();
 }
 
-function saveGuestRowEdit(id){
-  if(_guestRowEditId===id) _guestRowEditId='';
+function saveGuestRowEdit(){
+  _guestListEditMode=false;
   renderGuests();
 }
 
@@ -4566,7 +4569,12 @@ function renderTeamEventPicker(){
   const picker=document.getElementById('team-event-picker');
   if(!picker) return;
   const sess=Auth.currentSession();
-  const accessibleEvents=DB.events.filter(ev=>Auth.getTeam(ev.id).some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase())));
+  const accessibleEvents=DB.events.filter(ev=>{
+    const hasAccess=Auth.getTeam(ev.id).some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase()));
+    if(!hasAccess) return false;
+    const days=daysUntil(ev.date);
+    return days===null || days>=0;
+  });
   picker.innerHTML=accessibleEvents.map(ev=>{
     const col=COLORS[ev.color]||COLORS.rose;
     return `<div class="ep-item ${ev.id===selectedId?'sel':''}" onclick="App.pickTeamEvent('${ev.id}')">

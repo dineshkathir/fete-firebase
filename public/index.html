@@ -40,7 +40,7 @@ body{overscroll-behavior:none}
 #app{width:100%;max-width:430px;height:100dvh;max-height:100dvh;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,0.25)}
 
 /* ── HEADER ── */
-.hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 6px;flex-shrink:0;position:relative;z-index:20}
+.hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 2px;flex-shrink:0;position:relative;z-index:20}
 .logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0}
 .logo .brand-lockup{display:block;height:108px;width:auto;max-width:220px}
 .brand-lockup{display:block;height:72px;width:auto}
@@ -279,7 +279,8 @@ body{overscroll-behavior:none}
 .m-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--txt);margin-bottom:16px}
 .m-topbar{position:sticky;top:-18px;z-index:25;background:rgba(253,250,246,.98);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0 14px;margin:-6px 0 14px;border-bottom:1px solid var(--bord2)}
 .m-topbar .m-title{margin-bottom:0;flex:1}
-.m-top-save{width:auto;min-width:64px;margin:0;padding:8px 12px;flex-shrink:0;font-size:12px}
+.m-top-save{width:34px;height:34px;min-width:34px;margin:0;padding:0;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;border-radius:999px}
+.m-top-save svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 
 #undo-snack{position:fixed;left:50%;bottom:calc(var(--tab) + 14px);transform:translateX(-50%) translateY(16px);background:var(--surf);border:1px solid var(--bord);box-shadow:var(--sh2);border-radius:999px;padding:8px 10px 8px 14px;display:flex;align-items:center;gap:10px;z-index:1000;opacity:0;pointer-events:none;transition:all .22s;max-width:calc(100% - 24px)}
 #undo-snack.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
@@ -603,7 +604,9 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-topbar">
       <div class="m-title" id="mo-event-title">New Event</div>
-      <button class="btn-p m-top-save" onclick="App.saveEvent()">Save</button>
+      <button class="btn-p m-top-save" onclick="App.saveEvent()" title="Save" aria-label="Save">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z"/><path d="M8 4.5v5h7v-5M9 15.5h6"/></svg>
+      </button>
     </div>
     <div class="fg" id="ev-name-section">
       <label class="fl">Event Name *</label>
@@ -697,7 +700,9 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-topbar">
       <div class="m-title" id="mo-event-contacts-title">Event Contacts</div>
-      <button class="btn-p m-top-save" id="event-contact-top-save-btn" onclick="App.saveEventContacts()">Save</button>
+      <button class="btn-p m-top-save" id="event-contact-top-save-btn" onclick="App.saveEventContacts()" title="Save" aria-label="Save">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z"/><path d="M8 4.5v5h7v-5M9 15.5h6"/></svg>
+      </button>
     </div>
     <div id="event-contacts-sub" style="font-size:12.5px;color:var(--txt3);line-height:1.6;margin-bottom:14px"></div>
     <button class="btn-p" id="event-contact-add-btn" style="margin-bottom:12px" onclick="App.addEventContact()">＋ Add Contact</button>
@@ -713,7 +718,9 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-topbar">
       <div class="m-title" id="mo-guest-title">Add Guest</div>
-      <button class="btn-p m-top-save" onclick="App.saveGuest()">Save</button>
+      <button class="btn-p m-top-save" onclick="App.saveGuest()" title="Save" aria-label="Save">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z"/><path d="M8 4.5v5h7v-5M9 15.5h6"/></svg>
+      </button>
     </div>
     <div class="fr">
       <div class="fg">
@@ -789,7 +796,9 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-topbar">
       <div class="m-title" id="mo-gift-title">Log a Gift</div>
-      <button class="btn-p m-top-save" onclick="App.saveGift()">Save</button>
+      <button class="btn-p m-top-save" onclick="App.saveGift()" title="Save" aria-label="Save">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z"/><path d="M8 4.5v5h7v-5M9 15.5h6"/></svg>
+      </button>
     </div>
     <div class="fg">
       <label class="fl">Category</label>
@@ -846,7 +855,9 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-topbar">
       <div class="m-title" id="mo-cash-title">Log Cash / Card Gift</div>
-      <button class="btn-p m-top-save" style="background:var(--gold-d)" onclick="App.saveMoi()">Save</button>
+      <button class="btn-p m-top-save" style="background:var(--gold-d)" onclick="App.saveMoi()" title="Save" aria-label="Save">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z"/><path d="M8 4.5v5h7v-5M9 15.5h6"/></svg>
+      </button>
     </div>
     <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
       <span style="font-size:18px;font-weight:700;color:var(--gold-d)">₹</span>
@@ -994,7 +1005,9 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-topbar">
       <div class="m-title" id="master-guest-editor-title">Add Saved Guest</div>
-      <button class="btn-p m-top-save" onclick="App.saveMasterGuest()">Save</button>
+      <button class="btn-p m-top-save" onclick="App.saveMasterGuest()" title="Save" aria-label="Save">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z"/><path d="M8 4.5v5h7v-5M9 15.5h6"/></svg>
+      </button>
     </div>
     <div class="fr">
       <div class="fg">

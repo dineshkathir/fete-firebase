@@ -4567,9 +4567,7 @@ function openAddMoi(){
   _editing.gift=null;
   applyCurrencyUI();
   document.getElementById('mo-moi-title').textContent='Add Cash Gift Entry';
-  const saveBtn=document.getElementById('moi-save-btn');
   const doneBtn=document.getElementById('moi-done-btn');
-  if(saveBtn){ saveBtn.textContent='Save & Next'; saveBtn.setAttribute('onclick',"App.saveMoi({keepOpen:true})"); }
   if(doneBtn) doneBtn.textContent='Done';
   document.getElementById('moi-from').value='';
   document.getElementById('moi-amount').value='';
@@ -4590,9 +4588,7 @@ function openEditMoi(id){
   _editing.gift=id;
   applyCurrencyUI();
   document.getElementById('mo-moi-title').textContent='Edit Cash Gift Entry';
-  const saveBtn=document.getElementById('moi-save-btn');
   const doneBtn=document.getElementById('moi-done-btn');
-  if(saveBtn){ saveBtn.textContent='Save Changes'; saveBtn.setAttribute('onclick',"App.saveMoi()"); }
   if(doneBtn) doneBtn.textContent='Close';
   document.getElementById('moi-from').value=g.from||'';
   document.getElementById('moi-amount').value=g.value||'';
@@ -4640,6 +4636,16 @@ function _saveMoiEntry(opts={}){
 }
 
 function saveMoi(opts){return _saveMoiEntry(opts);}
+
+function handleMoiDone(){
+  const from=(document.getElementById('moi-from')?.value||'').trim();
+  const amount=parseFloat(document.getElementById('moi-amount')?.value)||0;
+  if(!from && !amount){
+    closeModal('add-moi');
+    return;
+  }
+  saveMoi();
+}
 
 function handleMoiFieldEnter(field,e){
   if(e.key!=='Enter') return;
@@ -4793,7 +4799,7 @@ window.App={
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,
   setGiftTab,setGiftCatFilter,selectCat,
-  openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,handleMoiFieldEnter,filterMoi,setMoiFilter,setMoiTy,
+  openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,handleMoiDone,handleMoiFieldEnter,filterMoi,setMoiFilter,setMoiTy,
   _editingGift:()=>_editing.gift,
   openGuestRequestModal,openGuestFeedbackModal,openGuestFoodMenuModal,
   submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireOrganizer(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireOrganizer(resolveGuestRoomRequest),

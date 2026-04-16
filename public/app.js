@@ -662,7 +662,7 @@ function uiIcon(name,size=14){
     user:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="12" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 18c1-3 3.4-4.5 6.5-4.5S17.5 15 18.5 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     guests:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="9" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4.5 18c.6-2.7 2.5-4 4.5-4s3.9 1.3 4.5 4M13.5 18c.4-2 1.8-3.1 3.5-3.1 1.4 0 2.7.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     edit:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="m12.5 7.5 4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
-    export:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 4v10M8.5 10.5 12 14l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 18.5h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    export:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 20V10M8.5 13.5 12 10l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5.5h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     gift:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 10h16v10H4zM12 10v10M4 14h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10s-3.8-1.5-3.8-3.9c0-1.3 1-2.2 2.2-2.2 1.1 0 1.9.6 2.6 2 .7-1.4 1.5-2 2.6-2 1.2 0 2.2.9 2.2 2.2C15.8 8.5 12 10 12 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>`,
     room:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 19V8.5A1.5 1.5 0 0 1 6.5 7h11A1.5 1.5 0 0 1 19 8.5V19M3 19h18M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M9 11h2v2H9zm4 0h2v2h-2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     search:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`
@@ -765,6 +765,83 @@ function normalizeMasterGuestCandidate(candidate){
     createdAt: candidate.createdAt || Date.now()
   };
 }
+function summarizeMasterGuest(guest){
+  const parts=[fullGuestName(guest)||'Unknown guest'];
+  if(guest.email) parts.push(guest.email);
+  if(guest.contact) parts.push(guest.contact);
+  if(guest.group) parts.push(`Group: ${guest.group}`);
+  if(guest.notes) parts.push(guest.notes);
+  return parts.join(' · ');
+}
+function findMasterGuestMatch(candidate){
+  const normalized=normalizeMasterGuestCandidate(candidate);
+  if(normalized.email){
+    const existing=DB.masterGuests.find(item=>normalizeEmailValue(item.email)===normalized.email);
+    return existing?{ type:'email', existing, candidate:normalized }:null;
+  }
+  const phone=normalizePhoneValue(normalized.contact);
+  if(phone){
+    const existing=DB.masterGuests.find(item=>normalizePhoneValue(item.contact)===phone);
+    return existing?{ type:'phone', existing, candidate:normalized }:null;
+  }
+  const name=fullGuestName(normalized).toLowerCase();
+  if(name){
+    const existing=DB.masterGuests.find(item=>fullGuestName(item).toLowerCase()===name);
+    return existing?{ type:'name', existing, candidate:normalized }:null;
+  }
+  return null;
+}
+function mergeMasterGuest(existing,candidate){
+  existing.first=candidate.first||existing.first||'';
+  existing.last=candidate.last||existing.last||'';
+  existing.email=candidate.email||existing.email||'';
+  existing.contact=candidate.contact||existing.contact||'';
+  existing.notes=candidate.notes||existing.notes||'';
+  existing.group=candidate.group||existing.group||'';
+  return existing;
+}
+function saveMasterGuestRecord(candidate,{forceNew=false, updateId=null}={}){
+  const normalized=normalizeMasterGuestCandidate(candidate);
+  if(!normalized.first) return { saved:false, reason:'missing_name' };
+  if(updateId){
+    const existing=DB.masterGuests.find(item=>item.id===updateId);
+    if(!existing) return { saved:false, reason:'missing_existing' };
+    mergeMasterGuest(existing, normalized);
+    DB.masterGuests.sort((a,b)=>fullGuestName(a).localeCompare(fullGuestName(b)));
+    save();
+    return { saved:true, mode:'updated', guest:existing };
+  }
+  if(forceNew){
+    DB.masterGuests.push(normalized);
+    DB.masterGuests.sort((a,b)=>fullGuestName(a).localeCompare(fullGuestName(b)));
+    save();
+    return { saved:true, mode:'created', guest:normalized };
+  }
+  const existing=DB.masterGuests.find(item=>isMasterGuestDuplicate(normalized,item));
+  if(existing) return { saved:false, reason:'duplicate', guest:existing };
+  DB.masterGuests.push(normalized);
+  DB.masterGuests.sort((a,b)=>fullGuestName(a).localeCompare(fullGuestName(b)));
+  save();
+  return { saved:true, mode:'created', guest:normalized };
+}
+function openMasterGuestConflictModal({title,sub,candidate,existing,updateLabel='Update Existing',createLabel='Create New Entry'}){
+  const titleEl=document.getElementById('master-resolve-title');
+  const subEl=document.getElementById('master-resolve-sub');
+  const existingEl=document.getElementById('master-resolve-existing');
+  const incomingEl=document.getElementById('master-resolve-incoming');
+  const updateBtn=document.getElementById('master-resolve-update-btn');
+  const createBtn=document.getElementById('master-resolve-create-btn');
+  if(titleEl) titleEl.textContent=title;
+  if(subEl) subEl.textContent=sub;
+  if(existingEl) existingEl.textContent=summarizeMasterGuest(existing);
+  if(incomingEl) incomingEl.textContent=summarizeMasterGuest(candidate);
+  if(updateBtn) updateBtn.textContent=updateLabel;
+  if(createBtn) createBtn.textContent=createLabel;
+  return new Promise(resolve=>{
+    _masterGuestConflictResolver=resolve;
+    openModal('master-guest-resolve');
+  });
+}
 function isMasterGuestDuplicate(candidate, existing){
   const candidateEmail=normalizeEmailValue(candidate.email);
   const existingEmail=normalizeEmailValue(existing.email);
@@ -784,29 +861,13 @@ function addGuestToMasterList(candidate,{silent=false}={}){
     if(!silent) toast('⚠️ Add at least a first name');
     return { added:false, reason:'missing_name' };
   }
-  const hasEmail=!!normalized.email;
-  const hasPhone=!!normalizePhoneValue(normalized.contact);
-  const existing=DB.masterGuests.find(item=>isMasterGuestDuplicate(normalized,item));
-  if(existing){
-    if(!silent) toast('Already in master guest list');
-    return { added:false, reason:'duplicate' };
+  const result=saveMasterGuestRecord(normalized);
+  if(!result.saved){
+    if(!silent) toast(result.reason==='duplicate'?'Already in master guest list':'⚠️ Could not save guest');
+    return { added:false, reason:result.reason, guest:result.guest };
   }
-  if(!hasEmail && !hasPhone){
-    const sameNameWithoutContact=DB.masterGuests.find(item=>
-      fullGuestName(item).toLowerCase()===fullGuestName(normalized).toLowerCase() &&
-      !normalizeEmailValue(item.email) &&
-      !normalizePhoneValue(item.contact)
-    );
-    if(sameNameWithoutContact){
-      if(!silent) toast('⚠️ Same name without email or phone is not allowed twice');
-      return { added:false, reason:'duplicate_name_without_contact' };
-    }
-  }
-  DB.masterGuests.push(normalized);
-  DB.masterGuests.sort((a,b)=>fullGuestName(a).localeCompare(fullGuestName(b)));
-  save();
   if(!silent) toast('Added to master guest list');
-  return { added:true, reason:'added' };
+  return { added:true, reason:'added', guest:result.guest };
 }
 function guestMatchesSession(guest,session){
   const email=normalizeEmailValue(session?.email);
@@ -822,10 +883,39 @@ function getEventGuestsForPicker(){
     .filter(g=>g.eventId===DB.activeEvent)
     .sort((a,b)=>`${a.first||''} ${a.last||''}`.localeCompare(`${b.first||''} ${b.last||''}`));
 }
+function getGroupsForPicker(){
+  const groups=new Set();
+  DB.guests
+    .filter(g=>g.eventId===DB.activeEvent && (g.table||'').trim())
+    .forEach(g=>groups.add((g.table||'').trim()));
+  DB.masterGuests
+    .filter(g=>(g.group||'').trim())
+    .forEach(g=>groups.add((g.group||'').trim()));
+  return Array.from(groups).sort((a,b)=>a.localeCompare(b));
+}
 function getPickerElements(kind){
   if(kind==='gift') return { input:document.getElementById('gi-from'), menu:document.getElementById('guest-picker') };
   if(kind==='cash') return { input:document.getElementById('ca-from'), menu:document.getElementById('cash-guest-picker') };
   return { input:document.getElementById('moi-from'), menu:document.getElementById('moi-guest-picker') };
+}
+function renderGroupPicker(query=''){
+  const input=document.getElementById('g-table');
+  const menu=document.getElementById('group-picker');
+  if(!menu) return;
+  const q=(query||'').trim().toLowerCase();
+  const groups=getGroupsForPicker().filter(group=>!q || group.toLowerCase().includes(q));
+  if(!groups.length){
+    menu.innerHTML='<div class="picker-item"><div class="picker-item-name">No matching groups</div><div class="picker-item-sub">Keep typing to create a new group.</div></div>';
+    menu.style.display='block';
+    return;
+  }
+  menu.innerHTML=groups.map(group=>{
+    const memberCount=DB.guests.filter(g=>g.eventId===DB.activeEvent && (g.table||'').trim()===group).length;
+    const sub=memberCount?`${memberCount} guest${memberCount!==1?'s':''} in this event`:'Saved in master guest list';
+    return `<div class="picker-item" onclick="App.pickGroup('${encodeURIComponent(group)}')"><div class="picker-item-name">${group}</div><div class="picker-item-sub">${sub}</div></div>`;
+  }).join('');
+  menu.style.display='block';
+  if(input && document.activeElement!==input) input.focus();
 }
 function renderGuestPicker(kind,query=''){
   const { menu }=getPickerElements(kind);
@@ -834,17 +924,19 @@ function renderGuestPicker(kind,query=''){
   const guests=getEventGuestsForPicker().filter(g=>{
     const fullName=`${g.first||''} ${g.last||''}`.trim();
     const email=(g.email||'').trim();
-    return !q || fullName.toLowerCase().includes(q) || email.toLowerCase().includes(q);
+    const phone=(g.contact||'').trim();
+    const group=(g.table||'').trim();
+    return !q || fullName.toLowerCase().includes(q) || email.toLowerCase().includes(q) || phone.toLowerCase().includes(q) || group.toLowerCase().includes(q);
   });
   if(!guests.length){
-    menu.innerHTML='<div class="picker-item"><div class="picker-item-name">No matching guests</div><div class="picker-item-sub">Try a different name or email.</div></div>';
+    menu.innerHTML='<div class="picker-item"><div class="picker-item-name">No matching guests</div><div class="picker-item-sub">Try a different name, email, phone, or group.</div></div>';
     menu.style.display='block';
     return;
   }
   menu.innerHTML=guests.map(g=>{
     const fullName=`${g.first||''} ${g.last||''}`.trim()||'Unknown guest';
-    const email=(g.email||'').trim()||'No email added';
-    return `<div class="picker-item" onclick="App.pickGuest('${kind}','${encodeURIComponent(fullName)}')"><div class="picker-item-name">${fullName}</div><div class="picker-item-sub">${email}</div></div>`;
+    const sub=(g.email||'').trim() || (g.contact||'').trim() || (g.table||'').trim() || 'No email, phone, or group added';
+    return `<div class="picker-item" onclick="App.pickGuest('${kind}','${encodeURIComponent(fullName)}')"><div class="picker-item-name">${fullName}</div><div class="picker-item-sub">${sub}</div></div>`;
   }).join('');
   menu.style.display='block';
 }
@@ -860,8 +952,21 @@ function pickGuest(kind,encodedName){
   if(input) input.value=decodeURIComponent(encodedName);
   if(menu) menu.style.display='none';
 }
+function showGroupPicker(){
+  const input=document.getElementById('g-table');
+  renderGroupPicker(input?input.value:'');
+}
+function filterGroupPicker(query){
+  renderGroupPicker(query);
+}
+function pickGroup(encodedGroup){
+  const input=document.getElementById('g-table');
+  const menu=document.getElementById('group-picker');
+  if(input) input.value=decodeURIComponent(encodedGroup);
+  if(menu) menu.style.display='none';
+}
 function hideAllGuestPickers(){
-  ['guest-picker','cash-guest-picker','moi-guest-picker'].forEach(id=>{
+  ['guest-picker','cash-guest-picker','moi-guest-picker','group-picker'].forEach(id=>{
     const menu=document.getElementById(id);
     if(menu) menu.style.display='none';
   });
@@ -1150,6 +1255,11 @@ function openModal(id,{fromPop=false}={}){
 
 function closeModal(id,{fromPop=false}={}){
   document.getElementById('mo-'+id)?.classList.remove('open');
+  if(id==='master-guest-resolve' && _masterGuestConflictResolver){
+    const resolver=_masterGuestConflictResolver;
+    _masterGuestConflictResolver=null;
+    resolver('cancel');
+  }
   if(!fromPop && window.history && window.history.state?.overlay?.type==='modal' && window.history.state.overlay.id===id){
     _suppressOverlayPop=true;
     window.history.back();
@@ -1212,6 +1322,7 @@ let _showPastPickerEvents=false;
 let _masterGuestMode='manage';
 let _masterGuestSearch='';
 let _groupInviteSearch='';
+let _masterGuestConflictResolver=null;
 
 function syncTabHistory(tab,{fromPop=false}={}) {
   if (fromPop || !window.history || !window.history.replaceState) return;
@@ -2228,6 +2339,8 @@ function openAddGuest(){
   document.getElementById('g-rsvp').value='invited';
   document.getElementById('del-guest-btn').style.display='none';
   document.getElementById('send-invite-btn').style.display='none';
+  document.getElementById('guest-master-pick-btn').style.display='block';
+  document.getElementById('guest-master-update-btn').style.display='none';
   populateRoomSelects();
   document.getElementById('g-room-loc').value='';
   document.getElementById('g-room-no').value='';
@@ -2248,6 +2361,8 @@ function openEditGuest(id){
   document.getElementById('g-notes').value=g.notes||'';
   document.getElementById('g-table').value=g.table||'';
   document.getElementById('del-guest-btn').style.display='block';
+  document.getElementById('guest-master-pick-btn').style.display='none';
+  document.getElementById('guest-master-update-btn').style.display='block';
   const hasPhone=g.contact&&g.contact.replace(/\D/g,'').length>=10;
   document.getElementById('send-invite-btn').style.display=hasPhone?'block':'none';
   const primaryRoom=getGuestRoomAssignments(g)[0]||{loc:g.roomLoc||'',no:g.roomNo||''};
@@ -2338,20 +2453,44 @@ function addCurrentGuestToMaster(){
   }
 }
 
-function exportCurrentEventToMaster(){
+async function exportCurrentEventToMaster(){
   if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
   const eventGuests=DB.guests.filter(g=>g.eventId===DB.activeEvent);
   if(!eventGuests.length){toast('⚠️ No guests in this event');return;}
   let added=0;
+  let updated=0;
   let skipped=0;
-  eventGuests.forEach(guest=>{
-    const result=addGuestToMasterList(guest,{silent:true});
-    if(result.added) added++;
-    else skipped++;
-  });
-  save();
+  for(const guest of eventGuests){
+    const candidate=normalizeMasterGuestCandidate(guest);
+    const match=findMasterGuestMatch(candidate);
+    if(!match){
+      const result=saveMasterGuestRecord(candidate);
+      if(result.saved) added++;
+      else skipped++;
+      continue;
+    }
+    const choice=await openMasterGuestConflictModal({
+      title:'Matching Saved Guest Found',
+      sub:'This guest already matches the master guest list. Do you want to update the existing saved guest or create a new entry?',
+      candidate,
+      existing:match.existing,
+      updateLabel:'Update Existing',
+      createLabel:'Create New Entry'
+    });
+    if(choice==='update'){
+      const result=saveMasterGuestRecord(candidate,{updateId:match.existing.id});
+      if(result.saved) updated++;
+      else skipped++;
+    } else if(choice==='create'){
+      const result=saveMasterGuestRecord(candidate,{forceNew:true});
+      if(result.saved) added++;
+      else skipped++;
+    } else {
+      skipped++;
+    }
+  }
   renderMasterGuestList();
-  toast(added?`Added ${added} guest${added!==1?'s':''} to master list${skipped?` · ${skipped} skipped`:''}`:`No new guests added${skipped?` · ${skipped} skipped`:''}`);
+  toast(`${added} added · ${updated} updated${skipped?` · ${skipped} skipped`:''}`);
 }
 
 function renderMasterGuestList(){
@@ -2424,6 +2563,49 @@ function pickMasterGuest(id){
   document.getElementById('g-table').value=guest.group||'';
   closeModal('master-guests');
   toast('Guest details filled from master list');
+}
+
+function resolveMasterGuestConflict(choice){
+  const resolver=_masterGuestConflictResolver;
+  _masterGuestConflictResolver=null;
+  closeModal('master-guest-resolve');
+  if(resolver) resolver(choice);
+}
+
+async function updateEventGuestToMaster(){
+  const candidate=getGuestFormCandidate();
+  if(!candidate.first){toast('⚠️ Add at least a first name');return;}
+  const match=findMasterGuestMatch(candidate);
+  if(match?.type==='email'){
+    const result=saveMasterGuestRecord(candidate,{updateId:match.existing.id});
+    if(result.saved){ renderMasterGuestList(); toast('Master inventory updated using email match'); }
+    return;
+  }
+  if(match?.type==='phone' && !normalizeEmailValue(candidate.email)){
+    const result=saveMasterGuestRecord(candidate,{updateId:match.existing.id});
+    if(result.saved){ renderMasterGuestList(); toast('Master inventory updated using phone match'); }
+    return;
+  }
+  if(match?.type==='name' && !normalizeEmailValue(candidate.email) && !normalizePhoneValue(candidate.contact)){
+    const choice=await openMasterGuestConflictModal({
+      title:'Name Match Found',
+      sub:'A saved guest with the same name already exists. Do you want to update that saved guest or create a new entry?',
+      candidate,
+      existing:match.existing,
+      updateLabel:'Update Existing',
+      createLabel:'Create New Entry'
+    });
+    if(choice==='update'){
+      const result=saveMasterGuestRecord(candidate,{updateId:match.existing.id});
+      if(result.saved){ renderMasterGuestList(); toast('Master inventory updated'); }
+    } else if(choice==='create'){
+      const result=saveMasterGuestRecord(candidate,{forceNew:true});
+      if(result.saved){ renderMasterGuestList(); toast('New master inventory entry created'); }
+    }
+    return;
+  }
+  const result=saveMasterGuestRecord(candidate,{forceNew:true});
+  if(result.saved){ renderMasterGuestList(); toast('Guest added to master inventory'); }
 }
 
 function openMasterGuestEditor(id=null){
@@ -3883,7 +4065,7 @@ window.App={
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
   confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,
-  openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,
+  openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,
   setGiftTab,setGiftCatFilter,selectCat,
@@ -3892,7 +4074,7 @@ window.App={
   openGuestRequestModal,openGuestFeedbackModal,openGuestFoodMenuModal,
   submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireOrganizer(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireOrganizer(resolveGuestRoomRequest),
   toggleGuestFoodLike,toggleGuestFoodSectionLike,
-  showGuestPicker,filterGuestPicker,pickGuest,
+  showGuestPicker,filterGuestPicker,pickGuest,showGroupPicker,filterGroupPicker,pickGroup,
   openGroupInviteModal,filterGroupInvite,importMasterGroup,importMasterGuest,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   openProfileModal,toggleSetting,unlockPremium,clearAllData,
@@ -3921,6 +4103,8 @@ window.setMoiFilter=setMoiFilter;
 // ═══════════════════════════════════════════════
 // Pre-populate profile modal
 openProfileModal(false);
+const groupInviteSearchIcon=document.querySelector('#mo-group-invite .search-ico');
+if(groupInviteSearchIcon) groupInviteSearchIcon.textContent='⌕';
 if (window.history && window.history.replaceState) {
   window.history.replaceState({ tab: 'events' }, '', window.location.href);
 }

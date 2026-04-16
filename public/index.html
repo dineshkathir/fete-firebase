@@ -674,7 +674,10 @@ html.boot-authenticated #auth-screen{display:none}
     </div>
     <div class="fg">
       <label class="fl">Group</label>
-      <input class="fi" type="text" id="g-table" placeholder="e.g. Family, VIP, Bride Side" />
+      <div class="picker-wrap">
+        <input class="fi" type="text" id="g-table" placeholder="e.g. Family, VIP, Bride Side" autocomplete="off" oninput="App.filterGroupPicker(this.value)" onfocus="App.showGroupPicker()" />
+        <div class="picker-menu" id="group-picker"></div>
+      </div>
     </div>
     <div class="fr">
       <div class="fg">
@@ -692,7 +695,8 @@ html.boot-authenticated #auth-screen{display:none}
     </div>
     <div id="room-conflict-indicator" style="display:none"></div>
     <button class="btn-p" onclick="App.saveGuest()">Save Guest</button>
-    <button class="btn-s" style="margin-top:8px" onclick="App.openMasterGuestModal('pick')">Use from Master Guest List</button>
+    <button class="btn-s" style="margin-top:8px" id="guest-master-pick-btn" onclick="App.openMasterGuestModal('pick')">Use from Master Guest List</button>
+    <button class="btn-s" style="margin-top:8px;display:none" id="guest-master-update-btn" onclick="App.updateEventGuestToMaster()">Update to Master Inventory</button>
     <button class="btn-p" style="background:var(--sage-d);margin-top:8px" id="send-invite-btn" onclick="App.sendGuestInvite()" style="display:none">Send WhatsApp Invite</button>
     <button class="btn-s" onclick="App.closeModal('add-guest')">Cancel</button>
     <button class="btn-s btn-danger" id="del-guest-btn" onclick="App.confirmDeleteGuest()" style="display:none">Remove Guest</button>
@@ -1155,6 +1159,26 @@ html.boot-authenticated #auth-screen{display:none}
       <button class="btn-s" onclick="App.closeConfirm()">Cancel</button>
       <button class="btn-p btn-danger" id="confirm-ok" style="margin-top:0;padding:10px">Delete</button>
     </div>
+  </div>
+</div>
+
+<!-- MASTER GUEST RESOLVE -->
+<div class="mo mo-center" id="mo-master-guest-resolve">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="master-resolve-title">Matching Saved Guest Found</div>
+    <div style="font-size:12px;color:var(--txt3);margin:-8px 0 12px;line-height:1.6" id="master-resolve-sub">Choose whether to update the existing saved guest or create a new one.</div>
+    <div style="background:var(--surf2);border:1px solid var(--bord2);border-radius:var(--rs);padding:12px 14px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--txt3);margin-bottom:6px">Existing Saved Guest</div>
+      <div style="font-size:13px;color:var(--txt);line-height:1.6" id="master-resolve-existing"></div>
+    </div>
+    <div style="background:var(--rose-l);border:1px solid var(--rose-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--rose-d);margin-bottom:6px">Incoming Guest</div>
+      <div style="font-size:13px;color:var(--txt);line-height:1.6" id="master-resolve-incoming"></div>
+    </div>
+    <button class="btn-p" id="master-resolve-update-btn" onclick="App.resolveMasterGuestConflict('update')">Update Existing</button>
+    <button class="btn-s" id="master-resolve-create-btn" onclick="App.resolveMasterGuestConflict('create')">Create New Entry</button>
+    <button class="btn-s" onclick="App.resolveMasterGuestConflict('cancel')">Cancel</button>
   </div>
 </div>
 

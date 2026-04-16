@@ -153,6 +153,7 @@ function serializeEvent(event, team, session) {
       DB.guests = Array.from(guestsMap.values());
       DB.gifts = Array.from(giftsMap.values());
       save();
+      NotificationCenter.evaluateRoomAllocations(DB.guests, Auth.currentSession());
       render();
     };
 
@@ -310,6 +311,7 @@ function serializeEvent(event, team, session) {
     if (DB.activeEvent && !visibleIds.has(DB.activeEvent)) DB.activeEvent = DB.events[0]?.id || null;
     if (!DB.activeEvent && DB.events.length) DB.activeEvent = DB.events[0].id;
     save();
+    NotificationCenter.evaluateTeamInvites(DB.events, session);
   }
 
   function loadEventsForSession(session) {
@@ -499,6 +501,7 @@ const Auth = (() => {
     // If first ever user — make them organizer of all events automatically
     showAppShell();
     Cloud.migrateLocalEvents(sess).catch(()=>Cloud.loadEventsForSession(sess).catch(()=>{}));
+    NotificationCenter.initKnownState();
     render();
     if(showWelcomeToast) toast(`Welcome, ${sess.name}!`);
   }
@@ -651,14 +654,15 @@ const Auth = (() => {
         save();
         const shouldWelcome=!cachedSession || cachedSession.id!==sess.id;
         _onLogin(sess, shouldWelcome);
-      } else {
-        clearSession();
-        DB.events=[];DB.guests=[];DB.gifts=[];DB.activeEvent=null;
-        save();
-        showAuthScreen();
-      }
-    });
-  }
+    } else {
+      clearSession();
+      DB.events=[];DB.guests=[];DB.gifts=[];DB.activeEvent=null;
+      NotificationCenter.reset();
+      save();
+      showAuthScreen();
+    }
+  });
+}
 
   function currentSession() { return getSession(); }
 
@@ -688,7 +692,7 @@ let DB = {
   activeEvent: STORE.get('activeEvent')||null,
   profile: STORE.get('profile')||{name:'',email:''},
   premium: STORE.get('premium')||false,
-  settings: {...{rsvpReminders:true,tyReminders:true,exportNotes:true,removeGuestConfirmation:true,currency:'INR'},...(STORE.get('settings')||{})},
+  settings: {...{rsvpReminders:true,tyReminders:true,exportNotes:true,removeGuestConfirmation:true,currency:'INR',appNotifications:false},...(STORE.get('settings')||{})},
 };
 
 function save(){
@@ -703,6 +707,171 @@ function save(){
 }
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+
+const NotificationCenter = (() => {
+  let _ready = false;
+  let _registration = null;
+  let _knownShareIds = new Set();
+  let _knownEventIds = new Set();
+  let _knownRoomAssignments = new Map();
+  let _sharesSeeded = false;
+  let _eventsSeeded = false;
+  let _roomsSeeded = false;
+
+  function supported(){
+    return typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator;
+  }
+
+  async function ensureRegistration(){
+    if(!supported()) return null;
+    if(_registration) return _registration;
+    try{
+      _registration = await navigator.serviceWorker.ready;
+    }catch(e){
+      _registration = null;
+    }
+    return _registration;
+  }
+
+  function enabled(){
+    return supported() && DB.settings.appNotifications===true && Notification.permission==='granted';
+  }
+
+  async function requestPermission(){
+    if(!supported()){
+      toast('⚠️ Notifications are not supported on this device');
+      return false;
+    }
+    const permission = await Notification.requestPermission();
+    if(permission==='granted'){
+      DB.settings.appNotifications=true;
+      save();
+      await ensureRegistration();
+      renderSettings();
+      toast('App notifications enabled');
+      return true;
+    }
+    DB.settings.appNotifications=false;
+    save();
+    renderSettings();
+    toast('⚠️ Notification permission not granted');
+    return false;
+  }
+
+  async function show(title, body, options={}){
+    if(!enabled()) return false;
+    const registration = await ensureRegistration();
+    if(!registration) return false;
+    const payload = {
+      body,
+      tag: options.tag || uid(),
+      renotify: false,
+      badge: '/icons/icon-192.png',
+      icon: '/icons/icon-192.png',
+      data: options.data || {}
+    };
+    if(document.visibilityState === 'visible'){
+      toast(`${title}: ${body}`);
+      return true;
+    }
+    try{
+      await registration.showNotification(title, payload);
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+
+  function initKnownState(){
+    _knownShareIds = new Set(_incomingMasterGuestShares.filter(item=>item.status==='pending').map(item=>item.id));
+    _knownEventIds = new Set(DB.events.map(item=>item.id));
+    const session = Auth.currentSession();
+    _knownRoomAssignments = new Map(
+      DB.guests
+        .filter(guest=>guestMatchesSession(guest, session))
+        .map(guest=>[guest.id, formatGuestRooms(guest)])
+    );
+    _ready = true;
+    _sharesSeeded = false;
+    _eventsSeeded = false;
+    _roomsSeeded = false;
+  }
+
+  function reset(){
+    _ready = false;
+    _knownShareIds = new Set();
+    _knownEventIds = new Set();
+    _knownRoomAssignments = new Map();
+    _sharesSeeded = false;
+    _eventsSeeded = false;
+    _roomsSeeded = false;
+  }
+
+  function evaluateSharedGuestLists(items){
+    const pending = (items||[]).filter(item=>item.status==='pending');
+    if(!_ready || !_sharesSeeded){
+      _knownShareIds = new Set(pending.map(item=>item.id));
+      _sharesSeeded = true;
+      return;
+    }
+    pending.forEach(item=>{
+      if(_knownShareIds.has(item.id)) return;
+      _knownShareIds.add(item.id);
+      show('Shared guest list received', `${item.senderName||item.senderEmail||'Another user'} shared ${formatMasterGuestShareSummary(item)}.`, {
+        tag:`share-${item.id}`,
+        data:{ type:'shared-guest-list', shareId:item.id }
+      });
+    });
+  }
+
+  function evaluateTeamInvites(events, session){
+    const email = normalizeEmailValue(session?.email);
+    const currentIds = new Set((events||[]).map(item=>item.id));
+    if(!_ready || !_eventsSeeded){
+      _knownEventIds = currentIds;
+      _eventsSeeded = true;
+      return;
+    }
+    (events||[]).forEach(event=>{
+      if(_knownEventIds.has(event.id)) return;
+      const team = Cloud.hydrateTeamForSession(event.team||Auth.getTeam(event.id)||[], session);
+      const mine = team.find(member=>normalizeEmailValue(member.email)===email);
+      _knownEventIds.add(event.id);
+      if(!mine || mine.role==='organizer') return;
+      const roleLabel = mine.role==='cash' ? 'Cash Collector' : mine.role==='room' ? 'Room Coordinator' : 'Team Member';
+      show('Team invite received', `You were added to ${event.name} as ${roleLabel}.`, {
+        tag:`team-${event.id}`,
+        data:{ type:'team-invite', eventId:event.id }
+      });
+    });
+    _knownEventIds = currentIds;
+  }
+
+  function evaluateRoomAllocations(guests, session){
+    const mine = (guests||[]).filter(guest=>guestMatchesSession(guest, session));
+    if(!_ready || !_roomsSeeded){
+      _knownRoomAssignments = new Map(mine.map(guest=>[guest.id, formatGuestRooms(guest)]));
+      _roomsSeeded = true;
+      return;
+    }
+    const next = new Map();
+    mine.forEach(guest=>{
+      const previous = _knownRoomAssignments.get(guest.id) || 'Not assigned yet';
+      const current = formatGuestRooms(guest);
+      next.set(guest.id, current);
+      if(current !== previous && current !== 'Not assigned yet'){
+        const eventName = DB.events.find(item=>item.id===guest.eventId)?.name || 'your event';
+        show('Room allocated', `${eventName}: ${current}`, {
+          tag:`room-${guest.id}`,
+          data:{ type:'room-allocation', eventId:guest.eventId, guestId:guest.id }
+        });
+      }
+    });
+    _knownRoomAssignments = next;
+  }
+
+  return { supported, enabled, requestPermission, show, initKnownState, reset, evaluateSharedGuestLists, evaluateTeamInvites, evaluateRoomAllocations };
+})();
 
 // ═══════════════════════════════════════════════
 // HELPERS
@@ -1583,6 +1752,7 @@ let _showScrollTop=false;
 function setMasterGuestShareState(incoming, sent){
   if(Array.isArray(incoming)) _incomingMasterGuestShares=incoming;
   if(Array.isArray(sent)) _sentMasterGuestShares=sent;
+  if(Array.isArray(incoming)) NotificationCenter.evaluateSharedGuestLists(_incomingMasterGuestShares);
   if(_tab==='settings') renderSettings();
   if(document.getElementById('mo-master-guests')?.classList.contains('open')) renderMasterGuestList();
   if(document.getElementById('mo-master-guest-shares')?.classList.contains('open')) renderMasterGuestShares();
@@ -2876,6 +3046,13 @@ function renderSettings(){
   </div>
   <div class="set-sec">
     <div class="set-sec-t">Notifications</div>
+    <div class="set-item" onclick="App.enableAppNotifications()">
+      <div class="set-left">
+        <div class="set-ico" style="background:var(--slate-l)">AP</div>
+        <div><div class="set-lbl">App Notifications</div><div class="set-sub">${NotificationCenter.supported()?(DB.settings.appNotifications&&typeof Notification!=='undefined'&&Notification.permission==='granted'?'Enabled for shared lists, team invites, and room allocation':'Tap to enable browser/app notifications'):'Not supported on this device'}</div></div>
+      </div>
+      <span class="chev">${NotificationCenter.supported()&&DB.settings.appNotifications&&typeof Notification!=='undefined'&&Notification.permission==='granted'?'On':'>'}</span>
+    </div>
     <div class="set-item">
       <div class="set-left">
         <div class="set-ico" style="background:var(--gold-l)">RS</div>
@@ -5061,6 +5238,9 @@ function toggleSetting(key,btn){
   btn.classList.toggle('on',DB.settings[key]);
   save();
 }
+async function enableAppNotifications(){
+  await NotificationCenter.requestPermission();
+}
 function applyCurrencyUI(){
   const symbol=currencySymbol();
   const amountLabels=[document.getElementById('ca-amount-label'),document.getElementById('moi-amount-label')];
@@ -5482,7 +5662,7 @@ window.App={
   showGuestPicker,filterGuestPicker,pickGuest,showGroupPicker,filterGroupPicker,pickGroup,
   openGroupInviteModal,filterGroupInvite,importMasterGroup,importMasterGuest,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
-  openProfileModal,toggleSetting,setCurrency,unlockPremium,clearAllData,
+  openProfileModal,toggleSetting,enableAppNotifications,setCurrency,unlockPremium,clearAllData,
   setGFilter,setGSearch,scrollToTop,openConfirm,closeConfirm,
   limitPhoneDigits,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,

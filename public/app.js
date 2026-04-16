@@ -1083,7 +1083,7 @@ function myManagedEvents(){
   return DB.events.filter(ev=>!ev._isGuestOnly);
 }
 function renderCreateEventState(title,message){
-  return `<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('event',42)}</div><div class="empty-t">${title}</div><div class="empty-s">${message}</div><button class="fab" style="margin-top:16px" onclick="App.openAddEvent()">＋ Create New Event</button></div>`;
+  return `<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('event',42)}</div><div class="empty-t">${title}</div><div class="empty-s">${message}</div></div><div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add event" aria-label="Add event" onclick="App.openAddEvent()">${uiIcon('event',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
 }
 
 function setEventEditorMode(isOrganizerMode){
@@ -1522,6 +1522,7 @@ let _guestListEditMode=false;
 let _guestUndoState=null;
 let _guestUndoTimer=null;
 let _preserveGuestSearchFocus=false;
+let _showGuestScrollTop=false;
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
 const GUEST_SWIPE_LEFT_REVEAL=196;
@@ -1560,6 +1561,7 @@ function switchTab(tab, options={}) {
   
   const mainScroll = document.getElementById('main-scroll');
   if (mainScroll) mainScroll.scrollTop = 0;
+  _showGuestScrollTop=false;
   
   const navTabs = document.querySelector('.tabs');
   if (navTabs) navTabs.style.display = 'flex';
@@ -1811,8 +1813,7 @@ function renderEvents(){
       <div class="no-events-ico" style="color:var(--rose-d)">${uiIcon('event',44)}</div>
       <div class="no-events-t">Welcome to eventise!</div>
       <p class="no-events-s">Manage guest lists and track gifts for all your special events in one beautiful place.</p>
-      <button class="fab" onclick="App.openAddEvent()">＋ Create Your First Event</button>
-    </div>`;
+    </div><div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add event" aria-label="Add event" onclick="App.openAddEvent()">${uiIcon('event',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
     return;
   }
   if(myEvents.length===0&&pastEvents.length){
@@ -1912,9 +1913,9 @@ function renderEvents(){
     : '';
   el.innerHTML=heroHtml+
     `<div class="ph"><div class="ph-title">My Events</div><div class="ph-sub">${myEvents.length} event${myEvents.length!==1?'s':''}</div></div>`+
-    `<button class="fab" onclick="App.openAddEvent()">＋ Create New Event</button>`+
     pastToggle+
-    cards;
+    cards+
+    `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add event" aria-label="Add event" onclick="App.openAddEvent()">${uiIcon('event',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
 }
 
 function renderEventContactsEditor(){
@@ -2342,8 +2343,6 @@ function renderGuests(){
   </div>`;
   const isOrg=Auth.isOrganizer(DB.activeEvent);
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-      <button class="ev-btn" title="Export guests to master guest list" aria-label="Export guests to master guest list" style="display:inline-flex;align-items:center;justify-content:center;padding:10px;margin:0;flex:0 0 auto;width:40px;height:40px" onclick="App.exportCurrentEventToMaster()">${uiIcon('export',16)}</button>
-      <button class="ev-btn" title="Add guests from master guest list" aria-label="Add guests from master guest list" style="display:inline-flex;align-items:center;justify-content:center;padding:10px;margin:0;flex:0 0 auto;width:40px;height:40px" onclick="App.openGroupInviteModal()">${uiIcon('guests',16)}</button>
       ${feedbackGuests.length?`<button class="fchip" style="padding:8px 14px;font-size:12px" onclick="App.scrollGuestsToFeedback()">Jump to Feedback</button>`:''}
     </div>`:'';
   let listHtml='';
@@ -2397,15 +2396,15 @@ function renderGuests(){
       </div>`
     : '';
   el.innerHTML=evSelHtml+
-    `<div class="ph" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div class="ph-title" style="margin-bottom:0">Guest List</div>${isOrg?`<button class="g-edit ${_guestListEditMode?'g-edit-save':''}" title="${_guestListEditMode?'Save guest actions':'Edit guest actions'}" aria-label="${_guestListEditMode?'Save guest actions':'Edit guest actions'}" onclick="App.${_guestListEditMode?'saveGuestRowEdit':'toggleGuestRowEdit'}()">${uiIcon(_guestListEditMode?'save':'edit',14)}</button>`:''}</div>`+
+    `<div class="ph" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div class="ph-title" style="margin-bottom:0">Guest List</div>${isOrg?`<div style="display:flex;align-items:center;gap:8px"><button class="ev-btn" title="Export guests to master guest list" aria-label="Export guests to master guest list" style="display:inline-flex;align-items:center;justify-content:center;padding:8px;margin:0;flex:0 0 auto;width:36px;height:36px" onclick="App.exportCurrentEventToMaster()">${uiIcon('export',15)}</button><button class="g-edit ${_guestListEditMode?'g-edit-save':''}" title="${_guestListEditMode?'Save guest actions':'Edit guest actions'}" aria-label="${_guestListEditMode?'Save guest actions':'Edit guest actions'}" onclick="App.${_guestListEditMode?'saveGuestRowEdit':'toggleGuestRowEdit'}()">${uiIcon(_guestListEditMode?'save':'edit',14)}</button></div>`:''}</div>`+
     statsHtml+
     organizerActions+
     `<div class="search-wrap"><span class="search-ico">${uiIcon('search',14)}</span><input class="search-inp" id="guest-search-input" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
     filtersHtml+listHtml+feedbackHtml+
     `<div class="floating-stack">
       ${isOrg?`<button class="floating-bubble floating-bubble-primary" type="button" title="Add guest" aria-label="Add guest" onclick="App.openAddGuest()">${uiIcon('guests',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button>`:''}
-      <button class="floating-bubble" type="button" title="Scroll to top" aria-label="Scroll to top" onclick="App.scrollToTop()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18V6M7.5 10.5 12 6l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    </div>`;
+    </div>`+
+    `<button class="floating-top-center ${_showGuestScrollTop?'show':''}" type="button" title="Scroll to top" aria-label="Scroll to top" onclick="App.scrollToTop()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17V7M7.5 11.5 12 7l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
   if(_preserveGuestSearchFocus){
     window.requestAnimationFrame(()=>{
       const searchInput=document.getElementById('guest-search-input');
@@ -2711,7 +2710,6 @@ function renderGifts(){
       </div>`;
     }
     const filtered=_giftCatFilter==='all'?physGifts:physGifts.filter(g=>g.cat===_giftCatFilter);
-    body+=`<button class="fab" onclick="App.openAddGift()">＋ Log a Gift</button>`;
     if(physGifts.length===0){
       body+=`<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('gift',42)}</div><div class="empty-t">No gifts yet</div><div class="empty-s">Tap above to log your first gift</div></div>`;
     } else if(filtered.length===0){
@@ -2779,7 +2777,6 @@ function renderGifts(){
       </div>`;
     }
 
-    body+=`<button class="fab" style="background:var(--gold-d);margin-bottom:12px" onclick="App.openAddMoi()">+ Add Cash Gift Entry</button>`;
     if(moiGifts.length===0){
       body+=`<div class="empty"><div class="empty-ico" style="color:var(--gold-d)">₹</div><div class="empty-t">No entries yet</div><div class="empty-s">Record cash received from guests - tap above to start</div></div>`;
     } else {
@@ -2795,7 +2792,10 @@ function renderGifts(){
     }
   }
 
-  el.innerHTML=evSelHtml+`<div class="ph" style="margin-bottom:12px"><div class="ph-title">Gift Tracker</div></div>`+tabBar+body;
+  const floatingGiftAction=_giftTab==='gifts'
+    ? `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add gift" aria-label="Add gift" onclick="App.openAddGift()">${uiIcon('gift',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`
+    : `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add cash gift" aria-label="Add cash gift" onclick="App.openAddMoi()" style="background:var(--gold-d);border-color:var(--gold-d)"><span style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;line-height:1">₹</span><span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
+  el.innerHTML=evSelHtml+`<div class="ph" style="margin-bottom:12px"><div class="ph-title">Gift Tracker</div></div>`+tabBar+body+floatingGiftAction;
 }
 
 // ═══════════════════════════════════════════════
@@ -2912,6 +2912,7 @@ function render(){
   else if(_tab==='guest-portal') renderGuestPortal();
   applyCurrencyUI();
   updateBadges();
+  updateGuestScrollTopVisibility();
 }
 
 function updateBadges(){
@@ -4053,7 +4054,8 @@ function renderRooms(){
   if(locs.length===0){
     el.innerHTML=evSelHtml+
       `<div class="ph"><div class="ph-title">Room Management</div></div>`+
-      `<div class="empty"><div class="empty-ico">${uiIcon('room',42)}</div><div class="empty-t">No rooms configured</div><div class="empty-s">Add room locations in the Event settings to manage guest room allocation.</div><button class="fab" style="margin-top:16px" onclick="App.openEditEvent('${ev.id}')">Configure Rooms</button></div>`;
+      `<div class="empty"><div class="empty-ico">${uiIcon('room',42)}</div><div class="empty-t">No rooms configured</div><div class="empty-s">Add room locations in the Event settings to manage guest room allocation.</div></div>`+
+      `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Configure rooms" aria-label="Configure rooms" onclick="App.openEditEvent('${ev.id}')" style="background:var(--slate-d);border-color:var(--slate-d)">${uiIcon('room',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
     return;
   }
   // build stats
@@ -4126,7 +4128,7 @@ function renderRooms(){
     });
     html+=`</div></div>`;
   });
-  html+=`<button class="fab fab-outline" style="margin-top:8px" onclick="App.openEditEvent('${ev.id}')">⚙️ Edit Room Configuration</button>`;
+  html+=`<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Configure rooms" aria-label="Configure rooms" onclick="App.openEditEvent('${ev.id}')" style="background:var(--slate-d);border-color:var(--slate-d)">${uiIcon('room',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
   el.innerHTML=html;
 }
 
@@ -4842,6 +4844,15 @@ function scrollToTop(){
   mainScroll.scrollTo({top:0,behavior:'smooth'});
 }
 
+function updateGuestScrollTopVisibility(){
+  const mainScroll=document.getElementById('main-scroll');
+  const shouldShow=!!mainScroll && _tab==='guests' && mainScroll.scrollTop>220;
+  if(_showGuestScrollTop===shouldShow) return;
+  _showGuestScrollTop=shouldShow;
+  const btn=document.querySelector('.floating-top-center');
+  if(btn) btn.classList.toggle('show', shouldShow);
+}
+
 function setMoiFilter(f,el){
   document.querySelectorAll('#moi-ty-filter .moi-fchip').forEach(c=>c.classList.remove('on'));
   if(el)el.classList.add('on');
@@ -5173,6 +5184,10 @@ if(false && DB.events.length===0){
 Auth.init();
 
 render();
+
+document.getElementById('main-scroll')?.addEventListener('scroll',()=>{
+  updateGuestScrollTopVisibility();
+},{passive:true});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

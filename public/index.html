@@ -130,6 +130,9 @@ body{overscroll-behavior:none}
 .floating-bubble:active{transform:scale(.97)}
 .floating-bubble-primary{background:var(--rose-d);color:#fff;border-color:var(--rose-d)}
 .floating-bubble svg{width:20px;height:20px;display:block}
+.floating-top-center{position:fixed;left:50%;bottom:calc(var(--tab) + 18px);transform:translateX(-50%) translateY(12px);width:40px;height:40px;border:none;border-radius:999px;background:rgba(255,251,246,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--txt2);box-shadow:0 6px 18px rgba(30,20,16,.12);border:1px solid rgba(143,117,95,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:34}
+.floating-top-center.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.floating-top-center svg{width:16px;height:16px;display:block}
 
 /* ── FILTERS ── */
 .filters{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
@@ -755,8 +758,11 @@ html.boot-authenticated #auth-screen{display:none}
       </div>
     </div>
     <div id="room-conflict-indicator" style="display:none"></div>
-    <button class="btn-p" onclick="App.saveGuest()">Save Guest</button>
-    <button class="btn-s" style="margin-top:8px" onclick="App.openMasterGuestModal('pick')">Use from Master Guest List</button>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+      <button class="btn-s" id="guest-master-pick-btn" style="margin-top:0;flex:1" onclick="App.openMasterGuestModal('pick')">Add From Master Guest List</button>
+      <button class="btn-s" id="guest-master-update-btn" style="margin-top:0;flex:1;display:none" onclick="App.updateEventGuestToMaster()">Update to Master Inventory</button>
+      <button class="btn-p" style="margin:0;flex:1" onclick="App.saveGuest()">Save Guest</button>
+    </div>
     <button class="btn-p" style="background:var(--sage-d);margin-top:8px" id="send-invite-btn" onclick="App.sendGuestInvite()" style="display:none">Send WhatsApp Invite</button>
     <button class="btn-s" onclick="App.closeModal('add-guest')">Cancel</button>
     <button class="btn-s btn-danger" id="del-guest-btn" onclick="App.confirmDeleteGuest()" style="display:none">Remove Guest</button>

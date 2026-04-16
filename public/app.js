@@ -965,6 +965,12 @@ function pickGroup(encodedGroup){
   if(input) input.value=decodeURIComponent(encodedGroup);
   if(menu) menu.style.display='none';
 }
+function rememberLastGuestGroup(groupName){
+  const group=(groupName||'').trim();
+  if(!group) return;
+  DB.settings.lastGuestGroup=group;
+  save();
+}
 function hideAllGuestPickers(){
   ['guest-picker','cash-guest-picker','moi-guest-picker','group-picker'].forEach(id=>{
     const menu=document.getElementById(id);
@@ -972,6 +978,7 @@ function hideAllGuestPickers(){
   });
 }
 document.addEventListener('click',(event)=>{
+  if(!event.target.closest('.g-swipe-wrap')) closeOpenGuestSwipe();
   if(!event.target.closest('.picker-wrap')) hideAllGuestPickers();
 });
 function roomRequestTypeLabel(type){
@@ -1323,6 +1330,11 @@ let _masterGuestMode='manage';
 let _masterGuestSearch='';
 let _groupInviteSearch='';
 let _masterGuestConflictResolver=null;
+let _guestSwipeTapBlockUntil=0;
+let _guestSwipeOpenId=null;
+
+const GUEST_SWIPE_RIGHT_ACTION=88;
+const GUEST_SWIPE_LEFT_REVEAL=156;
 
 function syncTabHistory(tab,{fromPop=false}={}) {
   if (fromPop || !window.history || !window.history.replaceState) return;
@@ -1365,6 +1377,126 @@ function switchTab(tab, options={}) {
   if (teamBtn) teamBtn.style.display = isGuestOnly ? 'none' : 'block';
   
   render();
+}
+
+function resetGuestSwipeRow(wrap,{immediate=false}={}){
+  if(!wrap) return;
+  const card=wrap.querySelector('.g-swipe-card');
+  if(!card) return;
+  if(immediate) card.style.transition='none';
+  card.style.transform='translateX(0px)';
+  wrap.dataset.swipeOpen='false';
+  if(_guestSwipeOpenId===wrap.dataset.guestId) _guestSwipeOpenId=null;
+  if(immediate){
+    requestAnimationFrame(()=>{ card.style.transition=''; });
+  }
+}
+
+function closeOpenGuestSwipe(exceptId=''){
+  document.querySelectorAll('.g-swipe-wrap[data-swipe-open="true"]').forEach(wrap=>{
+    if(exceptId && wrap.dataset.guestId===exceptId) return;
+    resetGuestSwipeRow(wrap);
+  });
+}
+
+function handleGuestRowTap(event,id){
+  if(Date.now()<_guestSwipeTapBlockUntil){
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  openGuestDetail(id);
+}
+
+function applyLastGuestGroup(guestId){
+  const guest=DB.guests.find(item=>item.id===guestId);
+  const group=(DB.settings.lastGuestGroup||'').trim();
+  if(!guest){toast('⚠️ Guest not found');return;}
+  if(!group){toast('⚠️ No recently used group found');return;}
+  if((guest.table||'').trim()===group){toast(`${guest.first} is already in ${group}`);return;}
+  guest.table=group;
+  rememberLastGuestGroup(group);
+  save();syncActiveEventData();renderGuests();
+  toast(`${guest.first} added to ${group}`);
+}
+
+function swipeAllocateRoom(guestId){
+  closeOpenGuestSwipe();
+  prepareGuestRoomAssignment(guestId);
+}
+
+function openAddGiftForGuest(guestId){
+  if(!Auth.isOrganizer(DB.activeEvent)){toast('⚠️ Only Organisers can add gifts');return;}
+  const guest=DB.guests.find(item=>item.id===guestId);
+  if(!guest){toast('⚠️ Guest not found');return;}
+  closeOpenGuestSwipe();
+  openAddGift();
+  document.getElementById('gi-from').value=fullGuestName(guest)||guest.first||'';
+}
+
+function swipeAddGift(guestId){
+  openAddGiftForGuest(guestId);
+}
+
+function initGuestSwipeRows(){
+  const wraps=document.querySelectorAll('.g-swipe-wrap[data-guest-id]');
+  wraps.forEach(wrap=>{
+    if(wrap.dataset.swipeBound==='true') return;
+    wrap.dataset.swipeBound='true';
+    const card=wrap.querySelector('.g-swipe-card');
+    if(!card) return;
+    let startX=0;
+    let startY=0;
+    let deltaX=0;
+    let tracking=false;
+    let horizontal=false;
+    wrap.addEventListener('touchstart',event=>{
+      if(event.touches.length!==1) return;
+      closeOpenGuestSwipe(wrap.dataset.guestId);
+      const touch=event.touches[0];
+      startX=touch.clientX;
+      startY=touch.clientY;
+      deltaX=0;
+      tracking=true;
+      horizontal=false;
+      card.style.transition='none';
+    },{passive:true});
+    wrap.addEventListener('touchmove',event=>{
+      if(!tracking || event.touches.length!==1) return;
+      const touch=event.touches[0];
+      const dx=touch.clientX-startX;
+      const dy=touch.clientY-startY;
+      if(!horizontal){
+        if(Math.abs(dx)<8) return;
+        if(Math.abs(dx)<=Math.abs(dy)) { tracking=false; card.style.transition=''; return; }
+        horizontal=true;
+      }
+      event.preventDefault();
+      deltaX=Math.max(-GUEST_SWIPE_LEFT_REVEAL, Math.min(GUEST_SWIPE_RIGHT_ACTION, dx));
+      card.style.transform=`translateX(${deltaX}px)`;
+    },{passive:false});
+    const finishSwipe=()=>{
+      if(!tracking && !horizontal){ card.style.transition=''; return; }
+      tracking=false;
+      card.style.transition='';
+      if(deltaX>=64){
+        _guestSwipeTapBlockUntil=Date.now()+250;
+        resetGuestSwipeRow(wrap);
+        applyLastGuestGroup(wrap.dataset.guestId);
+        return;
+      }
+      if(deltaX<=-72){
+        _guestSwipeTapBlockUntil=Date.now()+250;
+        card.style.transform=`translateX(-${GUEST_SWIPE_LEFT_REVEAL}px)`;
+        wrap.dataset.swipeOpen='true';
+        _guestSwipeOpenId=wrap.dataset.guestId;
+        return;
+      }
+      resetGuestSwipeRow(wrap);
+    };
+    wrap.addEventListener('touchend',finishSwipe,{passive:true});
+    wrap.addEventListener('touchcancel',finishSwipe,{passive:true});
+  });
 }
 
 window.addEventListener('popstate', (event) => {
@@ -1577,15 +1709,24 @@ function renderGuests(){
       const rsvp=(g.rsvp||'invited').toLowerCase();
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
-      listHtml+=`<div class="g-row anim" onclick="App.openGuestDetail('${g.id}')">
-        <div class="g-av" style="${avStyle(g.id)}">${ini}</div>
-        <div class="g-info">
-          <div class="g-name">${first} ${last}</div>
-          <div class="g-detail">Peoples: ${party}${contact?' · '+contact:''}${email?' · '+email:''}${table?' · '+table:''}${getGuestRoomAssignments(g).length?` · Rooms: ${formatGuestRooms(g)}`:''}${notes?' · '+notes:''}</div>
+      listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
+        <div class="g-swipe-under-left">
+          <div class="g-swipe-hint">Swipe right to add to ${DB.settings.lastGuestGroup||'last group'}</div>
         </div>
-        <div class="g-actions">
-          <button class="rsvp-btn r-${rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${rsvpLabel}</button>
-          <button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">X</button>
+        <div class="g-swipe-under-right">
+          <button class="g-swipe-action-btn g-swipe-action-room" onclick="event.stopPropagation();App.swipeAllocateRoom('${g.id}')">Allocate Room</button>
+          <button class="g-swipe-action-btn g-swipe-action-gift" onclick="event.stopPropagation();App.swipeAddGift('${g.id}')">Add Gift</button>
+        </div>
+        <div class="g-row g-swipe-card anim" onclick="App.handleGuestRowTap(event,'${g.id}')">
+          <div class="g-av" style="${avStyle(g.id)}">${ini}</div>
+          <div class="g-info">
+            <div class="g-name">${first} ${last}</div>
+            <div class="g-detail">Peoples: ${party}${contact?' · '+contact:''}${email?' · '+email:''}${table?' · '+table:''}${getGuestRoomAssignments(g).length?` · Rooms: ${formatGuestRooms(g)}`:''}${notes?' · '+notes:''}</div>
+          </div>
+          <div class="g-actions">
+            <button class="rsvp-btn r-${rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${rsvpLabel}</button>
+            <button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">X</button>
+          </div>
         </div>
       </div>`;
     });
@@ -1615,6 +1756,7 @@ function renderGuests(){
   if(!isOrg){
     el.querySelectorAll('.g-del').forEach(b=>b.style.display='none');
   }
+  initGuestSwipeRows();
 }
 
 // ═══════════════════════════════════════════════
@@ -2403,6 +2545,7 @@ function saveGuest(){
       }
       syncGuestPrimaryRoom(g);
       recomputeGuestRoomRequestStatus(g);
+      rememberLastGuestGroup(g.table);
     }
     toast('Guest updated');
   } else {
@@ -2429,6 +2572,7 @@ function saveGuest(){
       foodMenuLikes:[],
       createdAt:Date.now()
     });
+    rememberLastGuestGroup(document.getElementById('g-table').value.trim());
     toast(`${first} added`);
   }
   save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();
@@ -4064,7 +4208,7 @@ window.App={
   openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,saveEvent,confirmDeleteEvent:confirmDeleteEventGated,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
-  confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,
+  confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,
   openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,

@@ -840,6 +840,18 @@ html.boot-authenticated #auth-screen{display:none}
   </div>
 </div>
 
+<!-- GUEST QUICK ACTIONS -->
+<div class="mo mo-center" id="mo-guest-swipe-actions">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">Guest Actions</div>
+    <div style="font-size:12px;color:var(--txt3);margin:-8px 0 16px;line-height:1.6" id="guest-swipe-sub">Choose what you want to do for this guest.</div>
+    <button class="btn-p" style="background:var(--slate-d)" onclick="App.swipeAllocateRoom()">Allocate Room</button>
+    <button class="btn-p" style="background:var(--gold-d);margin-top:8px" onclick="App.swipeAddGift()">Add Gift</button>
+    <button class="btn-s" onclick="App.closeModal('guest-swipe-actions')">Cancel</button>
+  </div>
+</div>
+
 <!-- PREMIUM -->
 <div class="mo" id="mo-premium">
   <div class="ms" style="text-align:center;padding:24px 22px 32px">

@@ -1332,6 +1332,7 @@ let _groupInviteSearch='';
 let _masterGuestConflictResolver=null;
 let _guestSwipeTapBlockUntil=0;
 let _guestSwipeOpenId=null;
+let _guestSwipeActionGuestId=null;
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
 const GUEST_SWIPE_LEFT_REVEAL=196;
@@ -1421,8 +1422,10 @@ function applyLastGuestGroup(guestId){
 }
 
 function swipeAllocateRoom(guestId){
+  const targetId=guestId||_guestSwipeActionGuestId;
   closeOpenGuestSwipe();
-  prepareGuestRoomAssignment(guestId);
+  closeModal('guest-swipe-actions');
+  prepareGuestRoomAssignment(targetId);
 }
 
 function openAddGiftForGuest(guestId){
@@ -1435,7 +1438,18 @@ function openAddGiftForGuest(guestId){
 }
 
 function swipeAddGift(guestId){
-  openAddGiftForGuest(guestId);
+  const targetId=guestId||_guestSwipeActionGuestId;
+  closeModal('guest-swipe-actions');
+  openAddGiftForGuest(targetId);
+}
+
+function openGuestSwipeActions(guestId){
+  const guest=DB.guests.find(item=>item.id===guestId);
+  if(!guest){toast('⚠️ Guest not found');return;}
+  _guestSwipeActionGuestId=guestId;
+  const sub=document.getElementById('guest-swipe-sub');
+  if(sub) sub.textContent=`Choose what you want to do for ${fullGuestName(guest)||guest.first||'this guest'}.`;
+  openModal('guest-swipe-actions');
 }
 
 function initGuestSwipeRows(){
@@ -1487,9 +1501,8 @@ function initGuestSwipeRows(){
       }
       if(deltaX<=-72){
         _guestSwipeTapBlockUntil=Date.now()+250;
-        card.style.transform=`translateX(-${GUEST_SWIPE_LEFT_REVEAL}px)`;
-        wrap.dataset.swipeOpen='true';
-        _guestSwipeOpenId=wrap.dataset.guestId;
+        resetGuestSwipeRow(wrap);
+        openGuestSwipeActions(wrap.dataset.guestId);
         return;
       }
       resetGuestSwipeRow(wrap);
@@ -2613,10 +2626,18 @@ async function exportCurrentEventToMaster(){
       else skipped++;
       continue;
     }
+    const candidateHasEmail=!!normalizeEmailValue(candidate.email);
+    const candidateHasPhone=!!normalizePhoneValue(candidate.contact);
+    const existingHasEmail=!!normalizeEmailValue(match.existing.email);
+    const existingHasPhone=!!normalizePhoneValue(match.existing.contact);
     if(match.type==='email' || match.type==='phone'){
       const result=saveMasterGuestRecord(candidate,{updateId:match.existing.id});
       if(result.saved) updated++;
       else skipped++;
+      continue;
+    }
+    if(match.type==='name' && !candidateHasEmail && !candidateHasPhone && !existingHasEmail && !existingHasPhone){
+      skipped++;
       continue;
     }
     const choice=await openMasterGuestConflictModal({
@@ -4214,7 +4235,7 @@ window.App={
   openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,saveEvent,confirmDeleteEvent:confirmDeleteEventGated,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
-  confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,
+  confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,openGuestSwipeActions,
   openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,

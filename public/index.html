@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no" class="notranslate">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="google" content="notranslate"/>
 <meta name="google-adsense-account" content="ca-pub-4049798836230099"/>
 <meta name="theme-color" content="#FDF5EF"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -336,8 +337,9 @@ body{overscroll-behavior:none}
 .room-add-inp{flex:1;padding:7px 10px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rxs);font-size:12.5px;color:var(--txt);font-family:'Plus Jakarta Sans',sans-serif;outline:none}
 .room-add-inp:focus{border-color:var(--slate)}
 .room-add-btn{padding:7px 12px;background:var(--slate-d);color:white;border:none;border-radius:var(--rxs);font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap}
-.add-loc-btn{width:100%;padding:9px;border:1.5px dashed var(--bord);border-radius:var(--rs);background:transparent;color:var(--txt3);font-size:12.5px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;margin-bottom:4px}
-.add-loc-btn:hover{border-color:var(--slate);color:var(--slate-d);background:var(--slate-l)}
+.add-loc-btn{width:100%;padding:11px 14px;border:1px solid var(--slate-m);border-radius:var(--rs);background:linear-gradient(180deg,var(--slate-l) 0%,#E2ECF7 100%);color:var(--slate-d);font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;margin-bottom:4px;box-shadow:0 1px 0 rgba(255,255,255,.75) inset,0 2px 8px rgba(47,83,128,.08)}
+.add-loc-btn:hover{border-color:var(--slate-d);color:var(--slate-d);background:linear-gradient(180deg,#DCE9F5 0%,#D2E2F0 100%);box-shadow:0 1px 0 rgba(255,255,255,.85) inset,0 4px 12px rgba(47,83,128,.12)}
+.add-loc-btn:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(255,255,255,.65) inset,0 2px 6px rgba(47,83,128,.1)}
 
 /* ── ROOM CONFLICT INDICATOR ── */
 .room-conflict{background:#FFF3CD;border:1px solid #FFC107;border-radius:var(--rxs);padding:7px 10px;margin-top:6px;font-size:11.5px;color:#7A5C00;display:flex;align-items:center;gap:6px;animation:fadeIn .2s ease}
@@ -426,9 +428,16 @@ body{overscroll-behavior:none}
 .confirm-t{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:6px}
 .confirm-s{font-size:13px;color:var(--txt2);margin-bottom:18px;line-height:1.5}
 .confirm-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.picker-wrap{position:relative}
+.picker-menu{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);box-shadow:var(--sh2);overflow:hidden;z-index:40;display:none;max-height:220px;overflow-y:auto}
+.picker-item{padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--bord2);transition:background .12s}
+.picker-item:last-child{border-bottom:none}
+.picker-item:hover{background:var(--surf2)}
+.picker-item-name{font-size:12.5px;font-weight:600;color:var(--txt)}
+.picker-item-sub{font-size:11px;color:var(--txt3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
-<body>
+<body class="notranslate">
 <!-- ════ AUTH SCREEN ════ -->
 <div id="auth-screen">
   <div class="auth-card">
@@ -704,8 +713,10 @@ body{overscroll-behavior:none}
     </div>
     <div class="fg">
       <label class="fl">From Guest</label>
-      <input class="fi" type="text" id="gi-from" placeholder="Guest name" list="guest-datalist" />
-      <datalist id="guest-datalist"></datalist>
+      <div class="picker-wrap">
+        <input class="fi" type="text" id="gi-from" placeholder="Guest name" autocomplete="off" oninput="App.filterGuestPicker('gift', this.value)" onfocus="App.showGuestPicker('gift')" />
+        <div class="picker-menu" id="guest-picker"></div>
+      </div>
     </div>
     <div class="fr">
       <div class="fg">
@@ -750,8 +761,10 @@ body{overscroll-behavior:none}
     </div>
     <div class="fg">
       <label class="fl">From Guest *</label>
-      <input class="fi" type="text" id="ca-from" placeholder="Guest name" list="cash-guest-datalist" />
-      <datalist id="cash-guest-datalist"></datalist>
+      <div class="picker-wrap">
+        <input class="fi" type="text" id="ca-from" placeholder="Guest name" autocomplete="off" oninput="App.filterGuestPicker('cash', this.value)" onfocus="App.showGuestPicker('cash')" />
+        <div class="picker-menu" id="cash-guest-picker"></div>
+      </div>
     </div>
     <div class="fg">
       <label class="fl">Type</label>
@@ -831,15 +844,6 @@ body{overscroll-behavior:none}
       <div style="font-size:16px;font-weight:500" id="profile-name">Guest Host</div>
       <div style="font-size:12px;color:var(--txt3);margin-top:2px" id="profile-email">Sign in to sync across devices</div>
     </div>
-    <div class="fg">
-      <label class="fl">Display Name</label>
-      <input class="fi" type="text" id="prof-name" placeholder="Your name" />
-    </div>
-    <div class="fg">
-      <label class="fl">Email</label>
-      <input class="fi" type="email" id="prof-email" placeholder="you@email.com" />
-    </div>
-    <button class="btn-p" onclick="App.saveProfile()">Save Profile</button>
     <button class="btn-s" onclick="App.closeModal('profile')">Close</button>
   </div>
 </div>
@@ -884,11 +888,11 @@ body{overscroll-behavior:none}
     </div>
     <div class="fg">
       <label class="fl">Guest Name *</label>
-      <div style="position:relative">
-        <input class="fi" type="text" id="moi-from" placeholder="e.g. Rajan & Family" list="moi-datalist" style="padding-left:38px" />
+      <div class="picker-wrap" style="position:relative">
+        <input class="fi" type="text" id="moi-from" placeholder="e.g. Rajan & Family" autocomplete="off" style="padding-left:38px" oninput="App.filterGuestPicker('moi', this.value)" onfocus="App.showGuestPicker('moi')" />
         <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;pointer-events:none;color:var(--gold-d)">ID</span>
+        <div class="picker-menu" id="moi-guest-picker"></div>
       </div>
-      <datalist id="moi-datalist"></datalist>
     </div>
     <div class="fg">
       <label class="fl">Amount (₹) *</label>

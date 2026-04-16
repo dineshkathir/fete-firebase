@@ -658,6 +658,11 @@ function fmtDate(dateStr){
   if(!dateStr)return '';
   return new Date(dateStr+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
 }
+function todayInputDate(){
+  const now=new Date();
+  const localNow=new Date(now.getTime()-now.getTimezoneOffset()*60000);
+  return localNow.toISOString().slice(0,10);
+}
 function fmtTime(timeStr){
   const raw=String(timeStr||'').trim();
   if(!raw) return '';
@@ -685,8 +690,19 @@ function toTimeInputValue(timeStr){
   return '';
 }
 function fmtVal(v){
-  if(!v||isNaN(v))return '—';
-  return '₹'+Number(v).toLocaleString('en-IN');
+  if(v===null||v===undefined||v===''||isNaN(v))return '—';
+  const amount=Number(v);
+  const abs=Math.abs(amount);
+  if(abs>1000000000)return ':face_with_peeking_eye:';
+  const formatCompact=(value,suffix)=>{
+    const rounded=value>=100?Math.round(value):Math.round(value*10)/10;
+    const text=Number.isInteger(rounded)?String(rounded):rounded.toFixed(1).replace(/\.0$/,'');
+    return `₹${text}${suffix}`;
+  };
+  if(abs>=10000000)return formatCompact(amount/10000000,'Cr');
+  if(abs>=100000)return formatCompact(amount/100000,'L');
+  if(abs>=1000)return formatCompact(amount/1000,'k');
+  return '₹'+amount.toLocaleString('en-IN');
 }
 function initials(first,last){return((first||'')[0]||(last||'')[0]||'?').toUpperCase()+((last||'')[0]||'').toUpperCase()}
 function avStyle(id){const i=Math.abs(id.charCodeAt?[...id].reduce((a,c)=>a+c.charCodeAt(0),0):0)%6;return`background:${AV_BG[i]};color:${AV_C[i]}`}
@@ -700,6 +716,58 @@ function getCurrentGuestInvite(eventId){
   const session=Auth.currentSession();
   return DB.guests.find(g=>g.eventId===eventId&&guestMatchesSession(g,session))||null;
 }
+function getEventGuestsForPicker(){
+  return DB.guests
+    .filter(g=>g.eventId===DB.activeEvent)
+    .sort((a,b)=>`${a.first||''} ${a.last||''}`.localeCompare(`${b.first||''} ${b.last||''}`));
+}
+function getPickerElements(kind){
+  if(kind==='gift') return { input:document.getElementById('gi-from'), menu:document.getElementById('guest-picker') };
+  if(kind==='cash') return { input:document.getElementById('ca-from'), menu:document.getElementById('cash-guest-picker') };
+  return { input:document.getElementById('moi-from'), menu:document.getElementById('moi-guest-picker') };
+}
+function renderGuestPicker(kind,query=''){
+  const { menu }=getPickerElements(kind);
+  if(!menu) return;
+  const q=(query||'').trim().toLowerCase();
+  const guests=getEventGuestsForPicker().filter(g=>{
+    const fullName=`${g.first||''} ${g.last||''}`.trim();
+    const email=(g.email||'').trim();
+    return !q || fullName.toLowerCase().includes(q) || email.toLowerCase().includes(q);
+  });
+  if(!guests.length){
+    menu.innerHTML='<div class="picker-item"><div class="picker-item-name">No matching guests</div><div class="picker-item-sub">Try a different name or email.</div></div>';
+    menu.style.display='block';
+    return;
+  }
+  menu.innerHTML=guests.map(g=>{
+    const fullName=`${g.first||''} ${g.last||''}`.trim()||'Unknown guest';
+    const email=(g.email||'').trim()||'No email added';
+    return `<div class="picker-item" onclick="App.pickGuest('${kind}','${encodeURIComponent(fullName)}')"><div class="picker-item-name">${fullName}</div><div class="picker-item-sub">${email}</div></div>`;
+  }).join('');
+  menu.style.display='block';
+}
+function showGuestPicker(kind){
+  const { input }=getPickerElements(kind);
+  renderGuestPicker(kind,input?input.value:'');
+}
+function filterGuestPicker(kind,query){
+  renderGuestPicker(kind,query);
+}
+function pickGuest(kind,encodedName){
+  const { input, menu }=getPickerElements(kind);
+  if(input) input.value=decodeURIComponent(encodedName);
+  if(menu) menu.style.display='none';
+}
+function hideAllGuestPickers(){
+  ['guest-picker','cash-guest-picker','moi-guest-picker'].forEach(id=>{
+    const menu=document.getElementById(id);
+    if(menu) menu.style.display='none';
+  });
+}
+document.addEventListener('click',(event)=>{
+  if(!event.target.closest('.picker-wrap')) hideAllGuestPickers();
+});
 function roomRequestTypeLabel(type){
   return type==='needs_room'?'Room needed':type==='no_room_needed'?'No room needed':'Not submitted';
 }
@@ -976,11 +1044,27 @@ let _confirmCb=null;
 function openConfirm(title,sub,cb){
   document.getElementById('confirm-t').textContent=title;
   document.getElementById('confirm-s').textContent=sub;
+  const confirmOk=document.getElementById('confirm-ok');
+  if(confirmOk){
+    confirmOk.textContent='Delete';
+    confirmOk.style.background='var(--rose-d)';
+    confirmOk.style.color='white';
+    confirmOk.style.borderColor='var(--rose-d)';
+  }
   _confirmCb=cb;
   document.getElementById('confirm-ok').onclick=()=>{_confirmCb&&_confirmCb();closeConfirm()};
   document.getElementById('confirm-overlay').classList.add('open');
 }
-function closeConfirm(){document.getElementById('confirm-overlay').classList.remove('open')}
+function closeConfirm(){
+  document.getElementById('confirm-overlay').classList.remove('open');
+  const confirmOk=document.getElementById('confirm-ok');
+  if(confirmOk){
+    confirmOk.textContent='Delete';
+    confirmOk.style.background='var(--rose-d)';
+    confirmOk.style.color='white';
+    confirmOk.style.borderColor='var(--rose-d)';
+  }
+}
 document.getElementById('confirm-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('confirm-overlay'))closeConfirm()});
 
 // ═══════════════════════════════════════════════
@@ -991,7 +1075,21 @@ let _guestFilter='all';
 let _guestSearch='';
 let _exportEventId=null;
 
-function switchTab(tab) {
+function syncTabHistory(tab,{fromPop=false}={}) {
+  if (fromPop || !window.history || !window.history.replaceState) return;
+  const currentStateTab = window.history.state && window.history.state.tab;
+  if (tab === 'events') {
+    window.history.replaceState({ tab: 'events' }, '', window.location.href);
+    return;
+  }
+  if (_tab === 'events' || !currentStateTab || currentStateTab === 'events') {
+    window.history.pushState({ tab }, '', window.location.href);
+  } else {
+    window.history.replaceState({ tab }, '', window.location.href);
+  }
+}
+
+function switchTab(tab, options={}) {
   const ev = DB.events.find(e => e.id === DB.activeEvent);
   const isGuestOnly = ev && ev._isGuestOnly;
 
@@ -999,6 +1097,7 @@ function switchTab(tab) {
     tab = 'events';
   }
 
+  syncTabHistory(tab, options);
   _tab = tab;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1018,6 +1117,11 @@ function switchTab(tab) {
   
   render();
 }
+
+window.addEventListener('popstate', (event) => {
+  const nextTab = event.state && event.state.tab ? event.state.tab : 'events';
+  switchTab(nextTab, { fromPop: true });
+});
 
 // ═══════════════════════════════════════════════
 // EVENTS SCREEN
@@ -1460,10 +1564,6 @@ function renderGifts(){
         </div>
         <div style="height:1px;background:var(--bord2);margin-bottom:10px"></div>
         <div class="gift-bot">
-          <div>
-            <div class="gift-val">${g.value?fmtVal(g.value):'—'}</div>
-            ${g.value?`<div style="font-size:9.5px;color:var(--txt4);text-transform:uppercase;letter-spacing:.5px;margin-top:1px">Est. value</div>`:''}
-          </div>
           <div class="gift-actions">
             <button class="ty-btn ty-${g.ty}" onclick="event.stopPropagation();App.cycleTy('${g.id}')" style="display:flex;align-items:center;gap:4px">
               <span style="width:6px;height:6px;border-radius:50%;background:${tyDot};flex-shrink:0;display:inline-block"></span>${tyLabel}
@@ -1518,10 +1618,6 @@ function renderGifts(){
       <div class="gift-strip-cell">
         <span class="gsn">${physGifts.length}</span>
         <span class="gsl">Gifts</span>
-      </div>
-      <div class="gift-strip-cell">
-        <span class="gsn" style="font-size:${physVal>=100000?'15px':'21px'};color:var(--sage-d)">${physVal>0?fmtVal(physVal):'—'}</span>
-        <span class="gsl">Est. Value</span>
       </div>
       <div class="gift-strip-cell">
         <span class="gsn" style="color:${tyPct===100?'var(--sage-d)':'var(--txt)'}">${tySent}<span style="font-size:12px;color:var(--txt3);font-weight:400">/${physGifts.length}</span></span>
@@ -1640,31 +1736,8 @@ function renderGifts(){
 // ═══════════════════════════════════════════════
 function renderSettings(){
   const el=document.getElementById('scr-settings');
-  const sess=Auth.currentSession();
-  const p={
-    name:(sess&&sess.name)||DB.profile.name||'',
-    email:(sess&&sess.email)||DB.profile.email||''
-  };
   el.innerHTML=`
   <div class="ph"><div class="ph-title">Settings</div></div>
-  ${!DB.premium?`<div class="prem-banner">
-    <div class="prem-t">Go Ad-Free</div>
-    <div class="prem-s">Enjoy eventise without interruptions. Unlock premium features coming soon.</div>
-    <button class="prem-cta" onclick="App.openModal('premium')">Upgrade - Rs 499 / year</button>
-  </div>`:`<div class="prem-banner" style="background:linear-gradient(135deg,var(--sage-d) 0%,#2A5038 100%)">
-    <div class="prem-t">Premium Active</div>
-    <div class="prem-s">You're enjoying eventise ad-free. Thank you for your support!</div>
-  </div>`}
-  <div class="set-sec">
-    <div class="set-sec-t">Account</div>
-    <div class="set-item" onclick="App.openProfileModal()">
-      <div class="set-left">
-        <div class="set-ico" style="background:var(--rose-l)">PR</div>
-        <div><div class="set-lbl">Profile</div><div class="set-sub">${p.name||'Set your name'} ${p.email?' - '+p.email:''}</div></div>
-      </div>
-      <span class="chev">></span>
-    </div>
-  </div>
   <div class="set-sec">
     <div class="set-sec-t">Notifications</div>
     <div class="set-item">
@@ -1776,7 +1849,11 @@ function openAddEvent(){
   _eventMenuEditorDisabled=false;
   document.getElementById('mo-event-title').textContent='New Event';
   document.getElementById('ev-name').value='';
-  document.getElementById('ev-date').value='';
+  const dateInput=document.getElementById('ev-date');
+  if(dateInput){
+    dateInput.min=todayInputDate();
+    dateInput.value='';
+  }
   const timeEl=document.getElementById('ev-time');
   if(timeEl){
     timeEl.value='';
@@ -1812,7 +1889,11 @@ function openEditEvent(id){
   const isOrg = Auth.isOrganizer(id);
   document.getElementById('mo-event-title').textContent=isOrg?'Edit Event':'Configure Rooms';
   document.getElementById('ev-name').value=ev.name||'';
-  document.getElementById('ev-date').value=ev.date||'';
+  const dateInput=document.getElementById('ev-date');
+  if(dateInput){
+    dateInput.min=todayInputDate();
+    dateInput.value=ev.date||'';
+  }
   const timeEl=document.getElementById('ev-time');
   if(timeEl){
     timeEl.value=toTimeInputValue(ev.time);
@@ -1872,6 +1953,10 @@ function openEditEvent(id){
 async function saveEvent(){
   const name=document.getElementById('ev-name').value.trim();
   if(!name){toast('⚠️ Please enter an event name');return;}
+  const dateInput=document.getElementById('ev-date');
+  const selectedDate=dateInput?dateInput.value:'';
+  const minDate=todayInputDate();
+  if(!selectedDate){toast('⚠️ Please select an event date');return;}
   const locInp=document.getElementById('ev-loc');
   const locVal=locInp?locInp.value.trim():'';
   const locLat=locInp?parseFloat(locInp.dataset.lat)||null:null;
@@ -1884,10 +1969,14 @@ async function saveEvent(){
     const ev=DB.events.find(e=>e.id===_editing.event);
     if(ev){
       const isOrg=Auth.isOrganizer(ev.id);
+      if(isOrg && selectedDate<minDate && selectedDate!==String(ev.date||'')){
+        toast('⚠️ Event date cannot be in the past');
+        return;
+      }
       ev.roomLocs=JSON.parse(JSON.stringify(_roomLocsTemp));
       if(isOrg){
         ev.name=name;
-        ev.date=document.getElementById('ev-date').value;
+        ev.date=selectedDate;
         ev.time=eventTime;
         ev.type=document.getElementById('ev-type').value;
         ev.location=locVal;
@@ -1902,9 +1991,13 @@ async function saveEvent(){
     }
     toast('Event updated');
   } else {
+    if(selectedDate<minDate){
+      toast('⚠️ Event date cannot be in the past');
+      return;
+    }
     const ev={
       id:uid(),name,
-      date:document.getElementById('ev-date').value,
+      date:selectedDate,
       time:eventTime,
       type:document.getElementById('ev-type').value,
       location:locVal,
@@ -2743,8 +2836,7 @@ function openAddGift(){
   document.getElementById('gift-photo-img').style.display='none';
   document.getElementById('gift-photo-label').style.display='block';
   document.getElementById('del-gift-btn').style.display='none';
-  const dl=document.getElementById('guest-datalist');
-  dl.innerHTML=DB.guests.filter(g=>g.eventId===DB.activeEvent).map(g=>`<option value="${g.first} ${g.last}"></option>`).join('');
+  hideAllGuestPickers();
   openModal('add-gift');
 }
 
@@ -2771,8 +2863,7 @@ function openEditGift(id){
     document.getElementById('gift-photo-label').style.display='block';
   }
   document.getElementById('del-gift-btn').style.display='block';
-  const dl=document.getElementById('guest-datalist');
-  dl.innerHTML=DB.guests.filter(g=>g.eventId===DB.activeEvent).map(g=>`<option value="${g.first} ${g.last}"></option>`).join('');
+  hideAllGuestPickers();
   openModal('add-gift');
 }
 
@@ -2940,12 +3031,6 @@ function exportGifts(){
 // ═══════════════════════════════════════════════
 // PROFILE & SETTINGS
 // ═══════════════════════════════════════════════
-function saveProfile(){
-  DB.profile.name=document.getElementById('prof-name').value.trim();
-  DB.profile.email=document.getElementById('prof-email').value.trim();
-  save();closeModal('profile');render();toast('Profile saved');
-}
-
 function openProfileModal(){
   const sess=Auth.currentSession();
   const name=(sess&&sess.name)||DB.profile.name||'';
@@ -2954,13 +3039,9 @@ function openProfileModal(){
   const nameEl=document.getElementById('profile-name');
   const emailEl=document.getElementById('profile-email');
   const avatarEl=document.getElementById('profile-av');
-  const inputName=document.getElementById('prof-name');
-  const inputEmail=document.getElementById('prof-email');
   if(nameEl) nameEl.textContent=name||'Guest Host';
   if(emailEl) emailEl.textContent=email||'Sign in to sync across devices';
   if(avatarEl) avatarEl.textContent=avatar;
-  if(inputName) inputName.value=name;
-  if(inputEmail) inputEmail.value=email;
   openModal('profile');
 }
 
@@ -3125,8 +3206,7 @@ function openAddMoi(){
     b.style.color=active?'var(--gold-d)':'var(--txt3)';
   });
   document.getElementById('del-moi-btn').style.display='none';
-  const dl=document.getElementById('moi-datalist');
-  dl.innerHTML=DB.guests.filter(g=>g.eventId===DB.activeEvent).map(g=>`<option value="${g.first} ${g.last}"></option>`).join('');
+  hideAllGuestPickers();
   openModal('add-moi');
 }
 
@@ -3149,8 +3229,7 @@ function openEditMoi(id){
     b.style.color=active?'var(--gold-d)':'var(--txt3)';
   });
   document.getElementById('del-moi-btn').style.display='block';
-  const dl=document.getElementById('moi-datalist');
-  dl.innerHTML=DB.guests.filter(g=>g.eventId===DB.activeEvent).map(g=>`<option value="${g.first} ${g.last}"></option>`).join('');
+  hideAllGuestPickers();
   openModal('add-moi');
 }
 
@@ -3210,6 +3289,8 @@ function openUserMenu(){
   );
   document.getElementById('confirm-ok').textContent='Sign Out';
   document.getElementById('confirm-ok').style.background='var(--rose-d)';
+  document.getElementById('confirm-ok').style.color='white';
+  document.getElementById('confirm-ok').style.borderColor='var(--rose-d)';
 }
 
 // Role-gate wrappers — show toast if insufficient permission
@@ -3266,8 +3347,9 @@ window.App={
   openGuestRequestModal,openGuestFeedbackModal,openGuestFoodMenuModal,
   submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireOrganizer(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireOrganizer(resolveGuestRoomRequest),
   toggleGuestFoodLike,toggleGuestFoodSectionLike,
+  showGuestPicker,filterGuestPicker,pickGuest,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
-  saveProfile,openProfileModal,toggleSetting,unlockPremium,clearAllData,
+  openProfileModal,toggleSetting,unlockPremium,clearAllData,
   setGFilter,setGSearch,openConfirm,closeConfirm,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,
   addEventMenu,_updateEventMenuTitle,_updateEventMenuItems,_removeEventMenu,
@@ -3292,6 +3374,9 @@ window.setMoiFilter=setMoiFilter;
 // Pre-populate profile modal
 openProfileModal();
 closeModal('profile');
+if (window.history && window.history.replaceState) {
+  window.history.replaceState({ tab: 'events' }, '', window.location.href);
+}
 
 // Hide ads if premium
 if(DB.premium){

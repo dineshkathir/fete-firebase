@@ -626,7 +626,7 @@ let DB = {
   activeEvent: STORE.get('activeEvent')||null,
   profile: STORE.get('profile')||{name:'',email:''},
   premium: STORE.get('premium')||false,
-  settings: STORE.get('settings')||{rsvpReminders:true,tyReminders:true,exportNotes:true},
+  settings: STORE.get('settings')||{rsvpReminders:true,tyReminders:true,exportNotes:true,removeGuestConfirmation:true},
 };
 
 function save(){
@@ -661,6 +661,7 @@ function uiIcon(name,size=14){
     location:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 20s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>`,
     user:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="12" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 18c1-3 3.4-4.5 6.5-4.5S17.5 15 18.5 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     guests:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="9" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4.5 18c.6-2.7 2.5-4 4.5-4s3.9 1.3 4.5 4M13.5 18c.4-2 1.8-3.1 3.5-3.1 1.4 0 2.7.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    export:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 4v10M8.5 10.5 12 14l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 18.5h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     gift:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 10h16v10H4zM12 10v10M4 14h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10s-3.8-1.5-3.8-3.9c0-1.3 1-2.2 2.2-2.2 1.1 0 1.9.6 2.6 2 .7-1.4 1.5-2 2.6-2 1.2 0 2.2.9 2.2 2.2C15.8 8.5 12 10 12 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>`,
     room:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 19V8.5A1.5 1.5 0 0 1 6.5 7h11A1.5 1.5 0 0 1 19 8.5V19M3 19h18M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M9 11h2v2H9zm4 0h2v2h-2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     search:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`
@@ -1371,8 +1372,8 @@ function renderGuests(){
   const isOrg=Auth.isOrganizer(DB.activeEvent);
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <button class="fab" style="margin-bottom:0;flex:1 1 180px" onclick="App.openAddGuest()">＋ Add Guest</button>
-      <button class="btn-s" style="margin:0;flex:1 1 220px" onclick="App.exportCurrentEventToMaster()">Export Guests to Master Guest List</button>
-      <button class="btn-s" style="margin:0;flex:1 1 220px" onclick="App.openGroupInviteModal()">Invite Group</button>
+      <button class="ev-btn" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 12px;margin:0;flex:0 0 auto;font-size:12px;font-weight:600" onclick="App.exportCurrentEventToMaster()">${uiIcon('export',14)} Export</button>
+      <button class="ev-btn" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 12px;margin:0;flex:0 0 auto;font-size:12px;font-weight:600" onclick="App.openGroupInviteModal()">${uiIcon('guests',14)} Invite Group</button>
       ${feedbackGuests.length?`<button class="fchip" style="padding:8px 14px;font-size:12px" onclick="App.scrollGuestsToFeedback()">Jump to Feedback</button>`:''}
     </div>`:'';
   let listHtml='';
@@ -1818,6 +1819,7 @@ function renderGifts(){
 // ═══════════════════════════════════════════════
 function renderSettings(){
   const el=document.getElementById('scr-settings');
+  const canManageGuestDelete=Auth.isOrganizer(DB.activeEvent);
   el.innerHTML=`
   <div class="ph"><div class="ph-title">Settings</div></div>
   <div class="set-sec">
@@ -1837,6 +1839,16 @@ function renderSettings(){
       <button class="tog ${DB.settings.tyReminders?'on':''}" onclick="App.toggleSetting('tyReminders',this)"></button>
     </div>
   </div>
+  ${canManageGuestDelete?`<div class="set-sec">
+    <div class="set-sec-t">Guest Management</div>
+    <div class="set-item">
+      <div class="set-left">
+        <div class="set-ico" style="background:var(--rose-l)">DG</div>
+        <div><div class="set-lbl">Remove Confirmation</div><div class="set-sub">Ask before deleting a guest</div></div>
+      </div>
+      <button class="tog ${DB.settings.removeGuestConfirmation!==false?'on':''}" onclick="App.toggleSetting('removeGuestConfirmation',this)"></button>
+    </div>
+  </div>`:''}
   <div class="set-sec">
     <div class="set-sec-t">Data & Export</div>
     <div class="set-item" onclick="App.openMasterGuestModal('manage')">
@@ -2342,6 +2354,13 @@ function pickMasterGuest(id){
   toast('Guest details filled from master list');
 }
 
+function deleteGuestById(gid){
+  const g=DB.guests.find(x=>x.id===gid);
+  if(!g) return;
+  DB.guests=DB.guests.filter(x=>x.id!==gid);
+  save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();toast('Guest removed');
+}
+
 function getEventGroups(){
   if(!DB.activeEvent) return [];
   const groups=new Map();
@@ -2423,9 +2442,12 @@ function confirmDeleteGuest(id){
   const gid=id||_editing.guest;
   const g=DB.guests.find(x=>x.id===gid);
   if(!g)return;
+  if(DB.settings.removeGuestConfirmation===false){
+    deleteGuestById(gid);
+    return;
+  }
   openConfirm(`Remove ${g.first} ${g.last}?`,'This guest will be removed from the list.',()=>{
-    DB.guests=DB.guests.filter(x=>x.id!==gid);
-    save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();toast('Guest removed');
+    deleteGuestById(gid);
   });
 }
 

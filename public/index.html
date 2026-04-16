@@ -40,8 +40,8 @@ body{overscroll-behavior:none}
 #app{width:100%;max-width:430px;height:100dvh;max-height:100dvh;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,0.25)}
 
 /* ── HEADER ── */
-.hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 2px;flex-shrink:0;position:relative;z-index:20}
-.logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0}
+.hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 0;flex-shrink:0;position:relative;z-index:20}
+.logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0;margin-left:-12px}
 .logo .brand-lockup{display:block;height:108px;width:auto;max-width:220px}
 .brand-lockup{display:block;height:72px;width:auto}
 .brand-lockup.auth{height:136px}
@@ -226,6 +226,11 @@ body{overscroll-behavior:none}
 .moi-avg-cell{flex:1;background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:10px 8px;text-align:center;box-shadow:var(--sh1)}
 .moi-avg-n{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;display:block;line-height:1;color:var(--gold-d)}
 .moi-avg-l{font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;display:block}
+.moi-entry-row{display:flex;gap:12px;align-items:flex-end}
+.moi-entry-row .fg{margin-bottom:0;flex:1}
+.moi-entry-row #moi-amount-inline{flex:1.15}
+.moi-entry-row #moi-payment-inline{flex:1}
+@media (max-width:640px){.moi-entry-row{gap:10px}}
 /* category picker in modal */
 .cat-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
 .cat-opt{border:1.5px solid var(--bord);border-radius:var(--rs);padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surf)}
@@ -679,7 +684,7 @@ html.boot-authenticated #auth-screen{display:none}
         </div>
       </label>
     </div>
-    <div class="fg">
+    <div class="fr">
       <label class="fl">Guest Feedback</label>
       <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);cursor:pointer">
         <input type="checkbox" id="ev-feedback-enabled" />
@@ -688,6 +693,17 @@ html.boot-authenticated #auth-screen{display:none}
           <div style="font-size:12px;color:var(--txt3);margin-top:2px">Guests can share wishes plus 5-star ratings for food, event, and rooms when this is turned on.</div>
         </div>
       </label>
+    </div>
+      <div class="fg">
+        <label class="fl">Payment Mode</label>
+        <select class="fi" id="moi-notes">
+          <option value="Cash Envelope">Cash Envelope</option>
+          <option value="UPI / GPay">UPI / GPay</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Cheque">Cheque</option>
+          <option value="Gold / Jewellery">Gold / Jewellery</option>
+        </select>
+      </div>
     </div>
     <button class="btn-p" id="ev-bottom-save-btn" onclick="App.saveEvent()">Save Event</button>
     <button class="btn-s" onclick="App.closeModal('add-event')">Cancel</button>
@@ -860,7 +876,7 @@ html.boot-authenticated #auth-screen{display:none}
       </button>
     </div>
     <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
-      <span style="font-size:18px;font-weight:700;color:var(--gold-d)">₹</span>
+      <span id="ca-currency-badge" style="font-size:18px;font-weight:700;color:var(--gold-d)">₹</span>
       <div style="font-size:12px;color:var(--gold-d);line-height:1.5">Track cash envelopes, cheques, UPI transfers and gift cards in one place.</div>
     </div>
     <div class="fg">
@@ -882,7 +898,7 @@ html.boot-authenticated #auth-screen{display:none}
     </div>
     <div class="fr">
       <div class="fg">
-        <label class="fl">Amount (₹) *</label>
+        <label class="fl" id="ca-amount-label">Amount (₹) *</label>
         <input class="fi" type="number" id="ca-val" placeholder="5000" min="0" />
       </div>
       <div class="fg">
@@ -1074,35 +1090,43 @@ html.boot-authenticated #auth-screen{display:none}
       <div class="m-title" id="mo-moi-title" style="margin-bottom:0">Add Cash Gift Entry</div>
       <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rxs);padding:4px 10px;font-size:11px;font-weight:600;color:var(--gold-d)">Cash Gift</div>
     </div>
-    <div style="background:linear-gradient(135deg,var(--gold-l),#fff8ee);border:1px solid var(--gold-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
-      <span style="font-size:20px;flex-shrink:0;margin-top:1px">🪙</span>
-      <div style="font-size:12px;color:var(--gold-d);line-height:1.6">Record cash, cheque or digital transfers received from guests. Each entry is linked to your guest list for easy thank-you tracking.</div>
-    </div>
     <div class="fg">
       <label class="fl">Guest Name *</label>
       <div class="picker-wrap" style="position:relative">
-        <input class="fi" type="text" id="moi-from" placeholder="e.g. Rajan & Family" autocomplete="off" style="padding-left:38px" oninput="App.filterGuestPicker('moi', this.value)" onfocus="App.showGuestPicker('moi')" />
+        <input class="fi" type="text" id="moi-from" placeholder="e.g. Rajan & Family" autocomplete="off" style="padding-left:38px" oninput="App.filterGuestPicker('moi', this.value)" onfocus="App.showGuestPicker('moi')" onkeydown="App.handleMoiFieldEnter('from', event)" />
         <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;pointer-events:none;color:var(--gold-d)">ID</span>
         <div class="picker-menu" id="moi-guest-picker"></div>
       </div>
     </div>
-    <div class="fg">
-      <label class="fl">Amount (₹) *</label>
+    <div class="moi-entry-row">
+    <div class="fg" id="moi-amount-inline">
+      <label class="fl" id="moi-amount-label">Amount (₹) *</label>
       <div style="position:relative">
-        <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:600;color:var(--gold-d);font-family:'Cormorant Garamond',serif;pointer-events:none">₹</span>
-        <input class="fi" type="number" id="moi-amount" placeholder="e.g. 1001" min="0" inputmode="numeric" style="padding-left:28px;font-size:15px;font-weight:500" />
+        <span id="moi-currency-symbol" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:600;color:var(--gold-d);font-family:'Cormorant Garamond',serif;pointer-events:none">₹</span>
+        <input class="fi" type="number" id="moi-amount" placeholder="e.g. 1001" min="0" inputmode="numeric" style="padding-left:28px;font-size:15px;font-weight:500" onkeydown="App.handleMoiFieldEnter('amount', event)" />
       </div>
+    </div>
+    <div class="fg" id="moi-payment-inline">
+      <label class="fl">Payment Mode</label>
+      <select class="fi" id="moi-notes-inline">
+        <option value="Cash Envelope">Cash Envelope</option>
+        <option value="UPI / GPay">UPI / GPay</option>
+        <option value="Bank Transfer">Bank Transfer</option>
+        <option value="Cheque">Cheque</option>
+        <option value="Gold / Jewellery">Gold / Jewellery</option>
+      </select>
+    </div>
     </div>
     <!-- Quick amount chips -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:-4px;margin-bottom:14px">
       <span style="font-size:10.5px;color:var(--txt4);align-self:center;margin-right:2px">Quick:</span>
-      <button onclick="document.getElementById('moi-amount').value=501" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹501</button>
-      <button onclick="document.getElementById('moi-amount').value=1001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹1,001</button>
-      <button onclick="document.getElementById('moi-amount').value=2001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹2,001</button>
-      <button onclick="document.getElementById('moi-amount').value=5001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹5,001</button>
-      <button onclick="document.getElementById('moi-amount').value=10001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹10,001</button>
+      <button data-quick-amount="501" onclick="document.getElementById('moi-amount').value=501" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹501</button>
+      <button data-quick-amount="1001" onclick="document.getElementById('moi-amount').value=1001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹1,001</button>
+      <button data-quick-amount="2001" onclick="document.getElementById('moi-amount').value=2001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹2,001</button>
+      <button data-quick-amount="5001" onclick="document.getElementById('moi-amount').value=5001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹5,001</button>
+      <button data-quick-amount="10001" onclick="document.getElementById('moi-amount').value=10001" style="padding:4px 10px;border-radius:20px;border:1px solid var(--gold-m);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">₹10,001</button>
     </div>
-    <div class="fg">
+    <div class="fg" id="moi-payment-legacy" style="display:none">
       <label class="fl">Payment Mode</label>
       <select class="fi" id="moi-notes">
         <option value="">Select mode…</option>
@@ -1113,7 +1137,7 @@ html.boot-authenticated #auth-screen{display:none}
         <option value="Gold / Jewellery">Gold / Jewellery</option>
       </select>
     </div>
-    <div class="fg">
+    <div class="fg" id="moi-ty-section" style="display:none">
       <label class="fl">Thank-You Status</label>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="moi-ty-picker">
         <button onclick="setMoiTy('pending',this)" class="moi-ty-pick-btn" data-val="pending" style="padding:10px 6px;border:1.5px solid var(--gold-d);border-radius:var(--rs);background:var(--gold-l);color:var(--gold-d);font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">Pending</button>
@@ -1122,8 +1146,8 @@ html.boot-authenticated #auth-screen{display:none}
       </div>
       <input type="hidden" id="moi-ty" value="pending" />
     </div>
-    <button class="btn-p" style="background:var(--gold-d);margin-top:6px" onclick="App.saveMoi()">Save Cash Gift Entry</button>
-    <button class="btn-s" onclick="App.closeModal('add-moi')">Cancel</button>
+    <button class="btn-p" id="moi-save-btn" style="background:var(--gold-d);margin-top:6px" onclick="App.saveMoi({keepOpen:true})">Save &amp; Next</button>
+    <button class="btn-s" id="moi-done-btn" onclick="App.closeModal('add-moi')">Done</button>
     <button class="btn-s btn-danger" id="del-moi-btn" onclick="App.confirmDeleteGift(App._editingGift())" style="display:none">Delete Entry</button>
   </div>
 </div>

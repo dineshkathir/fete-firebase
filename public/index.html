@@ -452,6 +452,26 @@ html.boot-authenticated #auth-screen{display:none}
 .picker-item:hover{background:var(--surf2)}
 .picker-item-name{font-size:12.5px;font-weight:600;color:var(--txt)}
 .picker-item-sub{font-size:11px;color:var(--txt3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.event-contact-card{background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);padding:12px;margin-bottom:8px;box-shadow:var(--sh1)}
+.event-contact-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.event-contact-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--slate-l);color:var(--slate-d);font-size:11px;font-weight:700;letter-spacing:.2px}
+.event-contact-actions{display:flex;align-items:center;gap:6px}
+.event-contact-icon-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--bord);background:var(--surf2);color:var(--txt2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,border-color .15s}
+.event-contact-icon-btn:hover{background:var(--surf3);border-color:var(--txt3)}
+.event-contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.event-contact-note{margin-top:8px;font-size:11.5px;color:var(--txt3);line-height:1.5}
+.event-contact-empty{background:var(--surf);border:1px dashed var(--bord);border-radius:var(--rs);padding:14px;color:var(--txt3);font-size:12px;line-height:1.5}
+.event-contacts-list{display:flex;flex-direction:column;gap:10px}
+.event-contact-view{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:14px;box-shadow:var(--sh1)}
+.event-contact-view-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.event-contact-view-role{font-size:13px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:7px}
+.event-contact-view-name{font-size:13.5px;color:var(--txt);font-weight:500}
+.event-contact-view-meta{font-size:11.5px;color:var(--txt3);line-height:1.6}
+.event-contact-share-btn{border:none;border-radius:999px;background:var(--rose-l);color:var(--rose-d);padding:8px 12px;font-size:11.5px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+.event-contact-share-btn:hover{background:var(--rose-m)}
+@media (max-width:380px){
+  .event-contact-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body class="notranslate">
@@ -614,6 +634,11 @@ html.boot-authenticated #auth-screen{display:none}
       <button class="add-loc-btn" id="ev-food-menu-add-btn" onclick="App.addEventMenu()">ï¼‹ Add Menu Section</button>
     </div>
     <div class="fg">
+      <label class="fl">Event Contacts</label>
+      <div id="ev-contacts"></div>
+      <button class="add-loc-btn" id="ev-contact-add-btn" onclick="App.addEventContact()">＋ Add Event Contact</button>
+    </div>
+    <div class="fg">
       <label class="fl">Guest Room Requests</label>
       <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);cursor:pointer">
         <input type="checkbox" id="ev-room-requests-enabled" checked />
@@ -636,6 +661,16 @@ html.boot-authenticated #auth-screen{display:none}
     <button class="btn-p" onclick="App.saveEvent()">Save Event</button>
     <button class="btn-s" onclick="App.closeModal('add-event')">Cancel</button>
     <button class="btn-s btn-danger" id="del-event-btn" onclick="App.confirmDeleteEvent()" style="display:none">Delete Event</button>
+  </div>
+</div>
+
+<div class="mo" id="mo-event-contacts">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="mo-event-contacts-title">Event Contacts</div>
+    <div id="event-contacts-sub" style="font-size:12.5px;color:var(--txt3);line-height:1.6;margin-bottom:14px"></div>
+    <div id="event-contacts-list" class="event-contacts-list"></div>
+    <button class="btn-s" onclick="App.closeModal('event-contacts')">Close</button>
   </div>
 </div>
 
@@ -846,10 +881,10 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-title">Guest Actions</div>
     <div style="font-size:12px;color:var(--txt3);margin:-8px 0 16px;line-height:1.6" id="guest-swipe-sub">Choose what you want to do for this guest.</div>
-    <button class="btn-p" style="background:var(--slate-d)" onclick="App.swipeAllocateRoom()">Allocate Room</button>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn-p" style="background:var(--rose-d);margin-top:0;flex:1" onclick="App.swipeAddGift()">Add Gift</button>
-      <button class="btn-p" style="background:var(--gold-d);margin-top:0;flex:1" onclick="App.swipeAddCashGift()">Add Cash Gift</button>
+    <button class="btn-p" id="guest-swipe-allocate-btn" style="background:var(--slate-d)" onclick="App.swipeAllocateRoom()">Allocate Room</button>
+    <div id="guest-swipe-gift-row" style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-p" id="guest-swipe-gift-btn" style="background:var(--rose-d);margin-top:0;flex:1" onclick="App.swipeAddGift()">Add Gift</button>
+      <button class="btn-p" id="guest-swipe-cash-btn" style="background:var(--gold-d);margin-top:0;flex:1" onclick="App.swipeAddCashGift()">Add Cash Gift</button>
     </div>
     <button class="btn-s" onclick="App.closeModal('guest-swipe-actions')">Cancel</button>
   </div>

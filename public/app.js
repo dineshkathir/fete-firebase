@@ -70,7 +70,7 @@ const Cloud = (() => {
     }), session);
   }
 
-  function serializeEvent(event, team, session) {
+function serializeEvent(event, team, session) {
     const normalizedTeam = hydrateTeamForSession(team, session);
     return cleanData({
       id: event.id,
@@ -84,6 +84,7 @@ const Cloud = (() => {
       color: event.color || 'rose',
       roomLocs: Array.isArray(event.roomLocs) ? event.roomLocs : [],
       foodMenus: normalizeEventMenus(event.foodMenus),
+      eventContacts: normalizeEventContacts(event.eventContacts),
       roomRequestsEnabled: event.roomRequestsEnabled !== false,
       feedbackEnabled: event.feedbackEnabled === true,
       createdAt: event.createdAt || Date.now(),
@@ -259,6 +260,7 @@ const Cloud = (() => {
       color: event.color || 'rose',
       roomLocs: Array.isArray(event.roomLocs) ? event.roomLocs : [],
       foodMenus: normalizeEventMenus(event.foodMenus),
+      eventContacts: normalizeEventContacts(event.eventContacts),
       roomRequestsEnabled: event.roomRequestsEnabled !== false,
       feedbackEnabled: event.feedbackEnabled === true,
       createdAt: event.createdAt || Date.now()
@@ -660,9 +662,11 @@ function uiIcon(name,size=14){
     time:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 7.5v5l3 1.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     location:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 20s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>`,
     user:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="12" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 18c1-3 3.4-4.5 6.5-4.5S17.5 15 18.5 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    contact:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M7 5.5h10A1.5 1.5 0 0 1 18.5 7v10a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 17V7A1.5 1.5 0 0 1 7 5.5Z" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="10" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8 15c.7-1.6 1.8-2.4 3-2.4s2.3.8 3 2.4M8 3.5h8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     guests:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="9" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4.5 18c.6-2.7 2.5-4 4.5-4s3.9 1.3 4.5 4M13.5 18c.4-2 1.8-3.1 3.5-3.1 1.4 0 2.7.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     edit:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="m12.5 7.5 4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     export:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 20V10M8.5 13.5 12 10l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5.5h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    share:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="18" cy="5.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="6" cy="12" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="18" cy="18.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8 11l7.7-4.2M8 13l7.7 4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     gift:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 10h16v10H4zM12 10v10M4 14h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10s-3.8-1.5-3.8-3.9c0-1.3 1-2.2 2.2-2.2 1.1 0 1.9.6 2.6 2 .7-1.4 1.5-2 2.6-2 1.2 0 2.2.9 2.2 2.2C15.8 8.5 12 10 12 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>`,
     room:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 19V8.5A1.5 1.5 0 0 1 6.5 7h11A1.5 1.5 0 0 1 19 8.5V19M3 19h18M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M9 11h2v2H9zm4 0h2v2h-2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     search:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`
@@ -679,6 +683,14 @@ function daysUntil(dateStr){
 function fmtDate(dateStr){
   if(!dateStr)return '';
   return new Date(dateStr+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+function escapeHtml(value){
+  return String(value ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
 }
 function todayInputDate(){
   const now=new Date();
@@ -1069,11 +1081,43 @@ function normalizeEventMenus(foodMenus){
     : [];
 }
 
+function normalizeEventContacts(eventContacts){
+  return Array.isArray(eventContacts)
+    ? eventContacts
+        .map(contact=>({
+          role:(contact?.role||'').trim(),
+          name:(contact?.name||'').trim(),
+          phone:String(contact?.phone||'').replace(/\D/g,'').slice(0,15),
+          notes:(contact?.notes||'').trim()
+        }))
+        .filter(contact=>contact.role||contact.name||contact.phone||contact.notes)
+    : [];
+}
+
 function normalizeMenuItems(items){
   return String(items||'')
     .split(/\r?\n/)
     .map(item=>item.trim())
     .filter(Boolean);
+}
+
+function formatPhoneNumber(phone){
+  const digits=String(phone||'').replace(/\D/g,'');
+  if(!digits) return '';
+  if(digits.length===10) return `${digits.slice(0,5)} ${digits.slice(5)}`;
+  if(digits.length>10) return `+${digits.slice(0,digits.length-10)} ${digits.slice(-10,-5)} ${digits.slice(-5)}`;
+  return digits;
+}
+
+function buildEventContactShareText(ev, contact){
+  const lines=[
+    ev?.name ? `${ev.name} - Event Contact` : 'Event Contact',
+    contact.role ? `Role: ${contact.role}` : '',
+    contact.name ? `Name: ${contact.name}` : '',
+    contact.phone ? `Phone: ${formatPhoneNumber(contact.phone)}` : '',
+    contact.notes ? `Notes: ${contact.notes}` : ''
+  ].filter(Boolean);
+  return lines.join('\n');
 }
 
 function getFoodMenuLikeKey(menu, itemText){
@@ -1240,6 +1284,7 @@ let _editing={event:null,guest:null,gift:null};
 let _editingMasterGuest=null;
 let _roomLocsTemp=[];
 let _eventMenusTemp=[];
+let _eventContactsTemp=[];
 let _eventMenuEditorDisabled=false;
 let _giftPhotoData=null;
 let _showPastEvents=false;
@@ -1465,6 +1510,22 @@ function openGuestSwipeActions(guestId){
   _guestSwipeActionGuestId=guestId;
   const sub=document.getElementById('guest-swipe-sub');
   if(sub) sub.textContent=`Choose what you want to do for ${fullGuestName(guest)||guest.first||'this guest'}.`;
+  const role=Auth.currentRole(DB.activeEvent);
+  const allocateBtn=document.getElementById('guest-swipe-allocate-btn');
+  const giftBtn=document.getElementById('guest-swipe-gift-btn');
+  const cashBtn=document.getElementById('guest-swipe-cash-btn');
+  const giftRow=document.getElementById('guest-swipe-gift-row');
+  const canAllocate=role==='organizer'||role==='room';
+  const canAddGift=role==='organizer';
+  const canAddCashGift=role==='organizer'||role==='cash';
+  if(allocateBtn) allocateBtn.style.display=canAllocate?'block':'none';
+  if(giftBtn) giftBtn.style.display=canAddGift?'block':'none';
+  if(cashBtn) cashBtn.style.display=canAddCashGift?'block':'none';
+  if(giftRow) giftRow.style.display=(canAddGift||canAddCashGift)?'flex':'none';
+  if(!canAllocate && !canAddGift && !canAddCashGift){
+    toast('⚠️ No guest actions available for your role');
+    return;
+  }
   openModal('guest-swipe-actions');
 }
 
@@ -1598,6 +1659,7 @@ function renderEvents(){
   if(ae){
     const gc=DB.guests.filter(g=>g.eventId===ae.id);
     const giftc=DB.gifts.filter(g=>g.eventId===ae.id);
+    const contactc=normalizeEventContacts(ae.eventContacts).length;
     const attending=gc.filter(g=>g.rsvp==='attending').length;
     const days=daysUntil(ae.date);
     const col=COLORS[ae.color]||COLORS.rose;
@@ -1615,7 +1677,7 @@ function renderEvents(){
         ${normalizeEventMenus(ae.foodMenus).length?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFoodMenuModal('${ae.id}')">Food Menu</button>`:''}
         <button class="ev-btn" onclick="App.setActive('${ae.id}');${isRoomRequestEnabled(ae)?`App.openGuestRequestModal('${ae.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ae)?'Request Room':'View Rooms'}</button>
         ${isFeedbackEnabled(ae)?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFeedbackModal('${ae.id}')">Feedback</button>`:''}
-      </div>`:''}
+      </div>`:`${contactc?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()"><button class="ev-btn" onclick="App.openEventContacts('${ae.id}')">Contacts (${contactc})</button></div>`:''}`}
     </div>`;
   }
   const cards=myEvents.map(ev=>{
@@ -1624,6 +1686,7 @@ function renderEvents(){
     const att=gc.filter(g=>g.rsvp==='attending').length;
     const days=daysUntil(ev.date);
     const col=COLORS[ev.color]||COLORS.rose;
+    const eventContacts=normalizeEventContacts(ev.eventContacts);
     const isAct=ev.id===DB.activeEvent;
     const team=Auth.getTeam(ev.id);
     const myRole=team.find(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase()))?.role||'';
@@ -1647,6 +1710,7 @@ function renderEvents(){
           <div class="ev-stat"><span class="ev-stat-n">${giftc.length}</span><span class="ev-stat-l">Gifts</span></div>`}
         </div>
         ${normalizeEventMenus(ev.foodMenus).length?`<div style="font-size:11.5px;color:var(--txt3);margin-top:10px">${uiIcon('gift',12)} ${normalizeEventMenus(ev.foodMenus).length} menu section${normalizeEventMenus(ev.foodMenus).length!==1?'s':''} added</div>`:''}
+        ${eventContacts.length?`<div style="font-size:11.5px;color:var(--txt3);margin-top:6px">${uiIcon('contact',12)} ${eventContacts.length} saved contact${eventContacts.length!==1?'s':''}</div>`:''}
         <div class="ev-footer">
           ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?days+' days':days===0?'Today':'Past'}</span>`:'<span></span>'}
           <div class="ev-actions">
@@ -1655,7 +1719,8 @@ function renderEvents(){
             ${isFeedbackEnabled(ev)?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFeedbackModal('${ev.id}')">Feedback</button>`:''}
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
               :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
-            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>`}
+            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>
+            ${eventContacts.length?`<button class="ev-btn" onclick="event.stopPropagation();App.openEventContacts('${ev.id}')">Contacts</button>`:''}`}
             ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openEditEvent('${ev.id}')">Edit</button>`:''}
           </div>
         </div>
@@ -1670,6 +1735,119 @@ function renderEvents(){
     `<button class="fab" onclick="App.openAddEvent()">＋ Create New Event</button>`+
     pastToggle+
     cards;
+}
+
+function renderEventContactsEditor(){
+  const container=document.getElementById('ev-contacts');
+  if(!container) return;
+  if(_eventContactsTemp.length===0){
+    container.innerHTML='<div class="event-contact-empty">Add important event contacts here so the organiser can quickly call or share them later. Examples: cameraman, security, cook, decoration, make up, mehendi.</div>';
+    return;
+  }
+  container.innerHTML=_eventContactsTemp.map((contact,idx)=>`
+    <div class="event-contact-card">
+      <div class="event-contact-head">
+        <div class="event-contact-badge">${uiIcon('contact',14)} Contact ${idx+1}</div>
+        <div class="event-contact-actions">
+          <button class="event-contact-icon-btn" type="button" title="Remove contact" aria-label="Remove contact" onclick="App._removeEventContact(${idx})">✕</button>
+        </div>
+      </div>
+      <div class="event-contact-grid">
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Role / Function</label>
+          <input class="fi" type="text" placeholder="Camera Man / Security / Cook" value="${escapeHtml(contact.role||'')}" oninput="App._updateEventContact(${idx},'role',this.value)" ${_eventMenuEditorDisabled?'disabled style="opacity:.6"':''} />
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Contact Name</label>
+          <input class="fi" type="text" placeholder="Vendor or person name" value="${escapeHtml(contact.name||'')}" oninput="App._updateEventContact(${idx},'name',this.value)" ${_eventMenuEditorDisabled?'disabled style="opacity:.6"':''} />
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Mobile Number</label>
+          <input class="fi" type="text" inputmode="tel" maxlength="15" placeholder="Phone number" value="${escapeHtml(contact.phone||'')}" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,15);App._updateEventContact(${idx},'phone',this.value)" ${_eventMenuEditorDisabled?'disabled style="opacity:.6"':''} />
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Notes</label>
+          <input class="fi" type="text" placeholder="Optional details" value="${escapeHtml(contact.notes||'')}" oninput="App._updateEventContact(${idx},'notes',this.value)" ${_eventMenuEditorDisabled?'disabled style="opacity:.6"':''} />
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addEventContact(){
+  if(_eventMenuEditorDisabled) return;
+  _eventContactsTemp.push({role:'',name:'',phone:'',notes:''});
+  renderEventContactsEditor();
+}
+
+function _updateEventContact(idx,key,val){
+  if(_eventMenuEditorDisabled || !_eventContactsTemp[idx]) return;
+  if(key==='phone') _eventContactsTemp[idx][key]=String(val||'').replace(/\D/g,'').slice(0,15);
+  else _eventContactsTemp[idx][key]=String(val||'');
+}
+
+function _removeEventContact(idx){
+  if(_eventMenuEditorDisabled) return;
+  _eventContactsTemp.splice(idx,1);
+  renderEventContactsEditor();
+}
+
+function openEventContacts(eventId){
+  const ev=DB.events.find(item=>item.id===eventId);
+  if(!ev){toast('⚠️ Event not found');return;}
+  const contacts=normalizeEventContacts(ev.eventContacts);
+  document.getElementById('mo-event-contacts-title').textContent=`${ev.name} Contacts`;
+  document.getElementById('event-contacts-sub').textContent=contacts.length
+    ? `${contacts.length} saved contact${contacts.length!==1?'s':''} for this event.`
+    : 'No event contacts saved yet.';
+  document.getElementById('event-contacts-list').innerHTML=contacts.length
+    ? contacts.map((contact,idx)=>`
+        <div class="event-contact-view">
+          <div class="event-contact-view-top">
+            <div>
+              <div class="event-contact-view-role">${uiIcon('contact',14)} ${escapeHtml(contact.role||'General Contact')}</div>
+              ${contact.name?`<div class="event-contact-view-name" style="margin-top:4px">${escapeHtml(contact.name)}</div>`:''}
+            </div>
+            <button class="event-contact-share-btn" type="button" onclick="App.shareEventContact('${ev.id}',${idx})">${uiIcon('share',14)} Share</button>
+          </div>
+          <div class="event-contact-view-meta">
+            ${contact.phone?`Phone: ${escapeHtml(formatPhoneNumber(contact.phone))}<br>`:''}
+            ${contact.notes?`Notes: ${escapeHtml(contact.notes)}`:''}
+            ${!contact.phone&&!contact.notes?'No extra details added yet.':''}
+          </div>
+        </div>
+      `).join('')
+    : '<div class="event-contact-empty">Save event contacts from Edit Event to keep vendors and service contacts handy.</div>';
+  openModal('event-contacts');
+}
+
+async function shareEventContact(eventId, index){
+  const ev=DB.events.find(item=>item.id===eventId);
+  const contacts=normalizeEventContacts(ev?.eventContacts);
+  const contact=contacts[index];
+  if(!ev || !contact){toast('⚠️ Contact not found');return;}
+  const text=buildEventContactShareText(ev, contact);
+  try{
+    if(navigator.share){
+      await navigator.share({ title:`${ev.name} contact`, text });
+    }else if(navigator.clipboard?.writeText){
+      await navigator.clipboard.writeText(text);
+      toast('Contact copied');
+      return;
+    }else{
+      const temp=document.createElement('textarea');
+      temp.value=text;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      temp.remove();
+      toast('Contact copied');
+      return;
+    }
+    toast('Contact shared');
+  }catch(e){
+    if(String(e?.name||'')!=='AbortError') toast('⚠️ Could not share contact');
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -2327,11 +2505,18 @@ function openAddEvent(){
   document.getElementById('ev-feedback-enabled').checked=false;
   document.getElementById('ev-feedback-enabled').disabled=false;
   document.getElementById('ev-feedback-enabled').closest('label').style.opacity='1';
+  const eventContactAddBtn=document.getElementById('ev-contact-add-btn');
+  if(eventContactAddBtn){
+    eventContactAddBtn.disabled=false;
+    eventContactAddBtn.style.opacity='1';
+  }
   document.getElementById('del-event-btn').style.display='none';
   _roomLocsTemp=[];
   _eventMenusTemp=[];
+  _eventContactsTemp=[];
   renderRoomLocsEditor();
   renderEventMenusEditor();
+  renderEventContactsEditor();
   openModal('add-event');
 }
 
@@ -2369,6 +2554,11 @@ function openEditEvent(id){
     feedbackToggle.disabled=!isOrg;
     feedbackToggle.closest('label').style.opacity=isOrg?'1':'0.6';
   }
+  const eventContactAddBtn=document.getElementById('ev-contact-add-btn');
+  if(eventContactAddBtn){
+    eventContactAddBtn.disabled=!isOrg;
+    eventContactAddBtn.style.opacity=isOrg?'1':'0.6';
+  }
   
   // Disable core fields for non-organizers
   ['ev-name', 'ev-date', 'ev-type', 'ev-loc', 'ev-color'].forEach(fid => {
@@ -2384,8 +2574,10 @@ function openEditEvent(id){
   _roomLocsTemp=JSON.parse(JSON.stringify(ev.roomLocs||[]));
   _eventMenuEditorDisabled=!isOrg;
   _eventMenusTemp=JSON.parse(JSON.stringify(normalizeEventMenus(ev.foodMenus)));
+  _eventContactsTemp=JSON.parse(JSON.stringify(normalizeEventContacts(ev.eventContacts)));
   renderRoomLocsEditor();
   renderEventMenusEditor();
+  renderEventContactsEditor();
   // restore map preview if coords saved
   if(ev.locLat&&ev.locLon){
     const frame=document.getElementById('loc-map-frame');
@@ -2437,6 +2629,7 @@ async function saveEvent(){
         ev.locLon=locLon;
         ev.color=document.getElementById('ev-color').value;
         ev.foodMenus=JSON.parse(JSON.stringify(normalizeEventMenus(_eventMenusTemp)));
+        ev.eventContacts=JSON.parse(JSON.stringify(normalizeEventContacts(_eventContactsTemp)));
         if(roomRequestsEnabledEl) ev.roomRequestsEnabled=roomRequestsEnabledEl.checked;
         if(feedbackEnabledEl) ev.feedbackEnabled=feedbackEnabledEl.checked;
       }
@@ -2458,6 +2651,7 @@ async function saveEvent(){
       color:document.getElementById('ev-color').value,
       roomLocs:JSON.parse(JSON.stringify(_roomLocsTemp)),
       foodMenus:JSON.parse(JSON.stringify(normalizeEventMenus(_eventMenusTemp))),
+      eventContacts:JSON.parse(JSON.stringify(normalizeEventContacts(_eventContactsTemp))),
       roomRequestsEnabled:roomRequestsEnabledEl?roomRequestsEnabledEl.checked:true,
       feedbackEnabled:feedbackEnabledEl?feedbackEnabledEl.checked:false,
       createdAt:Date.now()
@@ -4268,6 +4462,7 @@ window.App={
   togglePastEvents(show){_showPastEvents=!!show; renderEvents();},
   switchTab,openModal: window.openModal,closeModal,
   openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,saveEvent,confirmDeleteEvent:confirmDeleteEventGated,
+  addEventContact,_updateEventContact,_removeEventContact,openEventContacts,shareEventContact,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
   confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,

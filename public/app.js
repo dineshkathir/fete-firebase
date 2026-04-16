@@ -501,8 +501,26 @@ const Auth = (() => {
     const team = Cloud.hydrateTeamForSession(getTeam(eventId), sess);
     saveTeam(eventId, team);
     const el = document.getElementById('team-member-list');
+    const selectedEvent = DB.events.find(ev=>ev.id===eventId);
+    const canEdit = isOrganizer(eventId);
+    const inviteEmailEl=document.getElementById('team-invite-email');
+    const inviteRoleEl=document.getElementById('team-invite-role');
+    const inviteBtn=document.querySelector('#mo-team .btn-p[onclick="App.sendTeamInvite()"]');
+    if(inviteEmailEl){
+      inviteEmailEl.disabled=!canEdit;
+      inviteEmailEl.style.opacity=canEdit?'1':'0.6';
+      inviteEmailEl.placeholder=canEdit?'colleague@email.com':'Only organisers can invite members';
+    }
+    if(inviteRoleEl){
+      inviteRoleEl.disabled=!canEdit;
+      inviteRoleEl.style.opacity=canEdit?'1':'0.6';
+    }
+    if(inviteBtn){
+      inviteBtn.disabled=!canEdit;
+      inviteBtn.style.opacity=canEdit?'1':'0.6';
+    }
     if(!el) return;
-    if(team.length===0){el.innerHTML=`<div class="empty" style="padding:20px 0"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('guests',38)}</div><div class="empty-t" style="font-size:16px">No team members yet</div></div>`;return;}
+    if(team.length===0){el.innerHTML=`<div class="empty" style="padding:20px 0"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('guests',38)}</div><div class="empty-t" style="font-size:16px">No team members yet</div><div class="empty-s" style="font-size:12px">${selectedEvent?selectedEvent.name:''}</div></div>`;return;}
     el.innerHTML = team.map(m=>{
       const memberEmail = (m.email||'').trim().toLowerCase();
       const isMe = m.userId===sess?.id || memberEmail===((sess?.email||'').trim().toLowerCase());
@@ -1003,7 +1021,7 @@ function roomRequestStatusLabel(status){
 }
 function getGuestRoomAssignments(guest){
   if(!guest) return [];
-  if(Array.isArray(guest.roomAssignments)&&guest.roomAssignments.length){
+  if(Array.isArray(guest.roomAssignments)){
     return guest.roomAssignments.filter(r=>r&&r.loc&&r.no);
   }
   return guest.roomLoc&&guest.roomNo?[{loc:guest.roomLoc,no:guest.roomNo}]:[];
@@ -1032,6 +1050,32 @@ function myManagedEvents(){
 function renderCreateEventState(title,message){
   return `<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('event',42)}</div><div class="empty-t">${title}</div><div class="empty-s">${message}</div><button class="fab" style="margin-top:16px" onclick="App.openAddEvent()">＋ Create New Event</button></div>`;
 }
+
+function setEventEditorMode(isOrganizerMode){
+  const organizerOnlySections=[
+    'ev-name-section',
+    'ev-datetime-section',
+    'ev-type-section',
+    'ev-location-section',
+    'ev-color-section',
+    'ev-food-section',
+    'ev-room-request-section',
+    'ev-feedback-section'
+  ];
+  organizerOnlySections.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=isOrganizerMode?'':'none';
+  });
+  const roomSection=document.getElementById('ev-room-section');
+  if(roomSection) roomSection.style.display='';
+  const deleteBtn=document.getElementById('del-event-btn');
+  if(deleteBtn && !isOrganizerMode) deleteBtn.style.display='none';
+  const topSaveBtn=document.querySelector('#mo-add-event .m-top-save');
+  if(topSaveBtn) topSaveBtn.textContent=isOrganizerMode?'Save':'Save Rooms';
+  const bottomSaveBtn=document.getElementById('ev-bottom-save-btn');
+  if(bottomSaveBtn) bottomSaveBtn.textContent=isOrganizerMode?'Save Event':'Save Rooms';
+}
+
 function addGuestRoomAssignment(guest,loc,no){
   const rooms=getGuestRoomAssignments(guest);
   if(!rooms.some(room=>room.loc===loc&&room.no===no)) rooms.push({loc,no});
@@ -1290,6 +1334,7 @@ let _roomLocsTemp=[];
 let _eventMenusTemp=[];
 let _eventContactsTemp=[];
 let _editingEventContactsId='';
+let _teamEventId='';
 let _eventMenuEditorDisabled=false;
 let _giftPhotoData=null;
 let _showPastEvents=false;
@@ -1775,7 +1820,7 @@ function renderEventContactsEditor(){
                 </div>
               </div>`
             : `<div class="event-contact-view-role">${uiIcon('contact',14)} ${escapeHtml(contact.name||'Contact')}</div>
-               <div class="event-contact-view-meta" style="margin-top:6px">${contact.phone?`Phone: ${escapeHtml(formatPhoneNumber(contact.phone))}`:'Phone not added yet.'}</div>`}
+               <div class="event-contact-view-meta" style="margin-top:6px">${contact.phone?`${escapeHtml(formatPhoneNumber(contact.phone))}`:'Phone not added yet.'}</div>`}
         </div>
         ${canEdit?`<button class="event-contact-icon-btn" type="button" title="Remove contact" aria-label="Remove contact" onclick="App._removeEventContact(${idx})">✕</button>`:''}
       </div>
@@ -2514,6 +2559,7 @@ function updateBadges(){
 function openAddEvent(){
   _editing.event=null;
   _eventMenuEditorDisabled=false;
+  setEventEditorMode(true);
   document.getElementById('mo-event-title').textContent='New Event';
   document.getElementById('ev-name').value='';
   const dateInput=document.getElementById('ev-date');
@@ -2559,6 +2605,7 @@ function openEditEvent(id){
   if(!ev)return;
   _editing.event=id;
   const isOrg = Auth.isOrganizer(id);
+  setEventEditorMode(isOrg);
   document.getElementById('mo-event-title').textContent=isOrg?'Edit Event':'Configure Rooms';
   document.getElementById('ev-name').value=ev.name||'';
   const dateInput=document.getElementById('ev-date');
@@ -3978,7 +4025,7 @@ function openAddGift(){
   _editing.gift=null;
   _giftPhotoData=null;
   document.getElementById('mo-gift-title').textContent='Log a Gift';
-  ['gi-desc','gi-from','gi-val','gi-notes'].forEach(id=>document.getElementById(id).value='');
+  ['gi-desc','gi-from','gi-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('gi-cat').value='personal';
   document.querySelectorAll('#gi-cat-picker .cat-opt').forEach(o=>o.classList.toggle('sel',o.dataset.cat==='personal'));
   document.getElementById('gi-ty').value='pending';
@@ -3997,7 +4044,6 @@ function openEditGift(id){
   document.getElementById('mo-gift-title').textContent='Edit Gift';
   document.getElementById('gi-desc').value=g.desc||'';
   document.getElementById('gi-from').value=g.from||'';
-  document.getElementById('gi-val').value=g.value||'';
   const cat=g.cat||'other';
   document.getElementById('gi-cat').value=cat;
   document.querySelectorAll('#gi-cat-picker .cat-opt').forEach(o=>o.classList.toggle('sel',o.dataset.cat===cat));
@@ -4036,7 +4082,7 @@ function saveGift(){
     const g=DB.gifts.find(x=>x.id===_editing.gift);
     if(g){
       g.desc=desc;g.from=document.getElementById('gi-from').value.trim();
-      g.value=parseFloat(document.getElementById('gi-val').value)||0;
+      g.value=0;
       g.cat=normalizeGiftCategory(document.getElementById('gi-cat').value);
       g.ty=document.getElementById('gi-ty').value;
       g.notes=document.getElementById('gi-notes').value.trim();
@@ -4047,7 +4093,7 @@ function saveGift(){
     DB.gifts.push({
       id:uid(),eventId:DB.activeEvent,
       desc,from:document.getElementById('gi-from').value.trim(),
-      value:parseFloat(document.getElementById('gi-val').value)||0,
+      value:0,
       cat:normalizeGiftCategory(document.getElementById('gi-cat').value),
       ty:document.getElementById('gi-ty').value,
       notes:document.getElementById('gi-notes').value.trim(),
@@ -4424,26 +4470,65 @@ function saveMoi(){
 // ═══════════════════════════════════════════════
 function openTeamModal(){
   if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
+  _teamEventId=DB.activeEvent;
   if(!Auth.isOrganizer(DB.activeEvent)){
     // Non-organizers can view team but not edit
   }
-  Auth.renderTeamModal(DB.activeEvent);
+  renderTeamEventPickerLabelOnly();
+  const picker=document.getElementById('team-event-picker');
+  if(picker) picker.style.display='none';
+  Auth.renderTeamModal(_teamEventId);
   openModal('team');
 }
 
 async function sendTeamInvite(){
-  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
-  if(!Auth.isOrganizer(DB.activeEvent)){toast('⚠️ Only organisers can invite members');return;}
+  const targetEventId=_teamEventId||DB.activeEvent;
+  if(!targetEventId){toast('⚠️ Select an event first');return;}
+  if(!Auth.isOrganizer(targetEventId)){toast('⚠️ Only organisers can invite members');return;}
   const email=document.getElementById('team-invite-email').value.trim().toLowerCase();
   const role=document.getElementById('team-invite-role').value;
   if(!email){toast('⚠️ Enter an email');return;}
-  const result=Auth.sendInvite(DB.activeEvent,email,role);
+  const result=Auth.sendInvite(targetEventId,email,role);
   if(result==='exists'){toast('⚠️ Already a team member');return;}
   if(result===false){toast('⚠️ Invalid email');return;}
   document.getElementById('team-invite-email').value='';
   const roleLabel=role==='organizer'?'Organizer':role==='cash'?'Cash Collector':'Room Coordinator';
   toast(`${email} added as ${roleLabel}`);
   try{ await Cloud.loadEventsForSession(Auth.currentSession()); }catch(e){}
+  Auth.renderTeamModal(targetEventId);
+}
+
+function renderTeamEventPicker(){
+  const selectedId=_teamEventId||DB.activeEvent;
+  const selectedEvent=DB.events.find(ev=>ev.id===selectedId);
+  const label=document.getElementById('team-event-name');
+  if(label) label.textContent=selectedEvent?selectedEvent.name:'Select an event';
+  const picker=document.getElementById('team-event-picker');
+  if(!picker) return;
+  const sess=Auth.currentSession();
+  const accessibleEvents=DB.events.filter(ev=>Auth.getTeam(ev.id).some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase())));
+  picker.innerHTML=accessibleEvents.map(ev=>{
+    const col=COLORS[ev.color]||COLORS.rose;
+    return `<div class="ep-item ${ev.id===selectedId?'sel':''}" onclick="App.pickTeamEvent('${ev.id}')">
+      <div class="ep-dot" style="background:${col.accent}"></div>
+      <div><div style="font-size:13.5px;font-weight:500">${ev.name}</div><div style="font-size:11.5px;color:var(--txt3)">${TYPE_LABEL[ev.type]} ${ev.date?'· '+fmtDate(ev.date):''}</div></div>
+    </div>`;
+  }).join('');
+  picker.style.display=picker.style.display==='block'?'none':'block';
+}
+
+function pickTeamEvent(id){
+  _teamEventId=id;
+  const picker=document.getElementById('team-event-picker');
+  if(picker) picker.style.display='none';
+  renderTeamEventPickerLabelOnly();
+  Auth.renderTeamModal(id);
+}
+
+function renderTeamEventPickerLabelOnly(){
+  const selectedEvent=DB.events.find(ev=>ev.id===(_teamEventId||DB.activeEvent));
+  const label=document.getElementById('team-event-name');
+  if(label) label.textContent=selectedEvent?selectedEvent.name:'Select an event';
 }
 
 function openUserMenu(){
@@ -4534,7 +4619,7 @@ window.App={
   onRoomAllocGuestChange,
   unassignGuestRoom:unassignGuestRoomGated,
   clearGuestRooms:_requireRoom(clearGuestRooms),
-  openTeamModal,sendTeamInvite,openUserMenu,
+  openTeamModal,sendTeamInvite,renderTeamEventPicker,pickTeamEvent,openUserMenu,
   toast,
 };
 

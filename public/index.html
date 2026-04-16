@@ -40,8 +40,8 @@ body{overscroll-behavior:none}
 #app{width:100%;max-width:430px;height:100dvh;max-height:100dvh;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,0.25)}
 
 /* ── HEADER ── */
-.hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;position:relative;z-index:20}
-.logo{display:flex;align-items:center;color:var(--txt)}
+.hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 6px;flex-shrink:0;position:relative;z-index:20}
+.logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0}
 .logo .brand-lockup{display:block;height:108px;width:auto;max-width:220px}
 .brand-lockup{display:block;height:72px;width:auto}
 .brand-lockup.auth{height:136px}
@@ -274,6 +274,9 @@ body{overscroll-behavior:none}
 .ms::-webkit-scrollbar{display:none}
 .m-handle{width:36px;height:4px;background:var(--bord);border-radius:2px;margin:0 auto 18px}
 .m-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--txt);margin-bottom:16px}
+.m-topbar{position:sticky;top:-18px;z-index:25;background:rgba(253,250,246,.98);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0 14px;margin:-6px 0 14px;border-bottom:1px solid var(--bord2)}
+.m-topbar .m-title{margin-bottom:0;flex:1}
+.m-top-save{width:auto;min-width:88px;margin:0;padding:10px 14px;flex-shrink:0}
 .fg{margin-bottom:12px}
 .fl{font-size:11px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px}
 .fi{width:100%;padding:10px 13px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;color:var(--txt);outline:none;transition:border-color .15s;appearance:none}
@@ -508,7 +511,15 @@ html.boot-authenticated #auth-screen{display:none}
   <div class="ms">
     <div class="m-handle"></div>
     <div class="m-title">Team & Roles</div>
-    <div style="font-size:12px;color:var(--txt3);margin:-8px 0 14px">Manage who can access this event and what they can do.</div>
+    <div style="font-size:12px;color:var(--txt3);margin:-8px 0 14px">Manage who can access each event and what they can do.</div>
+    <div class="ev-sel" onclick="App.renderTeamEventPicker()" style="margin-bottom:12px">
+      <div>
+        <div class="ev-sel-lbl">Selected Event</div>
+        <div class="ev-sel-val" id="team-event-name">Select an event</div>
+      </div>
+      <span class="chev">▼</span>
+    </div>
+    <div id="team-event-picker" style="display:none;margin-bottom:12px"></div>
     <div id="team-member-list"></div>
     <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">Invite by Email</div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -581,12 +592,15 @@ html.boot-authenticated #auth-screen{display:none}
 <div class="mo" id="mo-add-event">
   <div class="ms">
     <div class="m-handle"></div>
-    <div class="m-title" id="mo-event-title">New Event</div>
-    <div class="fg">
+    <div class="m-topbar">
+      <div class="m-title" id="mo-event-title">New Event</div>
+      <button class="btn-p m-top-save" onclick="App.saveEvent()">Save</button>
+    </div>
+    <div class="fg" id="ev-name-section">
       <label class="fl">Event Name *</label>
       <input class="fi" type="text" id="ev-name" placeholder="e.g. Priya & Arjun's Wedding" />
     </div>
-    <div class="fr">
+    <div class="fr" id="ev-datetime-section">
       <div class="fg">
         <label class="fl">Date *</label>
         <input class="fi" type="date" id="ev-date" />
@@ -596,7 +610,7 @@ html.boot-authenticated #auth-screen{display:none}
         <input class="fi" type="time" id="ev-time" />
       </div>
     </div>
-    <div class="fr">
+    <div class="fr" id="ev-type-section">
       <div class="fg">
         <label class="fl">Type</label>
         <select class="fi" id="ev-type">
@@ -608,7 +622,7 @@ html.boot-authenticated #auth-screen{display:none}
         </select>
       </div>
     </div>
-    <div class="fg">
+    <div class="fg" id="ev-location-section">
       <label class="fl">Location</label>
       <div style="position:relative">
         <input class="fi" type="text" id="ev-loc" placeholder="Search venue or address…" autocomplete="off" oninput="App.locSearch(this.value)" onfocus="App.locSearch(this.value)" />
@@ -619,7 +633,7 @@ html.boot-authenticated #auth-screen{display:none}
         <a id="loc-map-link" href="#" target="_blank" style="position:absolute;bottom:6px;right:6px;background:white;border-radius:4px;padding:3px 8px;font-size:10.5px;font-weight:600;color:#1a73e8;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.2);display:flex;align-items:center;gap:3px">Open in Maps</a>
       </div>
     </div>
-    <div class="fg">
+    <div class="fg" id="ev-color-section">
       <label class="fl">Theme Color</label>
       <select class="fi" id="ev-color">
         <option value="rose">Rose</option>
@@ -628,22 +642,22 @@ html.boot-authenticated #auth-screen{display:none}
         <option value="slate">Slate</option>
       </select>
     </div>
-    <div class="fg">
+    <div class="fg" id="ev-room-section">
       <label class="fl">Room Locations</label>
       <div id="ev-room-locs"></div>
       <button class="add-loc-btn" onclick="App.addRoomLocation()">＋ Add Location (Hall / Block / Floor)</button>
     </div>
-    <div class="fg">
+    <div class="fg" id="ev-food-section">
       <label class="fl">Food Menu</label>
       <div id="ev-food-menus"></div>
       <button class="add-loc-btn" id="ev-food-menu-add-btn" onclick="App.addEventMenu()">ï¼‹ Add Menu Section</button>
     </div>
-    <div class="fg">
+    <div class="fg" id="ev-room-request-section">
       <label class="fl" style="display:none">Event Contacts</label>
       <div id="ev-contacts" style="display:none"></div>
       <button class="add-loc-btn" id="ev-contact-add-btn" onclick="App.addEventContact()">＋ Add Event Contact</button>
     </div>
-    <div class="fg">
+    <div class="fg" id="ev-feedback-section">
       <label class="fl">Guest Room Requests</label>
       <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);cursor:pointer">
         <input type="checkbox" id="ev-room-requests-enabled" checked />
@@ -663,7 +677,7 @@ html.boot-authenticated #auth-screen{display:none}
         </div>
       </label>
     </div>
-    <button class="btn-p" onclick="App.saveEvent()">Save Event</button>
+    <button class="btn-p" id="ev-bottom-save-btn" onclick="App.saveEvent()">Save Event</button>
     <button class="btn-s" onclick="App.closeModal('add-event')">Cancel</button>
     <button class="btn-s btn-danger" id="del-event-btn" onclick="App.confirmDeleteEvent()" style="display:none">Delete Event</button>
   </div>
@@ -672,7 +686,10 @@ html.boot-authenticated #auth-screen{display:none}
 <div class="mo" id="mo-event-contacts">
   <div class="ms">
     <div class="m-handle"></div>
-    <div class="m-title" id="mo-event-contacts-title">Event Contacts</div>
+    <div class="m-topbar">
+      <div class="m-title" id="mo-event-contacts-title">Event Contacts</div>
+      <button class="btn-p m-top-save" id="event-contact-top-save-btn" onclick="App.saveEventContacts()">Save</button>
+    </div>
     <div id="event-contacts-sub" style="font-size:12.5px;color:var(--txt3);line-height:1.6;margin-bottom:14px"></div>
     <button class="btn-p" id="event-contact-add-btn" style="margin-bottom:12px" onclick="App.addEventContact()">＋ Add Contact</button>
     <div id="event-contacts-list" class="event-contacts-list"></div>
@@ -685,7 +702,10 @@ html.boot-authenticated #auth-screen{display:none}
 <div class="mo" id="mo-add-guest">
   <div class="ms">
     <div class="m-handle"></div>
-    <div class="m-title" id="mo-guest-title">Add Guest</div>
+    <div class="m-topbar">
+      <div class="m-title" id="mo-guest-title">Add Guest</div>
+      <button class="btn-p m-top-save" onclick="App.saveGuest()">Save</button>
+    </div>
     <div class="fr">
       <div class="fg">
         <label class="fl">First Name *</label>
@@ -758,7 +778,10 @@ html.boot-authenticated #auth-screen{display:none}
 <div class="mo" id="mo-add-gift">
   <div class="ms">
     <div class="m-handle"></div>
-    <div class="m-title" id="mo-gift-title">Log a Gift</div>
+    <div class="m-topbar">
+      <div class="m-title" id="mo-gift-title">Log a Gift</div>
+      <button class="btn-p m-top-save" onclick="App.saveGift()">Save</button>
+    </div>
     <div class="fg">
       <label class="fl">Category</label>
       <div class="cat-picker" id="gi-cat-picker">
@@ -782,19 +805,13 @@ html.boot-authenticated #auth-screen{display:none}
         <div class="picker-menu" id="guest-picker"></div>
       </div>
     </div>
-    <div class="fr">
-      <div class="fg">
-        <label class="fl">Est. Value (₹)</label>
-        <input class="fi" type="number" id="gi-val" placeholder="5000" min="0" inputmode="numeric" />
-      </div>
-      <div class="fg">
-        <label class="fl">Thank-You</label>
-        <select class="fi" id="gi-ty">
-          <option value="pending">Pending</option>
-          <option value="drafted">Drafted</option>
-          <option value="sent">Sent</option>
-        </select>
-      </div>
+    <div class="fg">
+      <label class="fl">Thank-You</label>
+      <select class="fi" id="gi-ty">
+        <option value="pending">Pending</option>
+        <option value="drafted">Drafted</option>
+        <option value="sent">Sent</option>
+      </select>
     </div>
     <div class="fg">
       <label class="fl">Notes</label>
@@ -818,7 +835,10 @@ html.boot-authenticated #auth-screen{display:none}
 <div class="mo" id="mo-add-cash">
   <div class="ms">
     <div class="m-handle"></div>
-    <div class="m-title" id="mo-cash-title">Log Cash / Card Gift</div>
+    <div class="m-topbar">
+      <div class="m-title" id="mo-cash-title">Log Cash / Card Gift</div>
+      <button class="btn-p m-top-save" style="background:var(--gold-d)" onclick="App.saveMoi()">Save</button>
+    </div>
     <div style="background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
       <span style="font-size:18px;font-weight:700;color:var(--gold-d)">₹</span>
       <div style="font-size:12px;color:var(--gold-d);line-height:1.5">Track cash envelopes, cheques, UPI transfers and gift cards in one place.</div>
@@ -858,7 +878,7 @@ html.boot-authenticated #auth-screen{display:none}
       <label class="fl">Notes</label>
       <input class="fi" type="text" id="ca-notes" placeholder="e.g. Given at reception, via GPay…" />
     </div>
-    <button class="btn-p" style="background:var(--gold-d)" onclick="App.saveCash()">Save Cash Gift</button>
+    <button class="btn-p" style="background:var(--gold-d)" onclick="App.saveMoi()">Save Cash Gift</button>
     <button class="btn-s" onclick="App.closeModal('add-cash')">Cancel</button>
     <button class="btn-s btn-danger" id="del-cash-btn" onclick="App.confirmDeleteCash()" style="display:none">Delete</button>
   </div>
@@ -963,7 +983,10 @@ html.boot-authenticated #auth-screen{display:none}
 <div class="mo" id="mo-master-guest-editor">
   <div class="ms">
     <div class="m-handle"></div>
-    <div class="m-title" id="master-guest-editor-title">Add Saved Guest</div>
+    <div class="m-topbar">
+      <div class="m-title" id="master-guest-editor-title">Add Saved Guest</div>
+      <button class="btn-p m-top-save" onclick="App.saveMasterGuest()">Save</button>
+    </div>
     <div class="fr">
       <div class="fg">
         <label class="fl">First Name *</label>

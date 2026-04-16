@@ -1412,6 +1412,7 @@ let _roomLocsTemp=[];
 let _eventMenusTemp=[];
 let _eventContactsTemp=[];
 let _editingEventContactsId='';
+let _eventContactsEditMode=false;
 let _eventContactActionEventId='';
 let _eventContactActionIndex=-1;
 let _teamEventId='';
@@ -1439,6 +1440,7 @@ function closeModal(id,{fromPop=false}={}){
   document.getElementById('mo-'+id)?.classList.remove('open');
   if(id==='event-contacts'){
     _editingEventContactsId='';
+    _eventContactsEditMode=false;
   }
   if(id==='event-contact-actions'){
     _eventContactActionEventId='';
@@ -1519,6 +1521,7 @@ let _directRoomAssignGuestId='';
 let _guestListEditMode=false;
 let _guestUndoState=null;
 let _guestUndoTimer=null;
+let _preserveGuestSearchFocus=false;
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
 const GUEST_SWIPE_LEFT_REVEAL=196;
@@ -1917,11 +1920,16 @@ function renderEvents(){
 function renderEventContactsEditor(){
   const container=document.getElementById('event-contacts-list');
   if(!container) return;
-  const canEdit=!!_editingEventContactsId && Auth.isOrganizer(_editingEventContactsId);
-  const addBtn=document.getElementById('event-contact-add-btn');
-  const saveBtn=document.getElementById('event-contact-save-btn');
-  if(addBtn) addBtn.style.display=canEdit?'block':'none';
-  if(saveBtn) saveBtn.style.display=canEdit?'block':'none';
+  const isOrganizer=!!_editingEventContactsId && Auth.isOrganizer(_editingEventContactsId);
+  const canEdit=isOrganizer && _eventContactsEditMode;
+  const headerBtn=document.getElementById('event-contact-mode-btn');
+  if(headerBtn){
+    headerBtn.style.display=isOrganizer?'inline-flex':'none';
+    headerBtn.classList.toggle('g-edit-save', canEdit);
+    headerBtn.title=canEdit?'Save contacts':'Edit contacts';
+    headerBtn.setAttribute('aria-label', canEdit?'Save contacts':'Edit contacts');
+    headerBtn.innerHTML=uiIcon(canEdit?'save':'edit',14);
+  }
   if(_eventContactsTemp.length===0){
     if(canEdit){
       container.innerHTML=`<div class="event-contact-view">
@@ -1930,20 +1938,18 @@ function renderEventContactsEditor(){
             <div class="event-contact-grid">
               <div class="fg" style="margin-bottom:0">
                 <label class="fl">Name</label>
-                <input class="fi" type="text" placeholder="Makeup / Security / Cook / Driver" oninput="App._updateEventContact(0,'name',this.value)" />
+                <input class="fi" data-contact-name-index="0" type="text" placeholder="Makeup / Security / Cook / Driver" oninput="App._updateEventContact(0,'name',this.value)" />
               </div>
               <div class="fg" style="margin-bottom:0">
                 <label class="fl">Phone Number</label>
-                <input class="fi" type="text" inputmode="tel" maxlength="15" placeholder="Phone number" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,15);App._updateEventContact(0,'phone',this.value)" />
+                <input class="fi event-contact-phone-input" data-contact-index="0" type="text" inputmode="tel" maxlength="15" placeholder="Phone number" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,15);App._updateEventContact(0,'phone',this.value)" onkeydown="App.handleEventContactPhoneKey(event,0)" />
               </div>
             </div>
           </div>
           <button class="event-contact-icon-btn" type="button" title="Remove contact" aria-label="Remove contact" onclick="App._removeEventContact(0)">✕</button>
         </div>
-        <div class="event-contact-view-actions">
-          <button class="event-contact-share-btn" type="button" onclick="App.shareEventContact('${_editingEventContactsId}',0)">${uiIcon('share',14)} Share</button>
-        </div>
       </div>`;
+      focusPendingEventContactRow();
       return;
     }
     container.innerHTML='<div class="event-contact-empty">No event contacts saved yet. Add key numbers here and use call, WhatsApp, or share whenever needed.</div>';
@@ -1958,18 +1964,15 @@ function renderEventContactsEditor(){
               <div class="event-contact-grid">
                 <div class="fg" style="margin-bottom:0">
                   <label class="fl">Name</label>
-                  <input class="fi" type="text" placeholder="Camera Man / Security / Cook" value="${escapeHtml(contact.name||'')}" oninput="App._updateEventContact(${idx},'name',this.value)" />
+                  <input class="fi" data-contact-name-index="${idx}" type="text" placeholder="Camera Man / Security / Cook" value="${escapeHtml(contact.name||'')}" oninput="App._updateEventContact(${idx},'name',this.value)" />
                 </div>
                 <div class="fg" style="margin-bottom:0">
                   <label class="fl">Phone Number</label>
-                  <input class="fi" type="text" inputmode="tel" maxlength="15" placeholder="Phone number" value="${escapeHtml(contact.phone||'')}" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,15);App._updateEventContact(${idx},'phone',this.value)" />
+                  <input class="fi event-contact-phone-input" data-contact-index="${idx}" type="text" inputmode="tel" maxlength="15" placeholder="Phone number" value="${escapeHtml(contact.phone||'')}" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,15);App._updateEventContact(${idx},'phone',this.value)" onkeydown="App.handleEventContactPhoneKey(event,${idx})" />
                 </div>
               </div>
             </div>
             <button class="event-contact-icon-btn" type="button" title="Remove contact" aria-label="Remove contact" onclick="App._removeEventContact(${idx})">✕</button>
-          </div>
-          <div class="event-contact-view-actions">
-            <button class="event-contact-share-btn" type="button" onclick="App.shareEventContact('${_editingEventContactsId}',${idx})">${uiIcon('share',14)} Share</button>
           </div>
         </div>
       `;
@@ -1989,13 +1992,30 @@ function renderEventContactsEditor(){
       </div>
     `;
   }).join('');
-  if(!canEdit) initEventContactSwipeRows();
+  if(canEdit) focusPendingEventContactRow();
+  else initEventContactSwipeRows();
 }
 
 function addEventContact(){
   if(!_editingEventContactsId || !Auth.isOrganizer(_editingEventContactsId)) return;
   _eventContactsTemp.push({name:'',phone:''});
   renderEventContactsEditor();
+}
+
+function ensureTrailingEventContactRow(){
+  if(!_editingEventContactsId || !Auth.isOrganizer(_editingEventContactsId) || !_eventContactsEditMode) return false;
+  const last=_eventContactsTemp[_eventContactsTemp.length-1];
+  if(last && !last.name && !last.phone) return false;
+  _eventContactsTemp.push({name:'',phone:''});
+  return true;
+}
+
+function focusPendingEventContactRow(){
+  if(!_eventContactsEditMode) return;
+  window.requestAnimationFrame(()=>{
+    const input=document.querySelector('#event-contacts-list .event-contact-view:last-child input[data-contact-name-index]');
+    input?.focus();
+  });
 }
 
 function _updateEventContact(idx,key,val){
@@ -2007,6 +2027,9 @@ function _updateEventContact(idx,key,val){
 function _removeEventContact(idx){
   if(!_editingEventContactsId || !Auth.isOrganizer(_editingEventContactsId)) return;
   _eventContactsTemp.splice(idx,1);
+  if(_eventContactsEditMode && _eventContactsTemp.length===0){
+    _eventContactsTemp=[{name:'',phone:''}];
+  }
   renderEventContactsEditor();
 }
 
@@ -2014,12 +2037,10 @@ function openEventContacts(eventId){
   const ev=DB.events.find(item=>item.id===eventId);
   if(!ev){toast('⚠️ Event not found');return;}
   _editingEventContactsId=eventId;
+  _eventContactsEditMode=false;
   _eventContactActionEventId='';
   _eventContactActionIndex=-1;
   _eventContactsTemp=JSON.parse(JSON.stringify(normalizeEventContacts(ev.eventContacts)));
-  if(Auth.isOrganizer(eventId) && _eventContactsTemp.length===0){
-    _eventContactsTemp=[{name:'',phone:''}];
-  }
   document.getElementById('mo-event-contacts-title').textContent=`${ev.name} Contacts`;
   document.getElementById('event-contacts-sub').textContent=Auth.isOrganizer(eventId)
     ? 'Manage event contact names and phone numbers here.'
@@ -2051,10 +2072,42 @@ async function saveEventContacts(){
     render();
     return;
   }
+  _eventContactsEditMode=false;
   render();
   renderEventContactsEditor();
-  closeModal('event-contacts');
   toast('Event contacts updated');
+}
+
+function toggleEventContactsEditMode(){
+  if(!_editingEventContactsId || !Auth.isOrganizer(_editingEventContactsId)) return;
+  _eventContactsEditMode=true;
+  if(_eventContactsTemp.length===0) _eventContactsTemp=[{name:'',phone:''}];
+  else ensureTrailingEventContactRow();
+  renderEventContactsEditor();
+}
+
+function handleEventContactsHeaderAction(){
+  if(!_editingEventContactsId || !Auth.isOrganizer(_editingEventContactsId)) return;
+  if(_eventContactsEditMode){
+    saveEventContacts();
+    return;
+  }
+  toggleEventContactsEditMode();
+}
+
+function handleEventContactPhoneKey(event,idx){
+  if(!_eventContactsEditMode) return;
+  if(event.key!=='Enter' && event.key!=='Tab') return;
+  const row=_eventContactsTemp[idx];
+  if(!row || !row.phone.trim()) return;
+  event.preventDefault();
+  const added=idx===_eventContactsTemp.length-1 ? ensureTrailingEventContactRow() : false;
+  renderEventContactsEditor();
+  window.requestAnimationFrame(()=>{
+    const nextIdx=added ? _eventContactsTemp.length-1 : Math.min(idx+1,_eventContactsTemp.length-1);
+    const nextName=document.querySelector(`#event-contacts-list input[data-contact-name-index="${nextIdx}"]`);
+    nextName?.focus();
+  });
 }
 
 function callEventContact(eventId,index){
@@ -2289,7 +2342,6 @@ function renderGuests(){
   </div>`;
   const isOrg=Auth.isOrganizer(DB.activeEvent);
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-      <button class="fab" style="margin-bottom:0;flex:1 1 180px" onclick="App.openAddGuest()">＋ Add Guest</button>
       <button class="ev-btn" title="Export guests to master guest list" aria-label="Export guests to master guest list" style="display:inline-flex;align-items:center;justify-content:center;padding:10px;margin:0;flex:0 0 auto;width:40px;height:40px" onclick="App.exportCurrentEventToMaster()">${uiIcon('export',16)}</button>
       <button class="ev-btn" title="Add guests from master guest list" aria-label="Add guests from master guest list" style="display:inline-flex;align-items:center;justify-content:center;padding:10px;margin:0;flex:0 0 auto;width:40px;height:40px" onclick="App.openGroupInviteModal()">${uiIcon('guests',16)}</button>
       ${feedbackGuests.length?`<button class="fchip" style="padding:8px 14px;font-size:12px" onclick="App.scrollGuestsToFeedback()">Jump to Feedback</button>`:''}
@@ -2348,8 +2400,23 @@ function renderGuests(){
     `<div class="ph" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div class="ph-title" style="margin-bottom:0">Guest List</div>${isOrg?`<button class="g-edit ${_guestListEditMode?'g-edit-save':''}" title="${_guestListEditMode?'Save guest actions':'Edit guest actions'}" aria-label="${_guestListEditMode?'Save guest actions':'Edit guest actions'}" onclick="App.${_guestListEditMode?'saveGuestRowEdit':'toggleGuestRowEdit'}()">${uiIcon(_guestListEditMode?'save':'edit',14)}</button>`:''}</div>`+
     statsHtml+
     organizerActions+
-    `<div class="search-wrap"><span class="search-ico">${uiIcon('search',14)}</span><input class="search-inp" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
-    filtersHtml+listHtml+feedbackHtml;
+    `<div class="search-wrap"><span class="search-ico">${uiIcon('search',14)}</span><input class="search-inp" id="guest-search-input" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
+    filtersHtml+listHtml+feedbackHtml+
+    `<div class="floating-stack">
+      ${isOrg?`<button class="floating-bubble floating-bubble-primary" type="button" title="Add guest" aria-label="Add guest" onclick="App.openAddGuest()">${uiIcon('guests',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button>`:''}
+      <button class="floating-bubble" type="button" title="Scroll to top" aria-label="Scroll to top" onclick="App.scrollToTop()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18V6M7.5 10.5 12 6l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>`;
+  if(_preserveGuestSearchFocus){
+    window.requestAnimationFrame(()=>{
+      const searchInput=document.getElementById('guest-search-input');
+      if(searchInput){
+        const len=searchInput.value.length;
+        searchInput.focus({preventScroll:true});
+        try{ searchInput.setSelectionRange(len,len); }catch(e){}
+      }
+      _preserveGuestSearchFocus=false;
+    });
+  }
   initGuestSwipeRows();
 }
 
@@ -4764,7 +4831,16 @@ function filterMoi(val){
 }
 
 function setGFilter(f){_guestFilter=f;renderGuests()}
-function setGSearch(v){_guestSearch=v;renderGuests()}
+function setGSearch(v){
+  _guestSearch=v;
+  _preserveGuestSearchFocus=true;
+  renderGuests();
+}
+function scrollToTop(){
+  const mainScroll=document.getElementById('main-scroll');
+  if(!mainScroll) return;
+  mainScroll.scrollTo({top:0,behavior:'smooth'});
+}
 
 function setMoiFilter(f,el){
   document.querySelectorAll('#moi-ty-filter .moi-fchip').forEach(c=>c.classList.remove('on'));
@@ -5012,7 +5088,7 @@ window.App={
   togglePastEvents(show){_showPastEvents=!!show; renderEvents();},
   switchTab,openModal: window.openModal,closeModal,
   openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,saveEvent,confirmDeleteEvent:confirmDeleteEventGated,
-  addEventContact,_updateEventContact,_removeEventContact,openEventContacts,saveEventContacts,shareEventContact,callEventContact,whatsAppEventContact,openEventContactActions,callActiveEventContact,whatsAppActiveEventContact,shareActiveEventContact,
+  addEventContact,_updateEventContact,_removeEventContact,openEventContacts,saveEventContacts,toggleEventContactsEditMode,handleEventContactsHeaderAction,handleEventContactPhoneKey,shareEventContact,callEventContact,whatsAppEventContact,openEventContactActions,callActiveEventContact,whatsAppActiveEventContact,shareActiveEventContact,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
   confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,toggleGuestRowEdit,saveGuestRowEdit,undoGuestRemoval,
@@ -5029,7 +5105,7 @@ window.App={
   openGroupInviteModal,filterGroupInvite,importMasterGroup,importMasterGuest,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   openProfileModal,toggleSetting,setCurrency,unlockPremium,clearAllData,
-  setGFilter,setGSearch,openConfirm,closeConfirm,
+  setGFilter,setGSearch,scrollToTop,openConfirm,closeConfirm,
   limitPhoneDigits,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,
   addEventMenu,_updateEventMenuTitle,_updateEventMenuItems,_removeEventMenu,

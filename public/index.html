@@ -124,6 +124,12 @@ body{overscroll-behavior:none}
 .search-inp{width:100%;padding:10px 12px 10px 36px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);font-size:13.5px;color:var(--txt);font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border-color .15s}
 .search-inp:focus{border-color:var(--rose)}
 .search-inp::placeholder{color:var(--txt4)}
+.floating-stack{position:fixed;right:16px;bottom:calc(var(--tab) + 18px);display:flex;flex-direction:column;gap:10px;z-index:35}
+.floating-bubble{width:52px;height:52px;border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surf);color:var(--txt2);box-shadow:0 10px 24px rgba(30,20,16,.14);border:1px solid var(--bord2);cursor:pointer;transition:transform .12s,box-shadow .15s,background .15s;position:relative}
+.floating-bubble:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(30,20,16,.16)}
+.floating-bubble:active{transform:scale(.97)}
+.floating-bubble-primary{background:var(--rose-d);color:#fff;border-color:var(--rose-d)}
+.floating-bubble svg{width:20px;height:20px;display:block}
 
 /* ── FILTERS ── */
 .filters{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
@@ -528,8 +534,7 @@ html.boot-authenticated #auth-screen{display:none}
         <div id="event-contacts-sub" style="font-size:12px;color:var(--txt3);margin-top:4px;line-height:1.6">Manage event contact names and phone numbers here.</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <button class="btn-s" id="event-contact-add-btn" type="button" onclick="App.addEventContact()" title="Add contact" aria-label="Add contact" style="width:34px;height:34px;min-width:34px;padding:0;border-radius:999px;display:flex;align-items:center;justify-content:center">+</button>
-        <button class="btn-p" id="event-contact-save-btn" type="button" onclick="App.saveEventContacts()" title="Save" aria-label="Save" style="width:auto;min-width:auto;margin:0;padding:8px 14px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center">Save</button>
+        <button class="g-edit" id="event-contact-mode-btn" type="button" onclick="App.handleEventContactsHeaderAction()" title="Edit contacts" aria-label="Edit contacts" style="display:none;width:32px;height:32px;min-width:32px"></button>
       </div>
     </div>
     <div id="event-contacts-list"></div>

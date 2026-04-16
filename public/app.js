@@ -1412,6 +1412,8 @@ let _roomLocsTemp=[];
 let _eventMenusTemp=[];
 let _eventContactsTemp=[];
 let _editingEventContactsId='';
+let _eventContactActionEventId='';
+let _eventContactActionIndex=-1;
 let _teamEventId='';
 let _eventMenuEditorDisabled=false;
 let _giftPhotoData=null;
@@ -1437,6 +1439,10 @@ function closeModal(id,{fromPop=false}={}){
   document.getElementById('mo-'+id)?.classList.remove('open');
   if(id==='event-contacts'){
     _editingEventContactsId='';
+  }
+  if(id==='event-contact-actions'){
+    _eventContactActionEventId='';
+    _eventContactActionIndex=-1;
   }
   if(id==='master-guest-resolve' && _masterGuestConflictResolver){
     const resolver=_masterGuestConflictResolver;
@@ -1943,12 +1949,13 @@ function renderEventContactsEditor(){
     container.innerHTML='<div class="event-contact-empty">No event contacts saved yet. Add key numbers here and use call, WhatsApp, or share whenever needed.</div>';
     return;
   }
-  container.innerHTML=_eventContactsTemp.map((contact,idx)=>`
-    <div class="event-contact-view">
-      <div class="event-contact-view-top">
-        <div style="flex:1;min-width:0">
-          ${canEdit
-            ? `<div class="event-contact-grid">
+  container.innerHTML=_eventContactsTemp.map((contact,idx)=>{
+    if(canEdit){
+      return `
+        <div class="event-contact-view">
+          <div class="event-contact-view-top">
+            <div style="flex:1;min-width:0">
+              <div class="event-contact-grid">
                 <div class="fg" style="margin-bottom:0">
                   <label class="fl">Name</label>
                   <input class="fi" type="text" placeholder="Camera Man / Security / Cook" value="${escapeHtml(contact.name||'')}" oninput="App._updateEventContact(${idx},'name',this.value)" />
@@ -1957,19 +1964,32 @@ function renderEventContactsEditor(){
                   <label class="fl">Phone Number</label>
                   <input class="fi" type="text" inputmode="tel" maxlength="15" placeholder="Phone number" value="${escapeHtml(contact.phone||'')}" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,15);App._updateEventContact(${idx},'phone',this.value)" />
                 </div>
-              </div>`
-            : `<div class="event-contact-view-role">${uiIcon('contact',14)} ${escapeHtml(contact.name||'Contact')}</div>
-               <div class="event-contact-view-meta" style="margin-top:6px">${contact.phone?`${escapeHtml(formatPhoneNumber(contact.phone))}`:'Phone not added yet.'}</div>`}
+              </div>
+            </div>
+            <button class="event-contact-icon-btn" type="button" title="Remove contact" aria-label="Remove contact" onclick="App._removeEventContact(${idx})">✕</button>
+          </div>
+          <div class="event-contact-view-actions">
+            <button class="event-contact-share-btn" type="button" onclick="App.shareEventContact('${_editingEventContactsId}',${idx})">${uiIcon('share',14)} Share</button>
+          </div>
         </div>
-        ${canEdit?`<button class="event-contact-icon-btn" type="button" title="Remove contact" aria-label="Remove contact" onclick="App._removeEventContact(${idx})">✕</button>`:''}
+      `;
+    }
+    return `
+      <div class="event-contact-swipe-wrap" data-event-contact-index="${idx}">
+        <div class="event-contact-swipe-under-left">${uiIcon('phone',14)} Call</div>
+        <div class="event-contact-swipe-under-right">${uiIcon('whatsapp',14)} WhatsApp</div>
+        <div class="event-contact-card event-contact-view" role="button" tabindex="0" onclick="App.openEventContactActions('${_editingEventContactsId}',${idx})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();App.openEventContactActions('${_editingEventContactsId}',${idx});}">
+          <div class="event-contact-view-top">
+            <div style="flex:1;min-width:0">
+              <div class="event-contact-view-role">${uiIcon('contact',14)} ${escapeHtml(contact.name||'Contact')}</div>
+              <div class="event-contact-view-meta" style="margin-top:6px">${contact.phone?`${escapeHtml(formatPhoneNumber(contact.phone))}`:'Phone not added yet.'}</div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="event-contact-view-actions">
-        ${contact.phone?`<button class="event-contact-share-btn event-contact-call-btn" type="button" onclick="App.callEventContact('${_editingEventContactsId}',${idx})">${uiIcon('phone',14)} Call</button>`:''}
-        ${contact.phone?`<button class="event-contact-share-btn event-contact-wa-btn" type="button" onclick="App.whatsAppEventContact('${_editingEventContactsId}',${idx})">${uiIcon('whatsapp',14)} WhatsApp</button>`:''}
-        <button class="event-contact-share-btn" type="button" onclick="App.shareEventContact('${_editingEventContactsId}',${idx})">${uiIcon('share',14)} Share</button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+  if(!canEdit) initEventContactSwipeRows();
 }
 
 function addEventContact(){
@@ -1994,6 +2014,8 @@ function openEventContacts(eventId){
   const ev=DB.events.find(item=>item.id===eventId);
   if(!ev){toast('⚠️ Event not found');return;}
   _editingEventContactsId=eventId;
+  _eventContactActionEventId='';
+  _eventContactActionIndex=-1;
   _eventContactsTemp=JSON.parse(JSON.stringify(normalizeEventContacts(ev.eventContacts)));
   if(Auth.isOrganizer(eventId) && _eventContactsTemp.length===0){
     _eventContactsTemp=[{name:'',phone:''}];
@@ -2076,6 +2098,154 @@ async function shareEventContact(eventId, index){
   }catch(e){
     if(String(e?.name||'')!=='AbortError') toast('⚠️ Could not share contact');
   }
+}
+
+function openEventContactActions(eventId,index){
+  const contact=getEventContactForAction(eventId,index);
+  if(!contact){toast('⚠️ Contact not found');return;}
+  _eventContactActionEventId=eventId;
+  _eventContactActionIndex=index;
+  const sub=document.getElementById('event-contact-actions-sub');
+  if(sub){
+    sub.textContent=contact.phone
+      ? `${contact.name||'Contact'} • ${formatPhoneNumber(contact.phone)}`
+      : `${contact.name||'Contact'} • Phone not added yet`;
+  }
+  const callBtn=document.getElementById('event-contact-call-btn');
+  const waBtn=document.getElementById('event-contact-wa-btn');
+  if(callBtn) callBtn.style.display=contact.phone?'block':'none';
+  if(waBtn) waBtn.style.display=contact.phone?'block':'none';
+  openModal('event-contact-actions');
+}
+
+function callActiveEventContact(){
+  if(!_eventContactActionEventId || _eventContactActionIndex<0) return;
+  closeModal('event-contact-actions');
+  callEventContact(_eventContactActionEventId,_eventContactActionIndex);
+}
+
+function whatsAppActiveEventContact(){
+  if(!_eventContactActionEventId || _eventContactActionIndex<0) return;
+  closeModal('event-contact-actions');
+  whatsAppEventContact(_eventContactActionEventId,_eventContactActionIndex);
+}
+
+function shareActiveEventContact(){
+  if(!_eventContactActionEventId || _eventContactActionIndex<0) return;
+  closeModal('event-contact-actions');
+  shareEventContact(_eventContactActionEventId,_eventContactActionIndex);
+}
+
+function initEventContactSwipeRows(){
+  document.querySelectorAll('.event-contact-swipe-wrap').forEach(wrap=>{
+    const card=wrap.querySelector('.event-contact-card');
+    if(!card || wrap.dataset.swipeBound==='1') return;
+    wrap.dataset.swipeBound='1';
+    let startX=0;
+    let startY=0;
+    let deltaX=0;
+    let tracking=false;
+    let horizontal=false;
+    let activePointerId=null;
+
+    const resetSwipe=()=>{
+      deltaX=0;
+      card.style.transition='transform .18s ease';
+      card.style.transform='translateX(0)';
+      window.setTimeout(()=>{ card.style.transition=''; },180);
+    };
+
+    const finishActionSwipe=(offset,cb)=>{
+      card.style.transition='transform .18s ease';
+      card.style.transform=`translateX(${offset}px)`;
+      window.setTimeout(()=>{
+        card.style.transform='translateX(0)';
+        window.setTimeout(()=>{ card.style.transition=''; },180);
+      },140);
+      cb();
+    };
+
+    const beginSwipe=(clientX,clientY)=>{
+      startX=clientX;
+      startY=clientY;
+      deltaX=0;
+      tracking=true;
+      horizontal=false;
+      card.style.transition='';
+    };
+
+    const moveSwipe=(clientX,clientY,event)=>{
+      if(!tracking) return;
+      const dx=clientX-startX;
+      const dy=clientY-startY;
+      if(!horizontal){
+        if(Math.abs(dx)<8 && Math.abs(dy)<8) return;
+        if(Math.abs(dx)<=Math.abs(dy)){
+          tracking=false;
+          return;
+        }
+        horizontal=true;
+      }
+      if(event?.cancelable) event.preventDefault();
+      deltaX=Math.max(-82,Math.min(82,dx));
+      card.style.transform=`translateX(${deltaX}px)`;
+    };
+
+    const finishSwipe=()=>{
+      if(!tracking && !horizontal){
+        card.style.transition='';
+        return;
+      }
+      tracking=false;
+      horizontal=false;
+      activePointerId=null;
+      if(deltaX>=58){
+        const idx=parseInt(wrap.dataset.eventContactIndex,10);
+        finishActionSwipe(18,()=>callEventContact(_editingEventContactsId,idx));
+        return;
+      }
+      if(deltaX<=-58){
+        const idx=parseInt(wrap.dataset.eventContactIndex,10);
+        finishActionSwipe(-18,()=>whatsAppEventContact(_editingEventContactsId,idx));
+        return;
+      }
+      resetSwipe();
+    };
+
+    wrap.addEventListener('touchstart',event=>{
+      if(event.touches.length!==1) return;
+      const touch=event.touches[0];
+      beginSwipe(touch.clientX,touch.clientY);
+    },{passive:true});
+    wrap.addEventListener('touchmove',event=>{
+      if(event.touches.length!==1) return;
+      const touch=event.touches[0];
+      moveSwipe(touch.clientX,touch.clientY,event);
+    },{passive:false});
+    wrap.addEventListener('touchend',finishSwipe,{passive:true});
+    wrap.addEventListener('touchcancel',finishSwipe,{passive:true});
+
+    wrap.addEventListener('pointerdown',event=>{
+      if(event.pointerType==='mouse') return;
+      activePointerId=event.pointerId;
+      beginSwipe(event.clientX,event.clientY);
+    });
+    wrap.addEventListener('pointermove',event=>{
+      if(event.pointerType==='mouse') return;
+      if(activePointerId!==event.pointerId) return;
+      moveSwipe(event.clientX,event.clientY,event);
+    });
+    wrap.addEventListener('pointerup',event=>{
+      if(event.pointerType==='mouse') return;
+      if(activePointerId!==event.pointerId) return;
+      finishSwipe();
+    });
+    wrap.addEventListener('pointercancel',event=>{
+      if(event.pointerType==='mouse') return;
+      if(activePointerId!==event.pointerId) return;
+      finishSwipe();
+    });
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -4842,7 +5012,7 @@ window.App={
   togglePastEvents(show){_showPastEvents=!!show; renderEvents();},
   switchTab,openModal: window.openModal,closeModal,
   openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,saveEvent,confirmDeleteEvent:confirmDeleteEventGated,
-  addEventContact,_updateEventContact,_removeEventContact,openEventContacts,saveEventContacts,shareEventContact,callEventContact,whatsAppEventContact,
+  addEventContact,_updateEventContact,_removeEventContact,openEventContacts,saveEventContacts,shareEventContact,callEventContact,whatsAppEventContact,openEventContactActions,callActiveEventContact,whatsAppActiveEventContact,shareActiveEventContact,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
   confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,toggleGuestRowEdit,saveGuestRowEdit,undoGuestRemoval,

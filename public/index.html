@@ -148,8 +148,12 @@ body{overscroll-behavior:none}
 .r-declined{background:#FEE8E8;color:#932B2B}
 .r-pending{background:var(--gold-l);color:var(--gold-d)}
 .r-invited{background:var(--surf2);color:var(--txt2)}
-.g-del{width:28px;height:28px;border-radius:50%;background:transparent;border:none;cursor:pointer;font-size:14px;color:var(--txt4);display:flex;align-items:center;justify-content:center;transition:background .15s}
+.g-del,.g-edit{width:32px;height:32px;border-radius:999px;background:linear-gradient(180deg,var(--surf) 0%,var(--surf2) 100%);border:1px solid var(--bord);cursor:pointer;font-size:14px;color:var(--txt3);display:flex;align-items:center;justify-content:center;transition:all .15s;box-shadow:0 3px 10px rgba(30,20,16,.05)}
+.g-del svg,.g-edit svg{width:15px;height:15px;display:block}
 .g-del:hover{background:#FEE8E8;color:#932B2B}
+.g-edit:hover{background:linear-gradient(180deg,var(--surf2) 0%,#F3ECE2 100%);color:var(--txt2);border-color:var(--txt4);transform:translateY(-1px)}
+.g-edit-save{background:linear-gradient(180deg,var(--sage-l) 0%,#DDEDDD 100%);color:var(--sage-d);border-color:var(--sage-m)}
+.g-edit-save:hover{background:linear-gradient(180deg,var(--sage-m) 0%,#CFE3CF 100%);color:var(--sage-d);border-color:var(--sage-d)}
 
 /* ── GIFT CARDS ── */
 .gift-card{background:var(--surf);border-radius:var(--r);margin-bottom:8px;cursor:pointer;transition:box-shadow .2s,transform .15s;position:relative;overflow:hidden;box-shadow:var(--sh1)}
@@ -403,9 +407,14 @@ body{overscroll-behavior:none}
 .request-btn.primary{background:var(--slate-d);color:white}
 .request-btn.secondary{background:var(--surf2);color:var(--txt2);border:1px solid var(--bord)}
 .event-contact-empty{background:var(--surf);border:1px dashed var(--bord);border-radius:var(--rs);padding:16px;font-size:12.5px;color:var(--txt3);line-height:1.7}
-.event-contact-view{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:14px;margin-bottom:10px;box-shadow:var(--sh1)}
+.event-contact-swipe-wrap{position:relative;overflow:hidden;border-radius:var(--rs);margin-bottom:10px}
+.event-contact-swipe-under-left,.event-contact-swipe-under-right{position:absolute;inset:0;display:flex;align-items:center;padding:0 14px;border-radius:var(--rs);font-size:12px;font-weight:700;letter-spacing:.2px}
+.event-contact-swipe-under-left{justify-content:flex-start;background:var(--sage-l);color:var(--sage-d)}
+.event-contact-swipe-under-right{justify-content:flex-end;background:#E9F8EF;color:#146C43}
+.event-contact-card{position:relative;z-index:2;touch-action:pan-y;transition:transform .18s ease}
+.event-contact-view{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:14px;box-shadow:var(--sh1)}
 .event-contact-view-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.event-contact-grid{display:grid;gap:10px}
+.event-contact-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 .event-contact-view-role{font-size:14px;font-weight:600;color:var(--txt);display:flex;align-items:center;gap:7px}
 .event-contact-view-meta{font-size:12px;color:var(--txt2);line-height:1.6}
 .event-contact-view-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
@@ -414,6 +423,7 @@ body{overscroll-behavior:none}
 .event-contact-wa-btn{background:#E9F8EF;color:#146C43}
 .event-contact-icon-btn{width:28px;height:28px;border-radius:50%;border:none;background:transparent;color:var(--txt4);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
 .event-contact-icon-btn:hover{background:#FEE8E8;color:#932B2B}
+@media (max-width:640px){.event-contact-grid{grid-template-columns:1fr 1fr}}
 
 /* ── AUTH SCREEN ── */
 #auth-screen{position:fixed;inset:0;background:linear-gradient(145deg,#FAF0F3 0%,#FBF6EC 50%,#EEF5F0 100%);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -519,13 +529,23 @@ html.boot-authenticated #auth-screen{display:none}
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <button class="btn-s" id="event-contact-add-btn" type="button" onclick="App.addEventContact()" title="Add contact" aria-label="Add contact" style="width:34px;height:34px;min-width:34px;padding:0;border-radius:999px;display:flex;align-items:center;justify-content:center">+</button>
-        <button class="btn-p m-top-save" id="event-contact-save-btn" type="button" onclick="App.saveEventContacts()" title="Save" aria-label="Save">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z"/><path d="M8 4.5v5h7v-5M9 15.5h6"/></svg>
-        </button>
+        <button class="btn-p" id="event-contact-save-btn" type="button" onclick="App.saveEventContacts()" title="Save" aria-label="Save" style="width:auto;min-width:auto;margin:0;padding:8px 14px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center">Save</button>
       </div>
     </div>
     <div id="event-contacts-list"></div>
     <button class="btn-s" onclick="App.closeModal('event-contacts')">Close</button>
+  </div>
+</div>
+
+<div class="mo mo-center" id="mo-event-contact-actions">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">Contact Actions</div>
+    <div id="event-contact-actions-sub" style="font-size:12px;color:var(--txt3);margin:-8px 0 16px;line-height:1.6">Choose what you want to do for this contact.</div>
+    <button class="btn-p" id="event-contact-call-btn" style="background:var(--sage-d)" onclick="App.callActiveEventContact()">Call</button>
+    <button class="btn-p" id="event-contact-wa-btn" style="background:#146C43;margin-top:8px" onclick="App.whatsAppActiveEventContact()">WhatsApp</button>
+    <button class="btn-s" id="event-contact-share-btn" style="margin-top:8px" onclick="App.shareActiveEventContact()">Share</button>
+    <button class="btn-s" onclick="App.closeModal('event-contact-actions')">Cancel</button>
   </div>
 </div>
 

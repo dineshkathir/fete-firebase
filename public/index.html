@@ -542,6 +542,7 @@ html.boot-authenticated #auth-screen{display:none}
 .public-invite-sub{font-size:12.5px;line-height:1.6;color:var(--txt3);text-align:center;margin-bottom:18px}
 .public-invite-details{display:none;background:linear-gradient(180deg,var(--gold-l) 0%,#FFF9F1 100%);border:1px solid var(--gold-m);border-radius:var(--r);padding:14px 15px;margin-bottom:14px;font-size:12px;line-height:1.7;color:var(--txt2);box-shadow:var(--sh1)}
 .public-invite-details-title{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-d);margin-bottom:8px}
+.public-invite-details-event{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;line-height:1.1;color:var(--txt);margin-bottom:10px}
 .public-invite-detail-line{display:flex;align-items:flex-start;gap:8px}
 .public-invite-detail-line + .public-invite-detail-line{margin-top:6px}
 .public-invite-detail-icon{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--gold-d);margin-top:1px}
@@ -616,7 +617,6 @@ html.boot-authenticated #auth-screen{display:none}
         <div class="switch-row" style="margin-bottom:0">
           <div class="switch-copy">
             <div class="switch-copy-title">Meal Preference</div>
-            <div class="switch-copy-sub">Switch between Veg and Non-veg.</div>
             <div class="switch-copy-value veg" id="public-invite-diet-value">Veg</div>
           </div>
           <label class="switch-control switch-control-guest-diet" aria-label="Meal preference">
@@ -631,7 +631,6 @@ html.boot-authenticated #auth-screen{display:none}
         <div class="switch-row" style="margin-bottom:0">
           <div class="switch-copy">
             <div class="switch-copy-title">Stay Needed</div>
-            <div class="switch-copy-sub">Turn on if you need a room.</div>
             <div class="switch-copy-value room-off" id="public-invite-room-value">No room needed</div>
           </div>
           <label class="switch-control switch-control-guest-room" aria-label="Room required">

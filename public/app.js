@@ -5907,6 +5907,7 @@ function renderPublicInviteScreen(context){
   if(subEl) subEl.textContent='Fill in your details so the organiser can add you to the guest list.';
   if(detailsEl){
     const parts=[];
+    const eventHeading=context?.eventName ? `<div class="public-invite-details-event">${escapeHtml(context.eventName)}</div>` : '';
     if(context?.eventDate){
       parts.push(`<div class="public-invite-detail-line"><span class="public-invite-detail-icon">${uiIcon('calendar',12)}</span><div class="public-invite-detail-text">${escapeHtml(fmtDate(context.eventDate))}</div></div>`);
     }
@@ -5916,8 +5917,9 @@ function renderPublicInviteScreen(context){
     if(context?.eventLocation){
       parts.push(`<div class="public-invite-detail-line"><span class="public-invite-detail-icon">${uiIcon('location',12)}</span><div class="public-invite-detail-text">${escapeHtml(formatEventLocation(context.eventLocation))}</div></div>`);
     }
-    detailsEl.innerHTML=parts.length?`<div class="public-invite-details-title">Event Details</div>${parts.join('')}`:'';
-    detailsEl.style.display=parts.length?'block':'none';
+    const hasDetails=Boolean(eventHeading || parts.length);
+    detailsEl.innerHTML=hasDetails?`<div class="public-invite-details-title">Event Details</div>${eventHeading}${parts.join('')}`:'';
+    detailsEl.style.display=hasDetails?'block':'none';
   }
   if(statusEl){
     statusEl.style.display='none';

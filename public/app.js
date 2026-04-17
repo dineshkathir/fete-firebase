@@ -1126,8 +1126,6 @@ function fmtVal(v){
 }
 function initials(first,last){return((first||'')[0]||(last||'')[0]||'?').toUpperCase()+((last||'')[0]||'').toUpperCase()}
 function avStyle(id){const i=Math.abs(id.charCodeAt?[...id].reduce((a,c)=>a+c.charCodeAt(0),0):0)%6;return`background:${AV_BG[i]};color:${AV_C[i]}`}
-function normalizeEmailValue(email){return(email||'').trim().toLowerCase()}
-function normalizePhoneValue(phone){return(phone||'').replace(/\D/g,'')}
 function limitPhoneDigits(input){
   if(!input) return;
   const raw=input.value||'';

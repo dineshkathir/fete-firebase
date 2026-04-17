@@ -2060,19 +2060,12 @@ function initGuestSwipeRows(){
         _guestSwipeTapBlockUntil=Date.now()+250;
         wrap.classList.add('swipe-commit');
         resetGuestSwipeRow(wrap);
-        if(_guestListEditMode) applyLastGuestGroup(wrap.dataset.guestId);
-        else openGuestContactActions(wrap.dataset.guestId);
+        applyLastGuestGroup(wrap.dataset.guestId);
         return;
       }
       if(deltaX<=-72){
         _guestSwipeTapBlockUntil=Date.now()+250;
-        if(_guestListEditMode){
-          wrap.classList.add('swipe-commit');
-          resetGuestSwipeRow(wrap);
-          openGuestSwipeActions(wrap.dataset.guestId);
-        }else{
-          openGuestInlineContactActions(wrap);
-        }
+        openGuestInlineContactActions(wrap);
         return;
       }
       resetGuestSwipeRow(wrap);
@@ -2730,12 +2723,10 @@ function renderGuests(){
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
       const lastGroupHint=getPreferredGuestGroup();
-      const swipeRightHint=_guestListEditMode
-        ? (lastGroupHint ? `Swipe right to add to ${escapeHtml(lastGroupHint)}` : 'Swipe right to add to the last used group')
-        : 'Swipe right for call or WhatsApp';
-      const swipeLeftHint=_guestListEditMode ? 'Swipe left for room, gift, or cash gift' : 'Swipe left to reveal call and WhatsApp';
+      const swipeRightHint=lastGroupHint ? `Swipe right to add to ${escapeHtml(lastGroupHint)}` : 'Swipe right to add to the most recent group';
+      const swipeLeftHint='Swipe left to reveal call and WhatsApp';
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
-        <div class="g-swipe-inline-actions" aria-hidden="${_guestListEditMode?'true':'false'}">
+        <div class="g-swipe-inline-actions" aria-hidden="false">
           <button class="g-swipe-inline-btn call" type="button" title="Call guest" aria-label="Call guest" onclick="event.stopPropagation();App.swipeCallGuest('${g.id}')">${uiIcon('phone',18)}</button>
           <button class="g-swipe-inline-btn whatsapp" type="button" title="WhatsApp guest" aria-label="WhatsApp guest" onclick="event.stopPropagation();App.swipeWhatsAppGuest('${g.id}')">${uiIcon('whatsapp',18)}</button>
         </div>
@@ -2751,7 +2742,7 @@ function renderGuests(){
           </div>
         </div>
         <div class="g-swipe-hint" aria-hidden="true">
-          <span class="g-swipe-hint-copy g-swipe-hint-right-copy">${uiIcon(_guestListEditMode?'guests':'phone',12)} ${swipeRightHint}</span>
+          <span class="g-swipe-hint-copy g-swipe-hint-right-copy">${uiIcon('guests',12)} ${swipeRightHint}</span>
           <span class="g-swipe-hint-copy g-swipe-hint-left-copy">${uiIcon('gift',12)} ${swipeLeftHint}</span>
         </div>
       </div>`;

@@ -131,7 +131,7 @@ body{overscroll-behavior:none}
 .floating-bubble:active{transform:scale(.97)}
 .floating-bubble-primary{background:var(--rose-d);color:#fff;border-color:var(--rose-d)}
 .floating-bubble svg{width:20px;height:20px;display:block}
-.floating-top-center{position:fixed;left:50%;bottom:calc(var(--tab) + 18px);transform:translateX(-50%) translateY(12px);width:38px;height:38px;border:none;border-radius:999px;background:rgba(255,251,246,.26);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:rgba(70,52,42,.7);box-shadow:0 3px 10px rgba(30,20,16,.05);border:1px solid rgba(143,117,95,.08);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease,background .18s ease;z-index:34}
+.floating-top-center{position:fixed;left:50%;bottom:calc(var(--tab) + 18px);transform:translateX(-50%) translateY(12px);width:38px;height:38px;border:none;border-radius:999px;background:rgba(255,251,246,.14);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);color:rgba(70,52,42,.52);box-shadow:0 2px 8px rgba(30,20,16,.035);border:1px solid rgba(143,117,95,.05);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease,background .18s ease;z-index:34}
 .floating-top-center.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
 .floating-top-center svg{width:16px;height:16px;display:block}
 
@@ -155,12 +155,12 @@ body{overscroll-behavior:none}
 .g-swipe-inline-actions{position:absolute;top:50%;right:10px;display:flex;align-items:center;justify-content:flex-end;gap:8px;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;transform:translateY(-50%) translateX(8px);z-index:1}
 .g-swipe-wrap[data-swipe-open="true"] .g-swipe-inline-actions{opacity:1;pointer-events:auto}
 .g-swipe-wrap[data-swipe-open="true"] .g-swipe-inline-actions{transform:translateY(-50%) translateX(0)}
-.g-swipe-inline-btn{width:40px;height:40px;border:none;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 16px rgba(30,20,16,.12);transition:transform .16s ease,box-shadow .16s ease,opacity .16s ease}
+.g-swipe-inline-btn{width:40px;height:40px;border:none;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 16px rgba(30,20,16,.12);transition:transform .16s ease,box-shadow .16s ease,opacity .16s ease;border:1px solid transparent}
 .g-swipe-inline-btn:hover{transform:translateY(-1px);box-shadow:0 10px 18px rgba(30,20,16,.16)}
 .g-swipe-inline-btn:active{transform:scale(.96)}
-.g-swipe-inline-btn.call{background:var(--sage-l);color:var(--sage-d)}
+.g-swipe-inline-btn.call{background:#DDEDDD;color:#27553C;border-color:#B9D2C1}
 .g-swipe-inline-btn.whatsapp{background:#E9F8EF;color:#146C43}
-.g-swipe-inline-btn svg{width:18px;height:18px;display:block}
+.g-swipe-inline-btn svg{width:18px;height:18px;display:block;stroke:currentColor}
 .g-swipe-wrap .g-row.g-swipe-card{margin-bottom:0}
 .g-swipe-hint{max-height:0;opacity:0;overflow:hidden;margin:0 8px;padding:0 10px;border-radius:0 0 12px 12px;background:transparent;font-size:10.5px;font-weight:600;letter-spacing:.18px;color:var(--txt3);transform:translateY(-4px);transition:max-height .18s ease,opacity .18s ease,transform .18s ease,padding .18s ease,margin-top .18s ease}
 .g-swipe-wrap.swipe-hint-left .g-swipe-hint,.g-swipe-wrap.swipe-hint-right .g-swipe-hint{max-height:28px;opacity:1;padding:6px 10px 7px;transform:translateY(0);margin-top:3px}

@@ -5859,10 +5859,12 @@ async function parsePublicInviteFromUrl(){
   const pathParts=(window.location.pathname||'').split('/').filter(Boolean);
   const params=new URLSearchParams(window.location.search||'');
   const pathKey=pathParts[0]==='i' ? decodeURIComponent(pathParts[1]||'').trim() : '';
-  const eventId=(params.get('invite') || params.get('i') || '').trim();
-  if(pathKey){
+  const queryKey=(params.get('i')||'').trim();
+  const inviteKey=pathKey || queryKey;
+  const eventId=(params.get('invite')||'').trim();
+  if(inviteKey){
     try{
-      const snap=await getDoc(doc(_fbDb, 'publicInvites', pathKey));
+      const snap=await getDoc(doc(_fbDb, 'publicInvites', inviteKey));
       if(snap.exists()){
         const data=snap.data()||{};
         if(data.enabled===false) return null;

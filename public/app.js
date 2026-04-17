@@ -160,9 +160,14 @@ const Cloud = (() => {
   }
 
   function normalizeTeam(team, fallbackSession) {
+    const source = Array.isArray(team)
+      ? team
+      : team && typeof team === 'object'
+        ? Object.values(team)
+        : [];
     const seen = new Set();
     const normalized = [];
-    for (const member of (team || [])) {
+    for (const member of source) {
       const email = normalizeEmail(member?.email);
       if (!email || seen.has(email)) continue;
       seen.add(email);
@@ -3463,18 +3468,35 @@ function renderSettings(){
 // MAIN RENDER
 // ═══════════════════════════════════════════════
 function render(){
-  const ev=DB.events.find(e=>e.id===DB.activeEvent);
-  const teamBtn=document.getElementById('hdr-team-btn');
-  if(teamBtn) teamBtn.style.display=ev&&ev._isGuestOnly?'none':'block';
-  if(_tab==='events') renderEvents();
-  else if(_tab==='guests') renderGuests();
-  else if(_tab==='gifts') renderGifts();
-  else if(_tab==='settings') renderSettings();
-  else if(_tab==='rooms') renderRooms();
-  else if(_tab==='guest-portal') renderGuestPortal();
-  applyCurrencyUI();
-  updateBadges();
-  updateScrollTopVisibility();
+  try{
+    const ev=DB.events.find(e=>e.id===DB.activeEvent);
+    const teamBtn=document.getElementById('hdr-team-btn');
+    if(teamBtn) teamBtn.style.display=ev&&ev._isGuestOnly?'none':'block';
+    if(_tab==='events') renderEvents();
+    else if(_tab==='guests') renderGuests();
+    else if(_tab==='gifts') renderGifts();
+    else if(_tab==='settings') renderSettings();
+    else if(_tab==='rooms') renderRooms();
+    else if(_tab==='guest-portal') renderGuestPortal();
+    applyCurrencyUI();
+    updateBadges();
+    updateScrollTopVisibility();
+  }catch(err){
+    console.error('Render failed', err);
+    const screenMap={
+      events:'scr-events',
+      guests:'scr-guests',
+      gifts:'scr-gifts',
+      settings:'scr-settings',
+      rooms:'scr-rooms',
+      'guest-portal':'scr-guest-portal'
+    };
+    const target=document.getElementById(screenMap[_tab]||'scr-events');
+    if(target){
+      target.innerHTML=`<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('event',42)}</div><div class="empty-t">We hit a loading issue</div><div class="empty-s">Please refresh once. If it still happens, the app data for one item may need cleanup.</div></div>`;
+    }
+    toast('⚠️ Screen could not load fully');
+  }
 }
 
 function updateBadges(){

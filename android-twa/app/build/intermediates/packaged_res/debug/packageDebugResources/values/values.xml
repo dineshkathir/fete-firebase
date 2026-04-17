@@ -2,7 +2,7 @@
 <resources>
     <color name="brand_charcoal">#1C1917</color>
     <color name="brand_coral">#E8603A</color>
-    <color name="brand_surface">#FDF5EF</color>
+    <color name="brand_surface">#FDFAF6</color>
     <string name="app_name">eventise</string>
     <string name="asset_statements">
         [{

@@ -4,8 +4,12 @@ color brand_charcoal
 color brand_coral
 color brand_surface
 drawable ic_launcher
+drawable ic_launcher_foreground
 drawable ic_logo
 drawable ic_splash
+drawable splash_wordmark
+mipmap ic_launcher
+mipmap ic_launcher_round
 string app_name
 string asset_statements
 string launch_url

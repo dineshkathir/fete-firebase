@@ -1,12 +1,12 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.eventise.twa.debug"
-4    android:versionCode="1"
-5    android:versionName="1.0.0-debug" >
+4    android:versionCode="2"
+5    android:versionName="1.0.1-debug" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="21"
-9        android:targetSdkVersion="34" />
+9        android:targetSdkVersion="35" />
 10
 11    <queries>
 11-->[com.google.androidbrowserhelper:androidbrowserhelper:2.4.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\32b51df433d1e76c8652e92c4555094a\transformed\androidbrowserhelper-2.4.0\AndroidManifest.xml:26:5-34:15
@@ -45,12 +45,12 @@
 29-->[androidx.core:core:1.13.0] C:\Users\Lenovo\.gradle\caches\9.0.0\transforms\76aef4f9a5fe3f4a692433aadca88359\transformed\core-1.13.0\AndroidManifest.xml:28:18-86
 30        android:debuggable="true"
 31        android:extractNativeLibs="true"
-32        android:icon="@drawable/ic_launcher"
-32-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:6:9-45
+32        android:icon="@mipmap/ic_launcher"
+32-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:6:9-43
 33        android:label="@string/app_name"
 33-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:7:9-41
-34        android:roundIcon="@drawable/ic_launcher"
-34-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:8:9-50
+34        android:roundIcon="@mipmap/ic_launcher_round"
+34-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:8:9-54
 35        android:supportsRtl="true"
 35-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:9:9-35
 36        android:testOnly="true"

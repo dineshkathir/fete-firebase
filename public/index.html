@@ -130,7 +130,7 @@ body{overscroll-behavior:none}
 .floating-bubble:active{transform:scale(.97)}
 .floating-bubble-primary{background:var(--rose-d);color:#fff;border-color:var(--rose-d)}
 .floating-bubble svg{width:20px;height:20px;display:block}
-.floating-top-center{position:fixed;left:50%;bottom:calc(var(--tab) + 18px);transform:translateX(-50%) translateY(12px);width:40px;height:40px;border:none;border-radius:999px;background:rgba(255,251,246,.44);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);color:rgba(70,52,42,.88);box-shadow:0 4px 14px rgba(30,20,16,.08);border:1px solid rgba(143,117,95,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:34}
+.floating-top-center{position:fixed;left:50%;bottom:calc(var(--tab) + 18px);transform:translateX(-50%) translateY(12px);width:38px;height:38px;border:none;border-radius:999px;background:rgba(255,251,246,.26);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:rgba(70,52,42,.7);box-shadow:0 3px 10px rgba(30,20,16,.05);border:1px solid rgba(143,117,95,.08);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease,background .18s ease;z-index:34}
 .floating-top-center.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
 .floating-top-center svg{width:16px;height:16px;display:block}
 
@@ -143,6 +143,13 @@ body{overscroll-behavior:none}
 /* ── GUEST ROWS ── */
 .g-swipe-wrap{position:relative;overflow:hidden;border-radius:var(--rs);margin-bottom:7px}
 .g-swipe-card{position:relative;z-index:2;touch-action:pan-y;transition:transform .18s ease;margin-bottom:0}
+.g-swipe-wrap.swiping .g-swipe-card{transition:none}
+.g-swipe-wrap::before,.g-swipe-wrap::after{content:'';position:absolute;inset:0;border-radius:var(--rs);opacity:0;transition:opacity .18s ease,transform .18s ease}
+.g-swipe-wrap::before{background:linear-gradient(90deg,rgba(107,155,126,.18) 0%,rgba(107,155,126,.05) 100%);transform:translateX(-18px)}
+.g-swipe-wrap::after{background:linear-gradient(270deg,rgba(196,99,122,.18) 0%,rgba(196,99,122,.05) 100%);transform:translateX(18px)}
+.g-swipe-wrap.swipe-hint-right::before{opacity:1;transform:translateX(0)}
+.g-swipe-wrap.swipe-hint-left::after{opacity:1;transform:translateX(0)}
+.g-swipe-wrap.swipe-commit .g-swipe-card{animation:guestSwipeCommit .24s ease}
 .g-row{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:box-shadow .15s,transform .1s}
 .g-row:hover{box-shadow:var(--sh1);transform:translateX(1px)}
 .g-row:active{transform:scale(.99)}
@@ -279,7 +286,9 @@ body{overscroll-behavior:none}
 .mo.open{opacity:1;pointer-events:all}
 .ms{background:var(--bg);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:430px;padding:18px 18px 30px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:92vh;overflow-y:auto}
 .mo.open .ms{transform:translateY(0)}
-.mo#mo-add-moi .ms{max-height:96vh;min-height:min(78vh,760px);padding-bottom:36px}
+.mo#mo-add-moi .ms{max-height:96vh;min-height:min(78vh,760px);padding-bottom:36px;overflow:visible}
+.mo#mo-add-moi .picker-wrap{z-index:6}
+.mo#mo-add-moi #moi-guest-picker{top:auto;bottom:calc(100% + 6px);border-radius:var(--rs) var(--rs) 0 0;border:1px solid var(--bord);border-bottom:none;box-shadow:0 -8px 20px rgba(30,20,16,.08);max-height:min(220px,28vh);z-index:80}
 .mo-center{align-items:center;padding:18px}
 .mo-center .ms{border-radius:var(--r);max-width:360px;max-height:min(88vh,640px);transform:translateY(18px) scale(.98);padding:18px 18px 22px}
 .mo-center.open .ms{transform:translateY(0) scale(1)}
@@ -353,6 +362,7 @@ body{overscroll-behavior:none}
 /* ── ANIMATIONS ── */
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .anim{animation:fadeIn .25s ease forwards}
+@keyframes guestSwipeCommit{0%{transform:scale(1)}45%{transform:scale(.985)}100%{transform:scale(1)}}
 
 /* ── ROOM MANAGEMENT ── */
 .room-loc-block{background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);padding:12px;margin-bottom:8px;position:relative}

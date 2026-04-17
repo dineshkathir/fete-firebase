@@ -1728,7 +1728,7 @@ document.getElementById('confirm-overlay').addEventListener('click',e=>{if(e.tar
 // TAB SWITCHING
 // ═══════════════════════════════════════════════
 let _tab='events';
-let _guestFilter='all';
+let _guestFilter='pending';
 let _guestSearch='';
 let _exportEventId=null;
 let _showPastPickerEvents=false;
@@ -1812,6 +1812,7 @@ function resetGuestSwipeRow(wrap,{immediate=false}={}){
   if(immediate) card.style.transition='none';
   card.style.transform='translateX(0px)';
   wrap.dataset.swipeOpen='false';
+  wrap.classList.remove('swipe-hint-left','swipe-hint-right','swipe-commit','swiping');
   if(_guestSwipeOpenId===wrap.dataset.guestId) _guestSwipeOpenId=null;
   if(immediate){
     requestAnimationFrame(()=>{ card.style.transition=''; });
@@ -1930,6 +1931,8 @@ function initGuestSwipeRows(){
       tracking=true;
       horizontal=false;
       card.style.transition='none';
+      wrap.classList.add('swiping');
+      wrap.classList.remove('swipe-hint-left','swipe-hint-right','swipe-commit');
     };
 
     const moveSwipe=(clientX,clientY,event)=>{
@@ -1944,9 +1947,12 @@ function initGuestSwipeRows(){
       if(event?.cancelable) event.preventDefault();
       deltaX=Math.max(-GUEST_SWIPE_LEFT_REVEAL, Math.min(GUEST_SWIPE_RIGHT_ACTION, dx));
       card.style.transform=`translateX(${deltaX}px)`;
+      wrap.classList.toggle('swipe-hint-right', deltaX>18);
+      wrap.classList.toggle('swipe-hint-left', deltaX<-18);
     };
 
     const finishSwipe=()=>{
+      wrap.classList.remove('swiping');
       if(!tracking && !horizontal){ card.style.transition=''; return; }
       tracking=false;
       horizontal=false;
@@ -1954,12 +1960,14 @@ function initGuestSwipeRows(){
       card.style.transition='';
       if(deltaX>=64){
         _guestSwipeTapBlockUntil=Date.now()+250;
+        wrap.classList.add('swipe-commit');
         resetGuestSwipeRow(wrap);
         applyLastGuestGroup(wrap.dataset.guestId);
         return;
       }
       if(deltaX<=-72){
         _guestSwipeTapBlockUntil=Date.now()+250;
+        wrap.classList.add('swipe-commit');
         resetGuestSwipeRow(wrap);
         openGuestSwipeActions(wrap.dataset.guestId);
         return;
@@ -2028,8 +2036,9 @@ function renderEvents(){
   const el=document.getElementById('scr-events');
   const sess=Auth.currentSession();
   const getRoomStats=eventId=>{
+    const event=DB.events.find(item=>item.id===eventId);
     const eventGuests=DB.guests.filter(g=>g.eventId===eventId);
-    const bookedRooms=eventGuests.reduce((count,guest)=>count+getGuestRoomAssignments(guest).length,0);
+    const bookedRooms=((event?.roomLocs)||[]).reduce((count,loc)=>count+(Array.isArray(loc.rooms)?loc.rooms.length:0),0);
     const occupiedRooms=new Set(eventGuests.flatMap(guest=>getGuestRoomAssignments(guest).map(room=>`${room.loc}||${room.no}`))).size;
     return { bookedRooms, occupiedRooms };
   };
@@ -2091,7 +2100,11 @@ function renderEvents(){
         ${normalizeEventMenus(ae.foodMenus).length?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFoodMenuModal('${ae.id}')">Food Menu</button>`:''}
         <button class="ev-btn" onclick="App.setActive('${ae.id}');${isRoomRequestEnabled(ae)?`App.openGuestRequestModal('${ae.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ae)?'Request Room':'View Rooms'}</button>
         ${isFeedbackEnabled(ae)?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFeedbackModal('${ae.id}')">Feedback</button>`:''}
-      </div>`:''}
+      </div>`:`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()">
+        <button class="ev-btn" onclick="App.setActive('${ae.id}');App.switchTab('guests')">Guests</button>
+        <button class="ev-btn" onclick="App.setActive('${ae.id}');App.switchTab('gifts')">Gifts</button>
+        <button class="ev-btn" onclick="App.openEventContacts('${ae.id}')">Event Contacts</button>
+      </div>`}
     </div>`;
   }
   const cards=myEvents.map(ev=>{
@@ -2128,7 +2141,8 @@ function renderEvents(){
             ${isFeedbackEnabled(ev)?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFeedbackModal('${ev.id}')">Feedback</button>`:''}
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
               :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
-            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>`}
+            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>
+            <button class="ev-btn" onclick="event.stopPropagation();App.openEventContacts('${ev.id}')">Contacts</button>`}
           </div>
         </div>
       </div>
@@ -2531,9 +2545,14 @@ function initEventContactSwipeRows(){
 // ═══════════════════════════════════════════════
 // GUESTS SCREEN
 // ═══════════════════════════════════════════════
+function normalizeGuestInviteStatus(status){
+  return String(status||'').toLowerCase()==='pending'?'pending':'invited';
+}
+
 function renderGuests(){
   const el=document.getElementById('scr-guests');
   const ev=DB.events.find(e=>e.id===DB.activeEvent);
+  if(!['pending','invited','all'].includes(_guestFilter)) _guestFilter='pending';
   if(!myManagedEvents().length){
     el.innerHTML=renderCreateEventState('Create an event!','Create your first event to start building a guest list.');
     return;
@@ -2541,15 +2560,15 @@ function renderGuests(){
   const col=ev?(COLORS[ev.color]||COLORS.rose):COLORS.rose;
   let guests=DB.guests.filter(g=>g.eventId===DB.activeEvent);
   const total=guests.length;
-  const att=guests.filter(g=>g.rsvp==='attending').length;
-  const dec=guests.filter(g=>g.rsvp==='declined').length;
-  const pen=guests.filter(g=>g.rsvp==='pending').length;
+  const invited=guests.filter(g=>normalizeGuestInviteStatus(g.rsvp)==='invited').length;
+  const pen=guests.filter(g=>normalizeGuestInviteStatus(g.rsvp)==='pending').length;
+  const invitedPct=total?Math.round((invited/total)*100):0;
   const feedbackGuests=DB.guests
     .filter(g=>g.eventId===DB.activeEvent)
     .map(g=>ensureGuestFeedbackDefaults(g))
     .filter(g=>g.feedbackMessage||g.feedbackUpdatedAt||g.feedbackFoodRating||g.feedbackEventRating||g.feedbackRoomRating);
   // filter
-  if(_guestFilter!=='all') guests=guests.filter(g=>g.rsvp===_guestFilter);
+  if(_guestFilter!=='all') guests=guests.filter(g=>normalizeGuestInviteStatus(g.rsvp)===_guestFilter);
   if(_guestSearch) guests=guests.filter(g=>(g.first+' '+g.last+' '+(g.contact||'')+' '+(g.email||'')+' '+(g.table||'')).toLowerCase().includes(_guestSearch.toLowerCase()));
   const evSelHtml=`<div class="ev-sel" onclick="App.openModal('event-pick')">
     <div><div class="ev-sel-lbl">Current Event</div><div class="ev-sel-val">${ev?ev.name:'Select an event'}</div></div>
@@ -2557,15 +2576,21 @@ function renderGuests(){
   </div>`;
   const statsHtml=`<div class="stats-row">
     <div class="s-card"><span class="s-n">${total}</span><span class="s-l">Total</span></div>
-    <div class="s-card"><span class="s-n" style="color:var(--sage-d)">${att}</span><span class="s-l">Attending</span></div>
-    <div class="s-card"><span class="s-n" style="color:#932B2B">${dec}</span><span class="s-l">Declined</span></div>
+    <div class="s-card"><span class="s-n" style="color:var(--txt2)">${invited}</span><span class="s-l">Invited</span></div>
+    <div class="s-card"><span class="s-n" style="color:var(--gold-d)">${pen}</span><span class="s-l">Pending</span></div>
+  </div>
+  <div class="ty-bar-wrap" style="margin-bottom:14px">
+    <div class="ty-bar-top">
+      <span class="ty-bar-label">Invite Progress</span>
+      <span class="ty-bar-pct">${total?`${invitedPct}% invited`:'No guests yet'}</span>
+    </div>
+    <div class="ty-track">
+      <div class="ty-fill" style="width:${invitedPct}%;background:linear-gradient(90deg,var(--gold-m),var(--rose-d))"></div>
+    </div>
   </div>`;
   const filtersHtml=`<div class="filters">
-    <span class="fchip ${_guestFilter==='all'?'on':''}" onclick="App.setGFilter('all')">All (${total})</span>
-    <span class="fchip ${_guestFilter==='attending'?'on':''}" onclick="App.setGFilter('attending')">Attending</span>
-    <span class="fchip ${_guestFilter==='pending'?'on':''}" onclick="App.setGFilter('pending')">Pending</span>
-    <span class="fchip ${_guestFilter==='declined'?'on':''}" onclick="App.setGFilter('declined')">Declined</span>
-    <span class="fchip ${_guestFilter==='invited'?'on':''}" onclick="App.setGFilter('invited')">Invited</span>
+    <span class="fchip ${_guestFilter==='pending'?'on':''}" onclick="App.setGFilter('pending')">Pending (${pen})</span>
+    <span class="fchip ${_guestFilter==='invited'?'on':''}" onclick="App.setGFilter('invited')">Invited (${invited})</span>
   </div>`;
   const isOrg=Auth.isOrganizer(DB.activeEvent);
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
@@ -2575,7 +2600,7 @@ function renderGuests(){
   if(!DB.activeEvent){
     listHtml=`<div class="empty"><div class="empty-ico" style="color:var(--txt3)">${uiIcon('event',42)}</div><div class="empty-t">No event selected</div><div class="empty-s">Select one of your events to manage guests</div></div>`;
   } else if(guests.length===0){
-    listHtml=`<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('guests',42)}</div><div class="empty-t">No guests yet</div><div class="empty-s">${_guestSearch||_guestFilter!=='all'?'Try clearing filters':'Add your first guest to get started'}</div></div>`;
+    listHtml=`<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('guests',42)}</div><div class="empty-t">No guests yet</div><div class="empty-s">${_guestSearch||_guestFilter!=='pending'?'Try clearing filters':'Add your first guest to get started'}</div></div>`;
   } else {
     guests.forEach((g,i)=>{
       if(i>0&&i%15===0&&!DB.premium){
@@ -2588,7 +2613,7 @@ function renderGuests(){
       const email=g.email||'';
       const table=g.table||'';
       const notes=g.notes||'';
-      const rsvp=(g.rsvp||'invited').toLowerCase();
+      const rsvp=normalizeGuestInviteStatus(g.rsvp);
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
@@ -3607,7 +3632,7 @@ function addCurrentGuestToMaster(){
   }
 }
 
-async function exportCurrentEventToMaster(){
+async function runCurrentEventExportToMaster(){
   if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
   const eventGuests=DB.guests.filter(g=>g.eventId===DB.activeEvent);
   if(!eventGuests.length){toast('⚠️ No guests in this event');return;}
@@ -3659,6 +3684,18 @@ async function exportCurrentEventToMaster(){
   }
   renderMasterGuestList();
   toast(`${added} added · ${updated} updated${skipped?` · ${skipped} skipped`:''}`);
+}
+
+function exportCurrentEventToMaster(){
+  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
+  const eventGuests=DB.guests.filter(g=>g.eventId===DB.activeEvent);
+  if(!eventGuests.length){toast('⚠️ No guests in this event');return;}
+  const eventName=DB.events.find(item=>item.id===DB.activeEvent)?.name||'this event';
+  openConfirm(
+    'Export guests to master guest list?',
+    `${eventGuests.length} guest${eventGuests.length!==1?'s':''} from ${eventName} will be checked against your saved master guest list.`,
+    ()=>{ runCurrentEventExportToMaster(); }
+  );
 }
 
 function getPendingMasterGuestShareCount(){

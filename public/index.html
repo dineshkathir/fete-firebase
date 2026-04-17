@@ -7,17 +7,32 @@
 <meta name="google-adsense-account" content="ca-pub-4049798836230099"/>
 <meta name="theme-color" content="#FDF5EF"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <link rel="manifest" href="./site.webmanifest"/>
 <link rel="icon" type="image/svg+xml" href="./eventise-favicon.svg"/>
 <link rel="apple-touch-icon" href="./icons/icon-192.png"/>
 <title>eventise - Event & Gift Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4049798836230099" crossorigin="anonymous"></script>
 <script>
 try{
   if(localStorage.getItem('fete_session')){
     document.documentElement.classList.add('boot-authenticated');
+  }
+}catch(e){}
+
+try{
+  const adsHosts=new Set([
+    'fete-app-c07ec.web.app',
+    'fete-app-c07ec.firebaseapp.com'
+  ]);
+  if(adsHosts.has(window.location.hostname)){
+    const adsScript=document.createElement('script');
+    adsScript.async=true;
+    adsScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4049798836230099';
+    adsScript.crossOrigin='anonymous';
+    adsScript.onerror=()=>console.warn('AdSense script could not be loaded on this device.');
+    document.head.appendChild(adsScript);
   }
 }catch(e){}
 </script>

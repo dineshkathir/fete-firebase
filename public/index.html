@@ -41,8 +41,10 @@ body{overscroll-behavior:none}
 
 /* ── HEADER ── */
 .hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 0;flex-shrink:0;position:relative;z-index:20}
-.logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0;margin-left:-14px}
+.logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0;margin-left:-14px;gap:8px}
 .logo .brand-lockup{display:block;height:108px;width:auto;max-width:220px}
+.contributor-badge{display:none;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;border:1px solid rgba(192,144,80,.32);background:linear-gradient(135deg,rgba(251,246,236,.98),rgba(240,222,184,.92));color:var(--gold-d);box-shadow:0 6px 16px rgba(192,144,80,.14);font-size:10.5px;font-weight:700;letter-spacing:.25px;white-space:nowrap;flex-shrink:0}
+.contributor-badge svg{width:13px;height:13px;display:block}
 .brand-lockup{display:block;height:72px;width:auto}
 .brand-lockup.auth{height:136px}
 .hdr-right{display:flex;gap:6px}
@@ -770,6 +772,14 @@ html.boot-authenticated #auth-screen{display:none}
         <input class="fi" type="text" id="contributors-name" placeholder="Contributor name" />
       </div>
       <div class="fg">
+        <label class="fl">Mail ID</label>
+        <input class="fi" type="email" id="contributors-email" placeholder="Contributor email" />
+      </div>
+      <div class="fg">
+        <label class="fl">Phone Number</label>
+        <input class="fi" type="tel" id="contributors-phone" placeholder="Phone number" maxlength="15" oninput="App.limitPhoneDigits(this,15)" />
+      </div>
+      <div class="fg">
         <label class="fl">Contribution</label>
         <textarea class="fi" id="contributors-contribution" rows="4" style="resize:vertical" placeholder="Contribution details"></textarea>
       </div>
@@ -783,6 +793,10 @@ html.boot-authenticated #auth-screen{display:none}
   <header class="hdr">
     <div class="logo">
       <img class="brand-lockup" src="./eventise-logo.svg" alt="eventise" />
+      <div class="contributor-badge" id="hdr-contributor-badge" title="Contributor">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.2 4.46 4.93.72-3.57 3.48.84 4.91L12 14.9 7.58 17.07l.84-4.91L4.85 8.68l4.93-.72L12 3.5Z" fill="currentColor"/></svg>
+        <span>Contributor</span>
+      </div>
     </div>
     <div class="hdr-right">
       <button class="ib" id="hdr-team-btn" onclick="App.openTeamModal()" title="Team" style="display:none"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="9" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4.5 18c.6-2.7 2.5-4 4.5-4s3.9 1.3 4.5 4M13.5 18c.4-2 1.8-3.1 3.5-3.1 1.4 0 2.7.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>

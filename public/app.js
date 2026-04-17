@@ -26,6 +26,12 @@ function normalizePhoneValue(value){
   return String(value||'').replace(/\D/g,'').slice(0,15);
 }
 
+function contributorMatchesEmail(email){
+  const normalized=normalizeEmailValue(email);
+  if(!normalized) return false;
+  return (DB?.contributors||[]).some(item=>normalizeEmailValue(item?.email)===normalized);
+}
+
 function publicInviteGuestDocId(eventId, email, phone){
   const normalizedEmail=normalizeEmailValue(email);
   const normalizedPhone=normalizePhoneValue(phone);
@@ -524,6 +530,8 @@ function serializeEvent(event, team, session) {
     const id=contributor.id||uid();
     await setDoc(doc(_fbDb,'contributors',id), cleanData({
       name:String(contributor.name||'').trim(),
+      email:normalizeEmailValue(contributor.email),
+      phone:normalizePhoneValue(contributor.phone),
       contribution:String(contributor.contribution||'').trim(),
       updatedAt:Date.now()
     }), { merge:true });
@@ -637,6 +645,7 @@ const Auth = (() => {
     // If first ever user — make them organizer of all events automatically
     showAppShell();
     Cloud.migrateLocalEvents(sess).catch(()=>Cloud.loadEventsForSession(sess).catch(()=>{}));
+    Cloud.loadContributors().then(()=>{ render(); }).catch(()=>{});
     NotificationCenter.initKnownState();
     render();
     if(showWelcomeToast) toast(`Welcome, ${sess.name}!`);
@@ -3542,6 +3551,8 @@ function renderContributorsModal(){
   const list=document.getElementById('contributors-list');
   const editor=document.getElementById('contributors-editor');
   const nameInput=document.getElementById('contributors-name');
+  const emailInput=document.getElementById('contributors-email');
+  const phoneInput=document.getElementById('contributors-phone');
   const contributionInput=document.getElementById('contributors-contribution');
   const adminNote=document.getElementById('contributors-admin-note');
   const manage=canManageContributors();
@@ -3553,6 +3564,10 @@ function renderContributorsModal(){
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
             <div style="min-width:0;flex:1">
               <div style="font-size:15px;font-weight:600;color:var(--txt)">${escapeHtml(item.name||'Contributor')}</div>
+              ${(item.email||item.phone)?`<div style="font-size:12px;color:var(--txt3);margin-top:4px;line-height:1.5">${[
+                item.email?escapeHtml(item.email):'',
+                item.phone?escapeHtml(item.phone):''
+              ].filter(Boolean).join(' · ')}</div>`:''}
               <div style="font-size:13px;color:var(--txt2);margin-top:6px;line-height:1.55;white-space:pre-wrap">${escapeHtml(item.contribution||'')}</div>
             </div>
             ${manage?`<div style="display:flex;gap:6px;flex-shrink:0">
@@ -3564,6 +3579,8 @@ function renderContributorsModal(){
       : `<div style="font-size:12.5px;color:var(--txt3);line-height:1.6;padding:8px 0">${manage?'Add the first contributor below.':'No contributors added yet.'}</div>`;
   }
   if(nameInput && !_editingContributorId) nameInput.value='';
+  if(emailInput && !_editingContributorId) emailInput.value='';
+  if(phoneInput && !_editingContributorId) phoneInput.value='';
   if(contributionInput && !_editingContributorId) contributionInput.value='';
 }
 
@@ -3580,25 +3597,36 @@ function editContributor(id){
   if(!item) return;
   _editingContributorId=id;
   const nameInput=document.getElementById('contributors-name');
+  const emailInput=document.getElementById('contributors-email');
+  const phoneInput=document.getElementById('contributors-phone');
   const contributionInput=document.getElementById('contributors-contribution');
   if(nameInput) nameInput.value=item.name||'';
+  if(emailInput) emailInput.value=item.email||'';
+  if(phoneInput) phoneInput.value=item.phone||'';
   if(contributionInput) contributionInput.value=item.contribution||'';
 }
 
 async function saveContributorEntry(){
   if(!canManageContributors()){toast('⚠️ View only');return;}
   const name=(document.getElementById('contributors-name')?.value||'').trim();
+  const email=normalizeEmailValue(document.getElementById('contributors-email')?.value||'');
+  const phone=normalizePhoneValue(document.getElementById('contributors-phone')?.value||'');
   const contribution=(document.getElementById('contributors-contribution')?.value||'').trim();
   if(!name || !contribution){toast('⚠️ Enter name and contribution');return;}
-  const id=await Cloud.saveContributor({id:_editingContributorId,name,contribution});
+  const id=await Cloud.saveContributor({id:_editingContributorId,name,email,phone,contribution});
   await Cloud.loadContributors();
   _editingContributorId='';
   const nameInput=document.getElementById('contributors-name');
+  const emailInput=document.getElementById('contributors-email');
+  const phoneInput=document.getElementById('contributors-phone');
   const contributionInput=document.getElementById('contributors-contribution');
   if(nameInput) nameInput.value='';
+  if(emailInput) emailInput.value='';
+  if(phoneInput) phoneInput.value='';
   if(contributionInput) contributionInput.value='';
   renderContributorsModal();
   renderSettings();
+  renderContributorBadge();
   toast(id?'Contributor saved':'Contributor updated');
 }
 
@@ -3610,8 +3638,16 @@ async function deleteContributorEntry(id){
     if(_editingContributorId===id) _editingContributorId='';
     renderContributorsModal();
     renderSettings();
+    renderContributorBadge();
     toast('Contributor deleted');
   });
+}
+
+function renderContributorBadge(){
+  const badge=document.getElementById('hdr-contributor-badge');
+  if(!badge) return;
+  const sessionEmail=Auth.currentSession()?.email||'';
+  badge.style.display=contributorMatchesEmail(sessionEmail)?'inline-flex':'none';
 }
 
 // ═══════════════════════════════════════════════
@@ -3630,6 +3666,7 @@ function render(){
     else if(_tab==='guest-portal') renderGuestPortal();
     applyCurrencyUI();
     updateBadges();
+    renderContributorBadge();
     updateScrollTopVisibility();
   }catch(err){
     console.error('Render failed', err);

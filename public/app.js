@@ -3936,9 +3936,10 @@ function buildPublicInviteLink(eventId){
   if(!ev) return '';
   ensurePublicGuestFormConfig(ev);
   const url=new URL(window.location.href);
-  url.pathname=`/i/${encodeURIComponent(ev.publicGuestFormKey)}`;
+  url.pathname='/';
   url.search='';
   url.hash='';
+  url.searchParams.set('i', ev.publicGuestFormKey);
   return url.toString();
 }
 

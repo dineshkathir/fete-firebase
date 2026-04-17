@@ -1780,7 +1780,7 @@ function setMasterGuestShareState(incoming, sent){
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
 const GUEST_SWIPE_LEFT_REVEAL=196;
-const GUEST_SWIPE_CONTACT_REVEAL=150;
+const GUEST_SWIPE_CONTACT_REVEAL=184;
 
 function syncTabHistory(tab,{fromPop=false}={}) {
   if (fromPop || !window.history || !window.history.replaceState) return;
@@ -2724,7 +2724,7 @@ function renderGuests(){
       const ini=initials(first,last);
       const lastGroupHint=getPreferredGuestGroup();
       const swipeRightHint=lastGroupHint ? `Swipe right to add to ${escapeHtml(lastGroupHint)}` : 'Swipe right to add to the most recent group';
-      const swipeLeftHint='Swipe left to reveal call and WhatsApp';
+      const swipeLeftHint='';
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
         <div class="g-swipe-inline-actions" aria-hidden="false">
           <button class="g-swipe-inline-btn call" type="button" title="Call guest" aria-label="Call guest" onclick="event.stopPropagation();App.swipeCallGuest('${g.id}')">${uiIcon('phone',18)}</button>
@@ -2743,7 +2743,7 @@ function renderGuests(){
         </div>
         <div class="g-swipe-hint" aria-hidden="true">
           <span class="g-swipe-hint-copy g-swipe-hint-right-copy">${uiIcon('guests',12)} ${swipeRightHint}</span>
-          <span class="g-swipe-hint-copy g-swipe-hint-left-copy">${uiIcon('gift',12)} ${swipeLeftHint}</span>
+          <span class="g-swipe-hint-copy g-swipe-hint-left-copy"></span>
         </div>
       </div>`;
     });

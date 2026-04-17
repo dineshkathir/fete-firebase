@@ -1,8 +1,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-  <item android:drawable="@color/brand_surface" />
   <item
-      android:width="84dp"
-      android:height="84dp"
+      android:width="96dp"
+      android:height="96dp"
       android:gravity="center"
       android:drawable="@drawable/ic_logo" />
 </layer-list>

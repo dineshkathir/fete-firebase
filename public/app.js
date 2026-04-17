@@ -2021,6 +2021,8 @@ function initGuestSwipeRows(){
     let horizontal=false;
     let activePointerId=null;
 
+    const isInlineActionTarget=target=>!!target?.closest?.('.g-swipe-inline-actions');
+
     const beginSwipe=(clientX,clientY)=>{
       closeOpenGuestSwipe(wrap.dataset.guestId);
       startX=clientX;
@@ -2072,6 +2074,7 @@ function initGuestSwipeRows(){
     };
 
     wrap.addEventListener('touchstart',event=>{
+      if(isInlineActionTarget(event.target)) return;
       if(event.touches.length!==1) return;
       const touch=event.touches[0];
       beginSwipe(touch.clientX,touch.clientY);
@@ -2085,6 +2088,7 @@ function initGuestSwipeRows(){
     wrap.addEventListener('touchcancel',finishSwipe,{passive:true});
 
     wrap.addEventListener('pointerdown',event=>{
+      if(isInlineActionTarget(event.target)) return;
       if(event.pointerType==='mouse') return;
       activePointerId=event.pointerId;
       beginSwipe(event.clientX,event.clientY);

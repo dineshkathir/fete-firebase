@@ -1253,6 +1253,14 @@ function rememberLastGuestGroup(groupName){
   DB.settings.lastGuestGroup=group;
   save();
 }
+function getPreferredGuestGroup(){
+  const savedGroup=(DB.settings.lastGuestGroup||'').trim();
+  if(savedGroup) return savedGroup;
+  const fallbackGuest=[...DB.guests]
+    .reverse()
+    .find(guest=>guest?.eventId===DB.activeEvent && String(guest.table||'').trim());
+  return String(fallbackGuest?.table||'').trim();
+}
 function hideAllGuestPickers(){
   ['guest-picker','cash-guest-picker','moi-guest-picker','group-picker'].forEach(id=>{
     const menu=document.getElementById(id);
@@ -1849,7 +1857,7 @@ function handleGuestRowTap(event,id){
 
 function applyLastGuestGroup(guestId){
   const guest=DB.guests.find(item=>item.id===guestId);
-  const group=(DB.settings.lastGuestGroup||'').trim();
+  const group=getPreferredGuestGroup();
   if(!guest){toast('⚠️ Guest not found');return;}
   if(!group){toast('⚠️ No recently used group found');return;}
   if((guest.table||'').trim()===group){toast(`${guest.first} is already in ${group}`);return;}
@@ -1896,6 +1904,63 @@ function swipeAddCashGift(guestId){
   openAddCashGiftForGuest(targetId);
 }
 
+function callGuestFromSwipe(guestId){
+  const targetId=guestId||_guestSwipeActionGuestId;
+  const guest=DB.guests.find(item=>item.id===targetId);
+  if(!guest){toast('⚠️ Guest not found');return;}
+  const digits=String(guest.contact||'').replace(/\D/g,'');
+  if(digits.length<10){toast('⚠️ No valid phone number');return;}
+  closeOpenGuestSwipe();
+  closeModal('guest-swipe-actions');
+  window.location.href=`tel:${digits}`;
+}
+
+function whatsAppGuestFromSwipe(guestId){
+  const targetId=guestId||_guestSwipeActionGuestId;
+  const guest=DB.guests.find(item=>item.id===targetId);
+  if(!guest){toast('⚠️ Guest not found');return;}
+  const digits=String(guest.contact||'').replace(/\D/g,'');
+  if(digits.length<10){toast('⚠️ No valid phone number');return;}
+  const intlPhone=digits.startsWith('91')?digits:'91'+digits;
+  closeOpenGuestSwipe();
+  closeModal('guest-swipe-actions');
+  window.open(`https://wa.me/${intlPhone}`,'_blank');
+}
+
+function openGuestContactActions(guestId){
+  const guest=DB.guests.find(item=>item.id===guestId);
+  if(!guest){toast('⚠️ Guest not found');return;}
+  _guestSwipeActionGuestId=guestId;
+  const sub=document.getElementById('guest-swipe-sub');
+  if(sub){
+    const phoneText=guest.contact ? formatPhoneNumber(guest.contact) : 'Phone not added yet';
+    sub.textContent=`Contact ${fullGuestName(guest)||guest.first||'this guest'}${phoneText?` • ${phoneText}`:''}`;
+  }
+  const contactRow=document.getElementById('guest-swipe-contact-row');
+  const callBtn=document.getElementById('guest-swipe-call-btn');
+  const waBtn=document.getElementById('guest-swipe-wa-btn');
+  const digits=String(guest.contact||'').replace(/\D/g,'');
+  const hasPhone=digits.length>=10;
+  if(contactRow) contactRow.style.display='flex';
+  if(callBtn){
+    callBtn.style.display=hasPhone?'inline-flex':'none';
+    callBtn.innerHTML=`${uiIcon('phone',14)} Call`;
+  }
+  if(waBtn){
+    waBtn.style.display=hasPhone?'inline-flex':'none';
+    waBtn.innerHTML=`${uiIcon('whatsapp',14)} WhatsApp`;
+  }
+  const allocateBtn=document.getElementById('guest-swipe-allocate-btn');
+  const giftRow=document.getElementById('guest-swipe-gift-row');
+  if(allocateBtn) allocateBtn.style.display='none';
+  if(giftRow) giftRow.style.display='none';
+  if(!hasPhone){
+    toast('⚠️ No valid phone number');
+    return;
+  }
+  openModal('guest-swipe-actions');
+}
+
 function openGuestSwipeActions(guestId){
   const guest=DB.guests.find(item=>item.id===guestId);
   if(!guest){toast('⚠️ Guest not found');return;}
@@ -1907,9 +1972,11 @@ function openGuestSwipeActions(guestId){
   const giftBtn=document.getElementById('guest-swipe-gift-btn');
   const cashBtn=document.getElementById('guest-swipe-cash-btn');
   const giftRow=document.getElementById('guest-swipe-gift-row');
+  const contactRow=document.getElementById('guest-swipe-contact-row');
   const canAllocate=role==='organizer'||role==='room';
   const canAddGift=role==='organizer';
   const canAddCashGift=role==='organizer'||role==='cash';
+  if(contactRow) contactRow.style.display='none';
   if(allocateBtn) allocateBtn.style.display=canAllocate?'block':'none';
   if(giftBtn) giftBtn.style.display=canAddGift?'block':'none';
   if(cashBtn) cashBtn.style.display=canAddCashGift?'block':'none';
@@ -1970,11 +2037,12 @@ function initGuestSwipeRows(){
       horizontal=false;
       activePointerId=null;
       card.style.transition='';
-      if(deltaX>=64){
+      if(deltaX>=56){
         _guestSwipeTapBlockUntil=Date.now()+250;
         wrap.classList.add('swipe-commit');
         resetGuestSwipeRow(wrap);
-        applyLastGuestGroup(wrap.dataset.guestId);
+        if(_guestListEditMode) applyLastGuestGroup(wrap.dataset.guestId);
+        else openGuestContactActions(wrap.dataset.guestId);
         return;
       }
       if(deltaX<=-72){
@@ -2428,20 +2496,26 @@ function openEventContactActions(eventId,index){
 
 function callActiveEventContact(){
   if(!_eventContactActionEventId || _eventContactActionIndex<0) return;
+  const eventId=_eventContactActionEventId;
+  const contactIndex=_eventContactActionIndex;
   closeModal('event-contact-actions');
-  callEventContact(_eventContactActionEventId,_eventContactActionIndex);
+  callEventContact(eventId,contactIndex);
 }
 
 function whatsAppActiveEventContact(){
   if(!_eventContactActionEventId || _eventContactActionIndex<0) return;
+  const eventId=_eventContactActionEventId;
+  const contactIndex=_eventContactActionIndex;
   closeModal('event-contact-actions');
-  whatsAppEventContact(_eventContactActionEventId,_eventContactActionIndex);
+  whatsAppEventContact(eventId,contactIndex);
 }
 
 function shareActiveEventContact(){
   if(!_eventContactActionEventId || _eventContactActionIndex<0) return;
+  const eventId=_eventContactActionEventId;
+  const contactIndex=_eventContactActionIndex;
   closeModal('event-contact-actions');
-  shareEventContact(_eventContactActionEventId,_eventContactActionIndex);
+  shareEventContact(eventId,contactIndex);
 }
 
 function initEventContactSwipeRows(){
@@ -2632,7 +2706,7 @@ function renderGuests(){
       const rsvp=normalizeGuestInviteStatus(g.rsvp);
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
-      const lastGroupHint=(DB.settings.lastGuestGroup||'').trim();
+      const lastGroupHint=getPreferredGuestGroup();
       const swipeRightHint=lastGroupHint ? `Swipe right to add to ${escapeHtml(lastGroupHint)}` : 'Swipe right to add to the last used group';
       const swipeLeftHint='Swipe left for room, gift, or cash gift';
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
@@ -5727,7 +5801,7 @@ window.App={
   addEventContact,_updateEventContact,_removeEventContact,openEventContacts,saveEventContacts,toggleEventContactsEditMode,handleEventContactsHeaderAction,handleEventContactPhoneKey,shareEventContact,callEventContact,whatsAppEventContact,openEventContactActions,callActiveEventContact,whatsAppActiveEventContact,shareActiveEventContact,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
-  confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,toggleGuestRowEdit,saveGuestRowEdit,undoGuestRemoval,
+  confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,openGuestContactActions,swipeCallGuest:callGuestFromSwipe,swipeWhatsAppGuest:whatsAppGuestFromSwipe,toggleGuestRowEdit,saveGuestRowEdit,undoGuestRemoval,
   openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,toggleMasterGuestSelection,toggleMasterGuestGroupSelection,openMasterGuestShareComposer,sendMasterGuestShare,openMasterGuestShares,acceptMasterGuestShare,rejectMasterGuestShare,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,

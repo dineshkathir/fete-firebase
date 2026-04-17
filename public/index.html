@@ -41,7 +41,7 @@ body{overscroll-behavior:none}
 
 /* ── HEADER ── */
 .hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 0;flex-shrink:0;position:relative;z-index:20}
-.logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0;margin-left:-6px}
+.logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0;margin-left:-14px}
 .logo .brand-lockup{display:block;height:108px;width:auto;max-width:220px}
 .brand-lockup{display:block;height:72px;width:auto}
 .brand-lockup.auth{height:136px}
@@ -294,16 +294,16 @@ body{overscroll-behavior:none}
 .soon-badge{font-size:10px;color:var(--txt3);background:var(--surf2);padding:2px 8px;border-radius:10px}
 
 /* ── MODALS ── */
-.mo{position:fixed;inset:0;background:rgba(30,20,16,.45);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .28s var(--ease-out),backdrop-filter .28s var(--ease-out)}
+.mo{position:fixed;inset:0;background:rgba(30,20,16,.42);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .36s var(--ease-out),backdrop-filter .36s var(--ease-out)}
 .mo.open{opacity:1;pointer-events:all}
-.ms{background:var(--bg);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:430px;padding:18px 18px 30px;transform:translateY(108%) scale(.985);transition:transform .34s var(--ease-out),box-shadow .28s var(--ease-out);max-height:92vh;overflow-y:auto}
-.mo.open .ms{transform:translateY(0) scale(1);animation:sheetPeekIn .34s var(--ease-out)}
-.mo.closing .ms{animation:sheetPeekOut .24s ease-in forwards}
+.ms{background:var(--bg);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:430px;padding:18px 18px 30px;transform:translateY(108%) scale(.988);opacity:.98;transition:transform .4s var(--ease-out),opacity .32s var(--ease-out),box-shadow .32s var(--ease-out);max-height:92vh;overflow-y:auto;will-change:transform,opacity}
+.mo.open .ms{transform:translateY(0) scale(1);opacity:1;animation:sheetPeekIn .42s cubic-bezier(.2,.78,.16,1)}
+.mo.closing .ms{animation:sheetPeekOut .3s cubic-bezier(.42,0,1,1) forwards}
 .mo#mo-add-moi .ms{max-height:min(88vh,700px);min-height:auto;padding-bottom:18px;overflow:visible}
 .mo#mo-add-moi .picker-wrap{z-index:6}
 .mo#mo-add-moi #moi-guest-picker{top:auto;bottom:calc(100% + 6px);border-radius:var(--rs) var(--rs) 0 0;border:1px solid var(--bord);border-bottom:none;box-shadow:0 -8px 20px rgba(30,20,16,.08);max-height:min(220px,28vh);z-index:80}
 .mo-center{align-items:center;padding:18px}
-.mo-center .ms{border-radius:var(--r);max-width:360px;max-height:min(88vh,640px);transform:translateY(22px) scale(.96);padding:18px 18px 22px}
+.mo-center .ms{border-radius:var(--r);max-width:360px;max-height:min(88vh,640px);transform:translateY(18px) scale(.975);padding:18px 18px 22px}
 .mo-center.open .ms{transform:translateY(0) scale(1)}
 .ms::-webkit-scrollbar{display:none}
 .m-handle{width:36px;height:4px;background:var(--bord);border-radius:2px;margin:0 auto 18px}
@@ -377,8 +377,8 @@ body{overscroll-behavior:none}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .anim{animation:fadeIn .25s ease forwards}
 @keyframes guestSwipeCommit{0%{transform:scale(1)}45%{transform:scale(.985)}100%{transform:scale(1)}}
-@keyframes sheetPeekIn{0%{transform:translateY(108%) scale(.985)}68%{transform:translateY(-8px) scale(1)}100%{transform:translateY(0) scale(1)}}
-@keyframes sheetPeekOut{0%{transform:translateY(0) scale(1)}100%{transform:translateY(108%) scale(.985)}}
+@keyframes sheetPeekIn{0%{transform:translateY(112%) scale(.992);opacity:.72}55%{transform:translateY(-4px) scale(1);opacity:1}100%{transform:translateY(0) scale(1);opacity:1}}
+@keyframes sheetPeekOut{0%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(112%) scale(.992);opacity:.82}}
 @keyframes softPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 @keyframes floatingIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 @keyframes heroGlow{0%{box-shadow:0 10px 28px rgba(122,42,69,.08)}100%{box-shadow:0 18px 36px rgba(122,42,69,.16)}}
@@ -1052,6 +1052,10 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-title">Guest Actions</div>
     <div style="font-size:12px;color:var(--txt3);margin:-8px 0 16px;line-height:1.6" id="guest-swipe-sub">Choose what you want to do for this guest.</div>
+    <div id="guest-swipe-contact-row" style="display:none;gap:10px;margin-bottom:8px">
+      <button class="btn-p" id="guest-swipe-call-btn" style="background:var(--sage-d);margin-top:0;flex:1;display:flex;align-items:center;justify-content:center;gap:8px" onclick="App.swipeCallGuest()"></button>
+      <button class="btn-p" id="guest-swipe-wa-btn" style="background:#146C43;margin-top:0;flex:1;display:flex;align-items:center;justify-content:center;gap:8px" onclick="App.swipeWhatsAppGuest()"></button>
+    </div>
     <button class="btn-p" id="guest-swipe-allocate-btn" style="background:var(--slate-d)" onclick="App.swipeAllocateRoom()">Allocate Room</button>
     <div id="guest-swipe-gift-row" style="display:flex;gap:8px;margin-top:8px">
       <button class="btn-p" id="guest-swipe-gift-btn" style="background:var(--rose-d);margin-top:0;flex:1" onclick="App.swipeAddGift()">Add Gift</button>

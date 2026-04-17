@@ -1,0 +1,42 @@
+[
+    {
+        "merged": "com.eventise.twa.app-release-25:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.eventise.twa.app-main-26:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-release-25:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.eventise.twa.app-main-26:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-release-25:/drawable_ic_logo.xml.flat",
+        "source": "com.eventise.twa.app-main-26:/drawable/ic_logo.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-release-25:/mipmap_ic_launcher_round.xml.flat",
+        "source": "com.eventise.twa.app-main-26:/mipmap/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-release-25:/mipmap_ic_launcher.xml.flat",
+        "source": "com.eventise.twa.app-main-26:/mipmap/ic_launcher.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-release-25:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.eventise.twa.app-main-26:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-release-25:/drawable_ic_launcher.xml.flat",
+        "source": "com.eventise.twa.app-main-26:/drawable/ic_launcher.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-release-25:/xml_filepaths.xml.flat",
+        "source": "com.eventise.twa.app-main-26:/xml/filepaths.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-release-25:/drawable_ic_splash.xml.flat",
+        "source": "com.eventise.twa.app-main-26:/drawable/ic_splash.xml"
+    },
+    {
+        "merged": "com.eventise.twa.app-release-25:/drawable-nodpi_splash_wordmark.png.flat",
+        "source": "com.eventise.twa.app-main-26:/drawable-nodpi/splash_wordmark.png"
+    }
+]

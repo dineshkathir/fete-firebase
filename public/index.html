@@ -152,7 +152,7 @@ body{overscroll-behavior:none}
 .g-swipe-wrap.swipe-hint-right::before{opacity:1;transform:translateX(0)}
 .g-swipe-wrap.swipe-hint-left::after{opacity:1;transform:translateX(0)}
 .g-swipe-wrap.swipe-commit .g-swipe-card{animation:guestSwipeCommit .24s ease}
-.g-swipe-inline-manage{position:absolute;top:0;left:0;bottom:0;width:196px;display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:0 12px;background:linear-gradient(90deg,rgba(245,240,232,.98) 0%,rgba(245,240,232,.94) 62%,rgba(245,240,232,0) 100%);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;transform:translateX(-10px);z-index:3}
+.g-swipe-inline-manage{position:absolute;top:0;left:0;bottom:0;width:212px;display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:0 12px;background:linear-gradient(90deg,rgba(245,240,232,.99) 0%,rgba(245,240,232,.96) 68%,rgba(245,240,232,.18) 100%);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;transform:translateX(-10px);z-index:4}
 .g-swipe-inline-actions{position:absolute;top:0;right:0;bottom:0;width:184px;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:0 14px;background:linear-gradient(270deg,rgba(233,248,239,.98) 0%,rgba(233,248,239,.92) 58%,rgba(233,248,239,0) 100%);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;transform:translateX(10px);z-index:3}
 .g-swipe-wrap[data-swipe-open="manage"] .g-swipe-inline-manage{opacity:1;pointer-events:auto;transform:translateX(0)}
 .g-swipe-wrap[data-swipe-open="contact"] .g-swipe-inline-actions{opacity:1;pointer-events:auto;transform:translateX(0)}
@@ -308,11 +308,11 @@ body{overscroll-behavior:none}
 .soon-badge{font-size:10px;color:var(--txt3);background:var(--surf2);padding:2px 8px;border-radius:10px}
 
 /* ── MODALS ── */
-.mo{position:fixed;inset:0;background:rgba(30,20,16,.42);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .36s var(--ease-out),backdrop-filter .36s var(--ease-out)}
+.mo{position:fixed;inset:0;background:rgba(30,20,16,.42);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .46s var(--ease-out),backdrop-filter .46s var(--ease-out)}
 .mo.open{opacity:1;pointer-events:all}
-.ms{background:var(--bg);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:430px;padding:18px 18px 30px;transform:translateY(108%) scale(.988);opacity:.98;transition:transform .4s var(--ease-out),opacity .32s var(--ease-out),box-shadow .32s var(--ease-out);max-height:92vh;overflow-y:auto;will-change:transform,opacity}
-.mo.open .ms{transform:translateY(0) scale(1);opacity:1;animation:sheetPeekIn .42s cubic-bezier(.2,.78,.16,1)}
-.mo.closing .ms{animation:sheetPeekOut .3s cubic-bezier(.42,0,1,1) forwards}
+.ms{background:var(--bg);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:430px;padding:18px 18px 30px;transform:translateY(108%) scale(.988);opacity:.98;transition:transform .52s var(--ease-out),opacity .4s var(--ease-out),box-shadow .4s var(--ease-out);max-height:92vh;overflow-y:auto;will-change:transform,opacity}
+.mo.open .ms{transform:translateY(0) scale(1);opacity:1;animation:sheetPeekIn .54s cubic-bezier(.2,.78,.16,1)}
+.mo.closing .ms{animation:sheetPeekOut .4s cubic-bezier(.42,0,1,1) forwards}
 .mo#mo-add-moi .ms{max-height:min(88vh,700px);min-height:auto;padding-bottom:18px;overflow:visible}
 .mo#mo-add-moi .picker-wrap{z-index:6}
 .mo#mo-add-moi #moi-guest-picker{top:auto;bottom:calc(100% + 6px);border-radius:var(--rs) var(--rs) 0 0;border:1px solid var(--bord);border-bottom:none;box-shadow:0 -8px 20px rgba(30,20,16,.08);max-height:min(220px,28vh);z-index:80}
@@ -392,7 +392,7 @@ body{overscroll-behavior:none}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .anim{animation:fadeIn .25s ease forwards}
 @keyframes guestSwipeCommit{0%{transform:scale(1)}45%{transform:scale(.985)}100%{transform:scale(1)}}
-@keyframes sheetPeekIn{0%{transform:translateY(112%) scale(.992);opacity:.72}55%{transform:translateY(-4px) scale(1);opacity:1}100%{transform:translateY(0) scale(1);opacity:1}}
+@keyframes sheetPeekIn{0%{transform:translateY(112%) scale(.992);opacity:.68}58%{transform:translateY(-4px) scale(1);opacity:1}100%{transform:translateY(0) scale(1);opacity:1}}
 @keyframes sheetPeekOut{0%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(112%) scale(.992);opacity:.82}}
 @keyframes softPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 @keyframes floatingIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}

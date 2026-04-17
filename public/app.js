@@ -915,7 +915,7 @@ function uiIcon(name,size=14){
     save:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8 4.5v5h7v-5M9 15.5h6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     export:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 20V10M8.5 13.5 12 10l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5.5h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     share:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="18" cy="5.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="6" cy="12" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="18" cy="18.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8 11l7.7-4.2M8 13l7.7 4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
-    whatsapp:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 4.5a7.5 7.5 0 0 0-6.5 11.3L4.5 20l4.4-1a7.5 7.5 0 1 0 3.1-14.5Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M9.4 9.3c.2-.4.5-.4.7-.4h.5c.2 0 .4.1.5.4l.5 1.3c.1.2.1.4 0 .5l-.4.6c-.1.2-.1.4 0 .6.5.8 1.2 1.5 2 2 .2.1.4.1.6 0l.6-.4c.2-.1.4-.1.5 0l1.3.5c.3.1.4.3.4.5v.5c0 .2 0 .5-.4.7-.5.3-1 .5-1.6.4-1.1-.1-2.4-.8-3.7-2.1s-2-2.6-2.1-3.7c-.1-.6.1-1.1.4-1.6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
+    whatsapp:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 4.75a7.25 7.25 0 0 0-6.18 11.05L5 19.25l3.61-.78A7.25 7.25 0 1 0 12 4.75Z" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.2 9.55c.14-.3.3-.33.56-.33h.45c.17 0 .32.1.41.28l.58 1.3c.08.18.07.33 0 .46l-.38.62c-.09.15-.08.32.01.47.49.75 1.13 1.39 1.88 1.88.15.1.32.1.47.01l.62-.38c.13-.08.28-.09.46 0l1.3.58c.18.09.28.24.28.41v.45c0 .26-.03.42-.33.56-.47.22-.98.3-1.5.23-1.01-.13-2.16-.77-3.34-1.95-1.18-1.18-1.82-2.33-1.95-3.34-.07-.52.01-1.03.23-1.5Z" fill="currentColor" stroke="none"/></svg>`,
     gift:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 10h16v10H4zM12 10v10M4 14h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10s-3.8-1.5-3.8-3.9c0-1.3 1-2.2 2.2-2.2 1.1 0 1.9.6 2.6 2 .7-1.4 1.5-2 2.6-2 1.2 0 2.2.9 2.2 2.2C15.8 8.5 12 10 12 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>`,
     room:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 19V8.5A1.5 1.5 0 0 1 6.5 7h11A1.5 1.5 0 0 1 19 8.5V19M3 19h18M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M9 11h2v2H9zm4 0h2v2h-2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     search:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`
@@ -1781,7 +1781,7 @@ function setMasterGuestShareState(incoming, sent){
 const GUEST_SWIPE_RIGHT_ACTION=196;
 const GUEST_SWIPE_LEFT_REVEAL=196;
 const GUEST_SWIPE_CONTACT_REVEAL=184;
-const GUEST_SWIPE_MANAGE_REVEAL=196;
+const GUEST_SWIPE_MANAGE_REVEAL=212;
 
 function syncTabHistory(tab,{fromPop=false}={}) {
   if (fromPop || !window.history || !window.history.replaceState) return;
@@ -1902,6 +1902,20 @@ function applyLastGuestGroup(guestId){
   rememberLastGuestGroup(group);
   save();syncActiveEventData();renderGuests();
   toast(`${guest.first} added to ${group}`);
+}
+
+function removeGuestFromRecentGroup(guestId){
+  const guest=DB.guests.find(item=>item.id===guestId);
+  const group=getPreferredGuestGroup();
+  if(!guest){toast('⚠️ Guest not found');return;}
+  if(!group){toast('⚠️ No recently used group found');return;}
+  if((guest.table||'').trim()!==group){
+    toast(`${guest.first} is not in ${group}`);
+    return;
+  }
+  guest.table='';
+  save();syncActiveEventData();renderGuests();
+  toast(`${guest.first} removed from ${group}`);
 }
 
 function swipeAllocateRoom(guestId){
@@ -2077,17 +2091,25 @@ function initGuestSwipeRows(){
       activePointerId=null;
       card.style.transition='';
       if(deltaX>=56){
-        if(!_guestListEditMode){
-          resetGuestSwipeRow(wrap);
-          return;
-        }
         _guestSwipeTapBlockUntil=Date.now()+250;
-        openGuestInlineManageActions(wrap);
+        if(_guestListEditMode){
+          wrap.classList.add('swipe-commit');
+          resetGuestSwipeRow(wrap);
+          applyLastGuestGroup(wrap.dataset.guestId);
+        }else{
+          openGuestInlineManageActions(wrap);
+        }
         return;
       }
       if(deltaX<=-72){
         _guestSwipeTapBlockUntil=Date.now()+250;
-        openGuestInlineContactActions(wrap);
+        if(_guestListEditMode){
+          wrap.classList.add('swipe-commit');
+          resetGuestSwipeRow(wrap);
+          removeGuestFromRecentGroup(wrap.dataset.guestId);
+        }else{
+          openGuestInlineContactActions(wrap);
+        }
         return;
       }
       resetGuestSwipeRow(wrap);
@@ -2751,8 +2773,12 @@ function renderGuests(){
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
       const lastGroupHint=getPreferredGuestGroup();
-      const swipeRightHint=_guestListEditMode ? 'Swipe right to reveal room, gift, and cash gift' : '';
-      const swipeLeftHint='';
+      const swipeRightHint=_guestListEditMode
+        ? (lastGroupHint ? `Swipe right to add to ${escapeHtml(lastGroupHint)}` : 'Swipe right to add to the most recent group')
+        : 'Swipe right to reveal room, gift, and cash gift';
+      const swipeLeftHint=_guestListEditMode
+        ? (lastGroupHint ? `Swipe left to remove from ${escapeHtml(lastGroupHint)}` : 'Swipe left to remove from the most recent group')
+        : '';
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
         <div class="g-swipe-inline-manage" aria-hidden="${_guestListEditMode?'false':'true'}">
           ${canSwipeAllocate?`<button class="g-swipe-inline-btn room" type="button" title="Allocate room" aria-label="Allocate room" onclick="event.stopPropagation();App.swipeAllocateRoom('${g.id}')">${uiIcon('room',18)}</button>`:''}
@@ -2776,7 +2802,7 @@ function renderGuests(){
         </div>
         <div class="g-swipe-hint" aria-hidden="true">
           <span class="g-swipe-hint-copy g-swipe-hint-right-copy">${swipeRightHint?`${uiIcon('gift',12)} ${swipeRightHint}`:''}</span>
-          <span class="g-swipe-hint-copy g-swipe-hint-left-copy"></span>
+          <span class="g-swipe-hint-copy g-swipe-hint-left-copy">${swipeLeftHint?`${uiIcon('edit',12)} ${swipeLeftHint}`:''}</span>
         </div>
       </div>`;
     });
@@ -3063,6 +3089,7 @@ function renderGifts(){
         <div style="font-size:11px;color:var(--txt4);display:flex;align-items:center;gap:4px"><span>${modeLabel}</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">
+        <button class="g-edit" type="button" title="Edit cash gift" aria-label="Edit cash gift" onclick="event.stopPropagation();App.openEditMoi('${g.id}')">${uiIcon('edit',14)}</button>
         <div style="text-align:right">
           <div style="font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:var(--gold-d);line-height:1">${fmtVal(g.value)}</div>
           <button class="moi-ty-badge" style="background:${tyBg};color:${tyColor};margin-top:3px" onclick="event.stopPropagation();App.cycleTy('${g.id}')" title="Tap to cycle status">${tyLabel}</button>
@@ -5680,7 +5707,14 @@ function _saveMoiEntry(opts={}){
   const from=document.getElementById('moi-from').value.trim();
   const amount=parseFloat(document.getElementById('moi-amount').value)||0;
   const paymentMode=(document.getElementById('moi-notes-inline')?.value || document.getElementById('moi-notes')?.value || 'Cash Envelope').trim() || 'Cash Envelope';
-  if(!from){toast('⚠️ Please enter a name');return;}
+  if(!from){
+    if(!keepOpen && !_editing.gift){
+      closeModal('add-moi');
+      return true;
+    }
+    toast('⚠️ Please enter a name');
+    return;
+  }
   if(!amount){toast('⚠️ Please enter the amount');return;}
   const wasEditing=!!_editing.gift;
   if(_editing.gift){

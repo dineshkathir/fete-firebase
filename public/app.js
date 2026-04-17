@@ -1780,6 +1780,7 @@ function setMasterGuestShareState(incoming, sent){
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
 const GUEST_SWIPE_LEFT_REVEAL=196;
+const GUEST_SWIPE_CONTACT_REVEAL=116;
 
 function syncTabHistory(tab,{fromPop=false}={}) {
   if (fromPop || !window.history || !window.history.replaceState) return;
@@ -1839,6 +1840,17 @@ function resetGuestSwipeRow(wrap,{immediate=false}={}){
   }
 }
 
+function openGuestInlineContactActions(wrap){
+  if(!wrap) return;
+  const card=wrap.querySelector('.g-swipe-card');
+  if(!card) return;
+  wrap.dataset.swipeOpen='true';
+  wrap.classList.add('swipe-hint-left');
+  card.style.transition='transform .18s ease';
+  card.style.transform=`translateX(-${GUEST_SWIPE_CONTACT_REVEAL}px)`;
+  _guestSwipeOpenId=wrap.dataset.guestId||null;
+}
+
 function closeOpenGuestSwipe(exceptId=''){
   document.querySelectorAll('.g-swipe-wrap[data-swipe-open="true"]').forEach(wrap=>{
     if(exceptId && wrap.dataset.guestId===exceptId) return;
@@ -1850,6 +1862,13 @@ function handleGuestRowTap(event,id){
   if(Date.now()<_guestSwipeTapBlockUntil){
     event.preventDefault();
     event.stopPropagation();
+    return;
+  }
+  const wrap=event?.target?.closest?.('.g-swipe-wrap');
+  if(wrap?.dataset?.swipeOpen==='true'){
+    event.preventDefault();
+    event.stopPropagation();
+    resetGuestSwipeRow(wrap);
     return;
   }
   openGuestDetail(id);
@@ -2047,9 +2066,13 @@ function initGuestSwipeRows(){
       }
       if(deltaX<=-72){
         _guestSwipeTapBlockUntil=Date.now()+250;
-        wrap.classList.add('swipe-commit');
-        resetGuestSwipeRow(wrap);
-        openGuestSwipeActions(wrap.dataset.guestId);
+        if(_guestListEditMode){
+          wrap.classList.add('swipe-commit');
+          resetGuestSwipeRow(wrap);
+          openGuestSwipeActions(wrap.dataset.guestId);
+        }else{
+          openGuestInlineContactActions(wrap);
+        }
         return;
       }
       resetGuestSwipeRow(wrap);
@@ -2707,9 +2730,15 @@ function renderGuests(){
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
       const lastGroupHint=getPreferredGuestGroup();
-      const swipeRightHint=lastGroupHint ? `Swipe right to add to ${escapeHtml(lastGroupHint)}` : 'Swipe right to add to the last used group';
-      const swipeLeftHint='Swipe left for room, gift, or cash gift';
+      const swipeRightHint=_guestListEditMode
+        ? (lastGroupHint ? `Swipe right to add to ${escapeHtml(lastGroupHint)}` : 'Swipe right to add to the last used group')
+        : 'Swipe right for call or WhatsApp';
+      const swipeLeftHint=_guestListEditMode ? 'Swipe left for room, gift, or cash gift' : 'Swipe left to reveal call and WhatsApp';
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
+        <div class="g-swipe-inline-actions" aria-hidden="${_guestListEditMode?'true':'false'}">
+          <button class="g-swipe-inline-btn call" type="button" title="Call guest" aria-label="Call guest" onclick="event.stopPropagation();App.swipeCallGuest('${g.id}')">${uiIcon('phone',18)}</button>
+          <button class="g-swipe-inline-btn whatsapp" type="button" title="WhatsApp guest" aria-label="WhatsApp guest" onclick="event.stopPropagation();App.swipeWhatsAppGuest('${g.id}')">${uiIcon('whatsapp',18)}</button>
+        </div>
         <div class="g-row g-swipe-card anim" onclick="App.handleGuestRowTap(event,'${g.id}')">
           <div class="g-av" style="${avStyle(g.id)}">${ini}</div>
           <div class="g-info">
@@ -2722,7 +2751,7 @@ function renderGuests(){
           </div>
         </div>
         <div class="g-swipe-hint" aria-hidden="true">
-          <span class="g-swipe-hint-copy g-swipe-hint-right-copy">${uiIcon('guests',12)} ${swipeRightHint}</span>
+          <span class="g-swipe-hint-copy g-swipe-hint-right-copy">${uiIcon(_guestListEditMode?'guests':'phone',12)} ${swipeRightHint}</span>
           <span class="g-swipe-hint-copy g-swipe-hint-left-copy">${uiIcon('gift',12)} ${swipeLeftHint}</span>
         </div>
       </div>`;

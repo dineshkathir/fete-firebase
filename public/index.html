@@ -540,7 +540,12 @@ html.boot-authenticated #auth-screen{display:none}
 .public-invite-logo img{height:88px;width:auto}
 .public-invite-title{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:600;text-align:center;color:var(--txt);margin-bottom:6px}
 .public-invite-sub{font-size:12.5px;line-height:1.6;color:var(--txt3);text-align:center;margin-bottom:18px}
-.public-invite-details{display:none;background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px;font-size:12px;line-height:1.7;color:var(--txt2)}
+.public-invite-details{display:none;background:linear-gradient(180deg,var(--gold-l) 0%,#FFF9F1 100%);border:1px solid var(--gold-m);border-radius:var(--r);padding:14px 15px;margin-bottom:14px;font-size:12px;line-height:1.7;color:var(--txt2);box-shadow:var(--sh1)}
+.public-invite-details-title{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-d);margin-bottom:8px}
+.public-invite-detail-line{display:flex;align-items:flex-start;gap:8px}
+.public-invite-detail-line + .public-invite-detail-line{margin-top:6px}
+.public-invite-detail-icon{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--gold-d);margin-top:1px}
+.public-invite-detail-text{flex:1;min-width:0}
 .public-invite-menu{display:none;background:var(--sage-l);border:1px solid var(--sage-m);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px;font-size:12px;line-height:1.7;color:var(--txt2);white-space:pre-wrap}
 .public-invite-status{display:none;background:var(--rose-l);color:var(--rose-d);border:1px solid var(--rose-m);border-radius:var(--rs);padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:14px}
 .public-invite-status.success{background:var(--sage-l);color:var(--sage-d);border-color:var(--sage-m)}
@@ -564,6 +569,15 @@ html.boot-authenticated #auth-screen{display:none}
 .switch-control-diet input:checked + .switch-slider{background:#1FAF78;border-color:#1FAF78;box-shadow:0 8px 16px rgba(31,175,120,.18)}
 .switch-control-room input + .switch-slider{background:var(--surf3);border-color:var(--bord);box-shadow:none}
 .switch-control-room input:checked + .switch-slider{background:#2F80ED;border-color:#2F80ED;box-shadow:0 8px 16px rgba(47,128,237,.18)}
+.switch-control-guest-diet input + .switch-slider{background:#D95858;border-color:#D95858;box-shadow:0 8px 16px rgba(217,88,88,.18)}
+.switch-control-guest-diet input:checked + .switch-slider{background:#1FAF78;border-color:#1FAF78;box-shadow:0 8px 16px rgba(31,175,120,.18)}
+.switch-control-guest-room input + .switch-slider{background:var(--surf3);border-color:var(--bord);box-shadow:none}
+.switch-control-guest-room input:checked + .switch-slider{background:#2F80ED;border-color:#2F80ED;box-shadow:0 8px 16px rgba(47,128,237,.18)}
+.switch-copy-value{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
+.switch-copy-value.veg{color:#1F8F67}
+.switch-copy-value.nonveg{color:#C54D4D}
+.switch-copy-value.room-on{color:#2F80ED}
+.switch-copy-value.room-off{color:var(--txt3)}
 .invite-share-meta{background:var(--surf2);border:1px solid var(--bord2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px}
 @media (max-width:420px){
   .public-invite-grid{grid-template-columns:1fr 1fr}
@@ -599,17 +613,31 @@ html.boot-authenticated #auth-screen{display:none}
       <div class="fg" id="public-invite-diet-wrap">
         <label class="fl">Veg / Non-veg</label>
         <input type="hidden" id="public-invite-diet" value="veg" />
-        <div class="public-toggle-wrap">
-          <button class="public-toggle-btn active" type="button" data-public-toggle="diet" data-value="veg" onclick="App.setPublicInviteToggle('diet','veg')">Veg</button>
-          <button class="public-toggle-btn" type="button" data-public-toggle="diet" data-value="non-veg" onclick="App.setPublicInviteToggle('diet','non-veg')">Non-veg</button>
+        <div class="switch-row" style="margin-bottom:0">
+          <div class="switch-copy">
+            <div class="switch-copy-title">Meal Preference</div>
+            <div class="switch-copy-sub">Switch between Veg and Non-veg.</div>
+            <div class="switch-copy-value veg" id="public-invite-diet-value">Veg</div>
+          </div>
+          <label class="switch-control switch-control-guest-diet" aria-label="Meal preference">
+            <input type="checkbox" id="public-invite-diet-switch" onchange="App.setPublicInviteSwitch('diet', this.checked)" checked />
+            <span class="switch-slider"></span>
+          </label>
         </div>
       </div>
       <div class="fg" id="public-invite-room-wrap">
         <label class="fl">Room Required</label>
         <input type="hidden" id="public-invite-room" value="no" />
-        <div class="public-toggle-wrap">
-          <button class="public-toggle-btn active" type="button" data-public-toggle="room" data-value="no" onclick="App.setPublicInviteToggle('room','no')">No</button>
-          <button class="public-toggle-btn" type="button" data-public-toggle="room" data-value="yes" onclick="App.setPublicInviteToggle('room','yes')">Yes</button>
+        <div class="switch-row" style="margin-bottom:0">
+          <div class="switch-copy">
+            <div class="switch-copy-title">Stay Needed</div>
+            <div class="switch-copy-sub">Turn on if you need a room.</div>
+            <div class="switch-copy-value room-off" id="public-invite-room-value">No room needed</div>
+          </div>
+          <label class="switch-control switch-control-guest-room" aria-label="Room required">
+            <input type="checkbox" id="public-invite-room-switch" onchange="App.setPublicInviteSwitch('room', this.checked)" />
+            <span class="switch-slider"></span>
+          </label>
         </div>
       </div>
     </div>

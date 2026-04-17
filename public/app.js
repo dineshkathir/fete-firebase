@@ -5907,10 +5907,16 @@ function renderPublicInviteScreen(context){
   if(subEl) subEl.textContent='Fill in your details so the organiser can add you to the guest list.';
   if(detailsEl){
     const parts=[];
-    if(context?.eventDate) parts.push(`${uiIcon('calendar',12)} ${fmtDate(context.eventDate)}`);
-    if(context?.eventTime) parts.push(`${uiIcon('time',12)} ${fmtTime(context.eventTime)}`);
-    if(context?.eventLocation) parts.push(`${uiIcon('location',12)} ${escapeHtml(formatEventLocation(context.eventLocation))}`);
-    detailsEl.innerHTML=parts.join('<br>');
+    if(context?.eventDate){
+      parts.push(`<div class="public-invite-detail-line"><span class="public-invite-detail-icon">${uiIcon('calendar',12)}</span><div class="public-invite-detail-text">${escapeHtml(fmtDate(context.eventDate))}</div></div>`);
+    }
+    if(context?.eventTime){
+      parts.push(`<div class="public-invite-detail-line"><span class="public-invite-detail-icon">${uiIcon('time',12)}</span><div class="public-invite-detail-text">${escapeHtml(fmtTime(context.eventTime))}</div></div>`);
+    }
+    if(context?.eventLocation){
+      parts.push(`<div class="public-invite-detail-line"><span class="public-invite-detail-icon">${uiIcon('location',12)}</span><div class="public-invite-detail-text">${escapeHtml(formatEventLocation(context.eventLocation))}</div></div>`);
+    }
+    detailsEl.innerHTML=parts.length?`<div class="public-invite-details-title">Event Details</div>${parts.join('')}`:'';
     detailsEl.style.display=parts.length?'block':'none';
   }
   if(statusEl){
@@ -5937,11 +5943,36 @@ function setPublicInviteStatus(message, isSuccess=false){
 }
 
 function setPublicInviteToggle(group,value){
-  document.querySelectorAll(`[data-public-toggle="${group}"]`).forEach(btn=>{
-    btn.classList.toggle('active', btn.dataset.value===value);
-  });
   const hidden=document.getElementById(`public-invite-${group}`);
   if(hidden) hidden.value=value;
+  if(group==='diet'){
+    const toggle=document.getElementById('public-invite-diet-switch');
+    if(toggle) toggle.checked=value==='veg';
+    const label=document.getElementById('public-invite-diet-value');
+    if(label){
+      label.textContent=value==='veg'?'Veg':'Non-veg';
+      label.className=`switch-copy-value ${value==='veg'?'veg':'nonveg'}`;
+    }
+  }
+  if(group==='room'){
+    const toggle=document.getElementById('public-invite-room-switch');
+    if(toggle) toggle.checked=value==='yes';
+    const label=document.getElementById('public-invite-room-value');
+    if(label){
+      label.textContent=value==='yes'?'Room required':'No room needed';
+      label.className=`switch-copy-value ${value==='yes'?'room-on':'room-off'}`;
+    }
+  }
+}
+
+function setPublicInviteSwitch(group,isChecked){
+  if(group==='diet'){
+    setPublicInviteToggle('diet', isChecked ? 'veg' : 'non-veg');
+    return;
+  }
+  if(group==='room'){
+    setPublicInviteToggle('room', isChecked ? 'yes' : 'no');
+  }
 }
 
 async function submitPublicInviteForm(){
@@ -6482,7 +6513,7 @@ window.App={
   openGroupInviteModal,filterGroupInvite,importMasterGroup,importMasterGuest,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   openProfileModal,toggleSetting,enableAppNotifications,setCurrency,unlockPremium,clearAllData,
-  openPublicInviteShareModal,copyPublicInviteLink,sharePublicInviteLink,submitPublicInviteForm,setPublicInviteToggle,
+  openPublicInviteShareModal,copyPublicInviteLink,sharePublicInviteLink,submitPublicInviteForm,setPublicInviteToggle,setPublicInviteSwitch,
   _publicInviteShareEventId:()=>_publicInviteShareEventId,
   setGFilter,setGSearch,scrollToTop,openConfirm,closeConfirm,
   limitPhoneDigits,

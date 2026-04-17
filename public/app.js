@@ -2965,6 +2965,7 @@ function openGuestRequestModal(eventId){
 }
 
 let _giftTab='moi';
+let _moiEditMode=false;
 let _giftCatFilter='all';
 
 const CAT_META={
@@ -3089,12 +3090,13 @@ function renderGifts(){
         <div style="font-size:11px;color:var(--txt4);display:flex;align-items:center;gap:4px"><span>${modeLabel}</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">
-        <button class="g-edit" type="button" title="Edit cash gift" aria-label="Edit cash gift" onclick="event.stopPropagation();App.openEditMoi('${g.id}')">${uiIcon('edit',14)}</button>
         <div style="text-align:right">
           <div style="font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:var(--gold-d);line-height:1">${fmtVal(g.value)}</div>
           <button class="moi-ty-badge" style="background:${tyBg};color:${tyColor};margin-top:3px" onclick="event.stopPropagation();App.cycleTy('${g.id}')" title="Tap to cycle status">${tyLabel}</button>
         </div>
-        ${waBtn(g,true)}
+        ${_moiEditMode
+          ? `<button class="gift-del" style="position:static;width:28px;height:28px;background:#FEE8E8;color:#932B2B;flex-shrink:0" onclick="event.stopPropagation();App.confirmDeleteGift('${g.id}')" title="Delete cash gift" aria-label="Delete cash gift">X</button>`
+          : waBtn(g,true)}
       </div>
     </div>`;
   }
@@ -3222,7 +3224,8 @@ function renderGifts(){
   const floatingGiftAction=_giftTab==='gifts'
     ? `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add gift" aria-label="Add gift" onclick="App.openAddGift()">${uiIcon('gift',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`
     : `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add cash gift" aria-label="Add cash gift" onclick="App.openAddMoi()" style="background:var(--gold-d);border-color:var(--gold-d)"><span style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;line-height:1">${escapeHtml(currencySymbol().trim()||'¤')}</span><span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
-  el.innerHTML=evSelHtml+`<div class="ph" style="margin-bottom:12px"><div class="ph-title">Gift Tracker</div></div>`+tabBar+body+floatingGiftAction;
+  const giftHeader=`<div class="ph" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px"><div class="ph-title" style="margin-bottom:0">Gift Tracker</div>${_giftTab==='moi'&&Auth.isCash(DB.activeEvent)?`<button class="g-edit ${_moiEditMode?'g-edit-save':''}" title="${_moiEditMode?'Save cash gift actions':'Edit cash gift actions'}" aria-label="${_moiEditMode?'Save cash gift actions':'Edit cash gift actions'}" onclick="App.${_moiEditMode?'saveMoiRowEdit':'toggleMoiRowEdit'}()">${uiIcon(_moiEditMode?'save':'edit',14)}</button>`:''}</div>`;
+  el.innerHTML=evSelHtml+giftHeader+tabBar+body+floatingGiftAction;
 }
 
 // ═══════════════════════════════════════════════
@@ -5650,7 +5653,17 @@ function selectCat(el,cat){
 
 function setGiftCatFilter(cat){_giftCatFilter=cat;renderGifts();}
 
-function setGiftTab(t){_giftTab=t;_giftCatFilter='all';renderGifts();}
+function setGiftTab(t){_giftTab=t;_giftCatFilter='all';if(t!=='moi') _moiEditMode=false;renderGifts();}
+
+function toggleMoiRowEdit(){
+  _moiEditMode=!_moiEditMode;
+  renderGifts();
+}
+
+function saveMoiRowEdit(){
+  _moiEditMode=false;
+  renderGifts();
+}
 
 function openAddMoi(){
   if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
@@ -5893,7 +5906,7 @@ window.App={
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,
   setGiftTab,setGiftCatFilter,selectCat,
-  openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,handleMoiFieldEnter,filterMoi,setMoiFilter,setMoiTy,
+  openAddMoi:openAddMoiGated,openEditMoi:openEditMoiGated,saveMoi,handleMoiFieldEnter,filterMoi,setMoiFilter,setMoiTy,toggleMoiRowEdit,saveMoiRowEdit,
   _editingGift:()=>_editing.gift,
   openGuestRequestModal,openGuestFeedbackModal,openGuestFoodMenuModal,
   submitGuestRoomRequest,setGuestFeedbackRating,submitGuestFeedback,clearGuestFeedback,scrollGuestsToFeedback,prepareGuestRoomAssignment:_requireOrganizer(prepareGuestRoomAssignment),resolveGuestRoomRequest:_requireOrganizer(resolveGuestRoomRequest),

@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut as fbSignOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { collection, deleteDoc, doc, getDocs, getFirestore, query, setDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, deleteDoc, doc, getDoc, getDocs, getFirestore, query, setDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const _fbApp = initializeApp({
   apiKey: "AIzaSyDnY1snuFwjiHRdPSe_Q36dG8krYwkXfb0",
@@ -463,14 +463,23 @@ function serializeEvent(event, team, session) {
 
   async function saveEvent(event, team, session) {
     const payload = serializeEvent(event, team, session);
+    const invitePayload = buildPublicInviteRecord(event);
     await setDoc(doc(_fbDb, 'events', event.id), payload, { merge: true });
+    if(invitePayload){
+      await setDoc(doc(_fbDb, 'publicInvites', invitePayload.key), cleanData(invitePayload), { merge: true });
+    }
     localStorage.setItem('fete_team_' + event.id, JSON.stringify(payload.team));
   }
 
   async function deleteEvent(eventId) {
+    const localEvent = (typeof DB !== 'undefined' ? DB.events.find(item=>item.id===eventId) : null);
+    const inviteKey = localEvent?.publicGuestFormKey || '';
     await deleteDocsForEvent('guests', eventId);
     await deleteDocsForEvent('gifts', eventId);
     await deleteDoc(doc(_fbDb, 'events', eventId));
+    if(inviteKey){
+      try{ await deleteDoc(doc(_fbDb, 'publicInvites', inviteKey)); }catch(e){}
+    }
     localStorage.removeItem('fete_team_' + eventId);
   }
 
@@ -821,6 +830,34 @@ function ensurePublicGuestFormConfig(event){
   if(event.publicInviteRoomEnabled===undefined) event.publicInviteRoomEnabled=true;
   if(event.publicInviteMenuEnabled===undefined) event.publicInviteMenuEnabled=false;
   return event;
+}
+
+function buildPublicInviteRecord(event){
+  if(!event) return null;
+  ensurePublicGuestFormConfig(event);
+  const menuText=event.publicInviteMenuEnabled===true
+    ? normalizeEventMenus(event.foodMenus)
+        .map(menu=>{
+          const items=normalizeMenuItems(menu.items).join(', ');
+          return [menu.title, items].filter(Boolean).join(': ');
+        })
+        .filter(Boolean)
+        .join(' | ')
+    : '';
+  return {
+    key:event.publicGuestFormKey,
+    eventId:event.id,
+    enabled:event.publicGuestFormEnabled!==false,
+    eventName:event.name||'Event',
+    dietEnabled:event.publicInviteDietEnabled!==false,
+    roomEnabled:event.publicInviteRoomEnabled!==false,
+    menuEnabled:event.publicInviteMenuEnabled===true,
+    menuText,
+    eventDate:event.date||'',
+    eventTime:event.time||'',
+    eventLocation:event.location||'',
+    updatedAt:Date.now()
+  };
 }
 
 const NotificationCenter = (() => {
@@ -3899,26 +3936,9 @@ function buildPublicInviteLink(eventId){
   if(!ev) return '';
   ensurePublicGuestFormConfig(ev);
   const url=new URL(window.location.href);
-  url.pathname=`/i/${encodeURIComponent(ev.id)}`;
+  url.pathname=`/i/${encodeURIComponent(ev.publicGuestFormKey)}`;
   url.search='';
   url.hash='';
-  if(ev.name) url.searchParams.set('e', ev.name);
-  if(ev.publicInviteDietEnabled===false) url.searchParams.set('d', '0');
-  if(ev.publicInviteRoomEnabled===false) url.searchParams.set('r', '0');
-  if(ev.publicInviteMenuEnabled===true) url.searchParams.set('m', '1');
-  if(ev.date) url.searchParams.set('dt', ev.date);
-  if(ev.time) url.searchParams.set('t', ev.time);
-  if(ev.location) url.searchParams.set('l', ev.location);
-  if(ev.publicInviteMenuEnabled===true){
-    const menuText=normalizeEventMenus(ev.foodMenus)
-      .map(menu=>{
-        const items=normalizeMenuItems(menu.items).join(', ');
-        return [menu.title, items].filter(Boolean).join(': ');
-      })
-      .filter(Boolean)
-      .join(' | ');
-    if(menuText) url.searchParams.set('mt', menuText);
-  }
   return url.toString();
 }
 
@@ -5834,11 +5854,32 @@ function showPublicInviteScreen(){
   if(invite) invite.style.display='flex';
 }
 
-function parsePublicInviteFromUrl(){
+async function parsePublicInviteFromUrl(){
   const pathParts=(window.location.pathname||'').split('/').filter(Boolean);
   const params=new URLSearchParams(window.location.search||'');
-  const pathEventId=pathParts[0]==='i' ? decodeURIComponent(pathParts[1]||'').trim() : '';
-  const eventId=(pathEventId || params.get('invite') || params.get('i') || '').trim();
+  const pathKey=pathParts[0]==='i' ? decodeURIComponent(pathParts[1]||'').trim() : '';
+  const eventId=(params.get('invite') || params.get('i') || '').trim();
+  if(pathKey){
+    try{
+      const snap=await getDoc(doc(_fbDb, 'publicInvites', pathKey));
+      if(snap.exists()){
+        const data=snap.data()||{};
+        if(data.enabled===false) return null;
+        return {
+          eventId:String(data.eventId||'').trim(),
+          eventName:String(data.eventName||'').trim() || 'Event',
+          dietEnabled:data.dietEnabled!==false,
+          roomEnabled:data.roomEnabled!==false,
+          menuEnabled:data.menuEnabled===true,
+          menuText:String(data.menuText||'').trim(),
+          eventDate:String(data.eventDate||'').trim(),
+          eventTime:String(data.eventTime||'').trim(),
+          eventLocation:String(data.eventLocation||'').trim(),
+        };
+      }
+    }catch(e){}
+    return null;
+  }
   if(!eventId) return null;
   return {
     eventId,
@@ -5959,8 +6000,8 @@ async function submitPublicInviteForm(){
   }
 }
 
-function initPublicInviteMode(){
-  const context=parsePublicInviteFromUrl();
+async function initPublicInviteMode(){
+  const context=await parsePublicInviteFromUrl();
   if(!context) return false;
   _publicInviteContext=context;
   renderPublicInviteScreen(context);
@@ -6567,11 +6608,17 @@ if(false && DB.events.length===0){
 }
 
 // Initialize auth — shows login screen or app based on session
-if(!initPublicInviteMode()){
+initPublicInviteMode().then(isInviteMode=>{
+  if(!isInviteMode){
+    Auth.init();
+    render();
+    return;
+  }
+  render();
+}).catch(()=>{
   Auth.init();
-}
-
-render();
+  render();
+});
 
 document.getElementById('main-scroll')?.addEventListener('scroll',()=>{
   updateScrollTopVisibility();

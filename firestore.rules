@@ -153,6 +153,13 @@ service cloud.firestore {
       allow create: if signedIn() && isEventMember(request.resource.data.eventId);
     }
 
+    match /publicInvites/{inviteKey} {
+      allow read: if resource.data.enabled == true;
+      allow create: if signedIn() && isEventOrganizer(request.resource.data.eventId);
+      allow update: if signedIn() && isEventOrganizer(resource.data.eventId);
+      allow delete: if signedIn() && isEventOrganizer(resource.data.eventId);
+    }
+
     match /masterGuestShares/{shareId} {
       allow create: if signedIn()
         && request.resource.data.senderEmail is string

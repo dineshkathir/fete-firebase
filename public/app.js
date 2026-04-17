@@ -3311,15 +3311,15 @@ function renderSettings(){
     <div class="set-sec-t">Coming Soon</div>
     <div class="set-item" style="cursor:default;opacity:.7">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--slate-l)">RS</div>
-        <div><div class="set-lbl">Digital RSVP Links</div><div class="set-sub">Let guests RSVP via a unique link</div></div>
+        <div class="set-ico" style="background:var(--slate-l)">ML</div>
+        <div><div class="set-lbl">Multi language</div><div class="set-sub">Use eventise in more languages</div></div>
       </div>
       <span class="soon-badge">v2.0</span>
     </div>
     <div class="set-item" style="cursor:default;opacity:.7">
       <div class="set-left">
-        <div class="set-ico" style="background:var(--sage-l)">CO</div>
-        <div><div class="set-lbl">Collaborator Mode</div><div class="set-sub">Co-host can edit simultaneously</div></div>
+        <div class="set-ico" style="background:var(--sage-l)">AN</div>
+        <div><div class="set-lbl">App notification</div><div class="set-sub">Get alerts for shares, invites, and updates</div></div>
       </div>
       <span class="soon-badge">v2.0</span>
     </div>

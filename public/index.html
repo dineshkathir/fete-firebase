@@ -557,9 +557,13 @@ html.boot-authenticated #auth-screen{display:none}
 .switch-control input{position:absolute;opacity:0;pointer-events:none}
 .switch-slider{width:46px;height:28px;border-radius:999px;background:var(--surf3);border:1px solid var(--bord);position:relative;transition:background .2s var(--ease-out),border-color .2s var(--ease-out),box-shadow .2s var(--ease-out)}
 .switch-slider::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(30,20,16,.14);transition:transform .2s var(--ease-out)}
-.switch-control input:checked + .switch-slider{background:var(--rose-d);border-color:var(--rose-d);box-shadow:0 8px 16px rgba(139,58,82,.16)}
+.switch-control input:checked + .switch-slider{box-shadow:0 8px 16px rgba(139,58,82,.16)}
 .switch-control input:checked + .switch-slider::after{transform:translateX(18px)}
 .switch-control input:focus-visible + .switch-slider{outline:2px solid rgba(139,58,82,.22);outline-offset:2px}
+.switch-control-diet input + .switch-slider{background:#D95858;border-color:#D95858;box-shadow:0 8px 16px rgba(217,88,88,.18)}
+.switch-control-diet input:checked + .switch-slider{background:#1FAF78;border-color:#1FAF78;box-shadow:0 8px 16px rgba(31,175,120,.18)}
+.switch-control-room input + .switch-slider{background:var(--surf3);border-color:var(--bord);box-shadow:none}
+.switch-control-room input:checked + .switch-slider{background:#2F80ED;border-color:#2F80ED;box-shadow:0 8px 16px rgba(47,128,237,.18)}
 .invite-share-meta{background:var(--surf2);border:1px solid var(--bord2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px}
 @media (max-width:420px){
   .public-invite-grid{grid-template-columns:1fr 1fr}
@@ -699,7 +703,7 @@ html.boot-authenticated #auth-screen{display:none}
         <div class="switch-copy-title">Show Veg / Non-veg</div>
         <div class="switch-copy-sub">Ask guests for food preference.</div>
       </div>
-      <label class="switch-control" aria-label="Show Veg or Non-veg">
+      <label class="switch-control switch-control-diet" aria-label="Show Veg or Non-veg">
         <input type="checkbox" id="share-public-invite-diet-enabled" checked />
         <span class="switch-slider"></span>
       </label>
@@ -709,7 +713,7 @@ html.boot-authenticated #auth-screen{display:none}
         <div class="switch-copy-title">Show Room Required</div>
         <div class="switch-copy-sub">Ask guests whether they need a room.</div>
       </div>
-      <label class="switch-control" aria-label="Show Room Required">
+      <label class="switch-control switch-control-room" aria-label="Show Room Required">
         <input type="checkbox" id="share-public-invite-room-enabled" checked />
         <span class="switch-slider"></span>
       </label>

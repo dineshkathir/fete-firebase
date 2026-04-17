@@ -41,11 +41,12 @@ body{overscroll-behavior:none}
 
 /* ── HEADER ── */
 .hdr{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 0;flex-shrink:0;position:relative;z-index:20}
-.logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0;margin-left:-14px;gap:2px}
+.logo{display:flex;align-items:center;color:var(--txt);justify-content:flex-start;min-width:0;margin-left:-14px;gap:0;position:relative}
 .logo .brand-lockup{display:block;height:108px;width:auto;max-width:220px}
-.contributor-badge{display:none;align-items:center;justify-content:center;width:18px;height:18px;margin-left:-4px;margin-top:2px;border-radius:999px;border:1px solid rgba(192,144,80,.38);background:linear-gradient(135deg,#FFF8E8,#EFD28E);color:#9B6A14;box-shadow:0 3px 8px rgba(192,144,80,.18);flex-shrink:0;cursor:pointer;transition:transform .18s var(--ease-out),box-shadow .18s var(--ease-out),background .18s var(--ease-out)}
-.contributor-badge:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(192,144,80,.18)}
-.contributor-badge svg{width:9px;height:9px;display:block}
+.contributor-badge{display:none;align-items:center;justify-content:center;position:absolute;left:168px;top:26px;width:26px;height:26px;border-radius:999px;border:1px solid rgba(192,144,80,.5);background:radial-gradient(circle at 32% 28%,#FFF7D6 0%,#F5D783 42%,#D7A53C 100%);color:#8A5B06;box-shadow:0 4px 10px rgba(192,144,80,.22),inset 0 1px 0 rgba(255,255,255,.5);flex-shrink:0;cursor:pointer;transition:transform .18s var(--ease-out),box-shadow .18s var(--ease-out),filter .18s var(--ease-out);z-index:2}
+.contributor-badge::after{content:'';position:absolute;inset:4px;border-radius:999px;border:1px solid rgba(138,91,6,.16)}
+.contributor-badge:hover{transform:translateY(-1px) scale(1.03);box-shadow:0 7px 16px rgba(192,144,80,.26),inset 0 1px 0 rgba(255,255,255,.55);filter:saturate(1.05)}
+.contributor-badge svg{width:12px;height:12px;display:block;position:relative;z-index:1}
 .brand-lockup{display:block;height:72px;width:auto}
 .brand-lockup.auth{height:136px}
 .hdr-right{display:flex;gap:6px}

@@ -3899,16 +3899,16 @@ function buildPublicInviteLink(eventId){
   if(!ev) return '';
   ensurePublicGuestFormConfig(ev);
   const url=new URL(window.location.href);
+  url.pathname=`/i/${encodeURIComponent(ev.id)}`;
   url.search='';
   url.hash='';
-  url.searchParams.set('invite', ev.id);
-  url.searchParams.set('event', ev.name || 'Event');
-  url.searchParams.set('diet', ev.publicInviteDietEnabled===false?'0':'1');
-  url.searchParams.set('room', ev.publicInviteRoomEnabled===false?'0':'1');
-  url.searchParams.set('menu', ev.publicInviteMenuEnabled===true?'1':'0');
-  if(ev.date) url.searchParams.set('date', ev.date);
-  if(ev.time) url.searchParams.set('time', ev.time);
-  if(ev.location) url.searchParams.set('location', ev.location);
+  if(ev.name) url.searchParams.set('e', ev.name);
+  if(ev.publicInviteDietEnabled===false) url.searchParams.set('d', '0');
+  if(ev.publicInviteRoomEnabled===false) url.searchParams.set('r', '0');
+  if(ev.publicInviteMenuEnabled===true) url.searchParams.set('m', '1');
+  if(ev.date) url.searchParams.set('dt', ev.date);
+  if(ev.time) url.searchParams.set('t', ev.time);
+  if(ev.location) url.searchParams.set('l', ev.location);
   if(ev.publicInviteMenuEnabled===true){
     const menuText=normalizeEventMenus(ev.foodMenus)
       .map(menu=>{
@@ -3917,7 +3917,7 @@ function buildPublicInviteLink(eventId){
       })
       .filter(Boolean)
       .join(' | ');
-    if(menuText) url.searchParams.set('menuText', menuText);
+    if(menuText) url.searchParams.set('mt', menuText);
   }
   return url.toString();
 }
@@ -5835,19 +5835,21 @@ function showPublicInviteScreen(){
 }
 
 function parsePublicInviteFromUrl(){
+  const pathParts=(window.location.pathname||'').split('/').filter(Boolean);
   const params=new URLSearchParams(window.location.search||'');
-  const eventId=(params.get('invite')||'').trim();
+  const pathEventId=pathParts[0]==='i' ? decodeURIComponent(pathParts[1]||'').trim() : '';
+  const eventId=(pathEventId || params.get('invite') || params.get('i') || '').trim();
   if(!eventId) return null;
   return {
     eventId,
-    eventName:(params.get('event')||'').trim() || 'Event',
-    dietEnabled: params.get('diet') !== '0',
-    roomEnabled: params.get('room') !== '0',
-    menuEnabled: params.get('menu') === '1',
-    menuText:(params.get('menuText')||'').trim(),
-    eventDate:(params.get('date')||'').trim(),
-    eventTime:(params.get('time')||'').trim(),
-    eventLocation:(params.get('location')||'').trim(),
+    eventName:(params.get('e')||params.get('event')||'').trim() || 'Event',
+    dietEnabled: (params.get('d') ?? params.get('diet')) !== '0',
+    roomEnabled: (params.get('r') ?? params.get('room')) !== '0',
+    menuEnabled: (params.get('m') ?? params.get('menu')) === '1',
+    menuText:(params.get('mt')||params.get('menuText')||'').trim(),
+    eventDate:(params.get('dt')||params.get('date')||'').trim(),
+    eventTime:(params.get('t')||params.get('time')||'').trim(),
+    eventLocation:(params.get('l')||params.get('location')||'').trim(),
   };
 }
 

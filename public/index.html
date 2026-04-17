@@ -549,6 +549,17 @@ html.boot-authenticated #auth-screen{display:none}
 .public-toggle-wrap{display:flex;gap:8px;flex-wrap:wrap}
 .public-toggle-btn{flex:1;padding:11px 12px;border-radius:999px;border:1px solid var(--bord);background:var(--surf2);color:var(--txt2);font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:all .18s var(--ease-out)}
 .public-toggle-btn.active{background:var(--rose-d);border-color:var(--rose-d);color:#fff;box-shadow:0 8px 16px rgba(139,58,82,.16)}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);margin-bottom:8px}
+.switch-copy{flex:1;min-width:0}
+.switch-copy-title{font-size:14px;font-weight:600;color:var(--txt)}
+.switch-copy-sub{font-size:12px;color:var(--txt3);margin-top:2px;line-height:1.45}
+.switch-control{position:relative;display:inline-flex;align-items:center;cursor:pointer;flex-shrink:0}
+.switch-control input{position:absolute;opacity:0;pointer-events:none}
+.switch-slider{width:46px;height:28px;border-radius:999px;background:var(--surf3);border:1px solid var(--bord);position:relative;transition:background .2s var(--ease-out),border-color .2s var(--ease-out),box-shadow .2s var(--ease-out)}
+.switch-slider::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(30,20,16,.14);transition:transform .2s var(--ease-out)}
+.switch-control input:checked + .switch-slider{background:var(--rose-d);border-color:var(--rose-d);box-shadow:0 8px 16px rgba(139,58,82,.16)}
+.switch-control input:checked + .switch-slider::after{transform:translateX(18px)}
+.switch-control input:focus-visible + .switch-slider{outline:2px solid rgba(139,58,82,.22);outline-offset:2px}
 .invite-share-meta{background:var(--surf2);border:1px solid var(--bord2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px}
 @media (max-width:420px){
   .public-invite-grid{grid-template-columns:1fr 1fr}
@@ -683,20 +694,26 @@ html.boot-authenticated #auth-screen{display:none}
       <div id="public-invite-share-event" style="font-size:15px;font-weight:600;color:var(--txt)"></div>
     </div>
     <div style="font-size:12px;color:var(--txt3);margin:-4px 0 12px;line-height:1.6">Choose what guests should see in the form, then copy the invite link.</div>
-    <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);cursor:pointer;margin-bottom:8px">
-      <input type="checkbox" id="share-public-invite-diet-enabled" checked />
-      <div>
-        <div style="font-size:14px;font-weight:600;color:var(--txt)">Show Veg / Non-veg</div>
-        <div style="font-size:12px;color:var(--txt3);margin-top:2px">Ask guests for food preference.</div>
+    <div class="switch-row">
+      <div class="switch-copy">
+        <div class="switch-copy-title">Show Veg / Non-veg</div>
+        <div class="switch-copy-sub">Ask guests for food preference.</div>
       </div>
-    </label>
-    <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);cursor:pointer;margin-bottom:8px">
-      <input type="checkbox" id="share-public-invite-room-enabled" checked />
-      <div>
-        <div style="font-size:14px;font-weight:600;color:var(--txt)">Show Room Required</div>
-        <div style="font-size:12px;color:var(--txt3);margin-top:2px">Ask guests whether they need a room.</div>
+      <label class="switch-control" aria-label="Show Veg or Non-veg">
+        <input type="checkbox" id="share-public-invite-diet-enabled" checked />
+        <span class="switch-slider"></span>
+      </label>
+    </div>
+    <div class="switch-row">
+      <div class="switch-copy">
+        <div class="switch-copy-title">Show Room Required</div>
+        <div class="switch-copy-sub">Ask guests whether they need a room.</div>
       </div>
-    </label>
+      <label class="switch-control" aria-label="Show Room Required">
+        <input type="checkbox" id="share-public-invite-room-enabled" checked />
+        <span class="switch-slider"></span>
+      </label>
+    </div>
     <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);cursor:pointer;margin-bottom:14px">
       <input type="checkbox" id="share-public-invite-menu-enabled" />
       <div>

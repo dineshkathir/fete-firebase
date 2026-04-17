@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#FDF5EF" />
+<title>Delete Account | eventise</title>
+<link rel="icon" type="image/svg+xml" href="./eventise-favicon.svg" />
+<link rel="apple-touch-icon" href="./icons/icon-192.png" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+*{box-sizing:border-box}
+:root{
+  --rose:#C4637A;--rose-d:#8B3A52;--gold:#C09050;--gold-l:#FBF6EC;
+  --bg:#FDFAF6;--surf:#FFFFFF;--surf2:#F7F1E8;--txt:#1E1410;--txt2:#5C4A3A;--txt3:#9C8A7A;
+  --bord:rgba(30,20,16,0.08);--sh:0 16px 40px rgba(30,20,16,0.08);
+}
+html,body{margin:0;padding:0;background:linear-gradient(180deg,#FDF5EF 0%,#FAF6F1 100%);color:var(--txt);font-family:'Plus Jakarta Sans',sans-serif}
+body{min-height:100vh}
+.wrap{max-width:860px;margin:0 auto;padding:32px 18px 56px}
+.card{background:rgba(255,255,255,.92);border:1px solid var(--bord);border-radius:24px;box-shadow:var(--sh);padding:28px}
+.brand{display:flex;justify-content:center;margin-bottom:14px}
+.brand img{width:min(260px,72vw);height:auto;display:block}
+h1{font-family:'Cormorant Garamond',serif;font-size:48px;line-height:1;margin:8px 0 14px;text-align:center}
+.lead{max-width:640px;margin:0 auto 24px;text-align:center;font-size:16px;line-height:1.7;color:var(--txt2)}
+.section{background:var(--surf);border:1px solid var(--bord);border-radius:18px;padding:20px 18px;margin-top:16px}
+.section h2{margin:0 0 12px;font-size:18px;color:var(--rose-d)}
+.section p{margin:0 0 12px;line-height:1.7;color:var(--txt2)}
+.section ul{margin:0;padding-left:20px;color:var(--txt2);line-height:1.8}
+.cta{display:inline-flex;align-items:center;justify-content:center;margin-top:10px;padding:13px 18px;border-radius:14px;background:var(--rose-d);color:#fff;text-decoration:none;font-weight:600}
+.mail{word-break:break-word;color:var(--rose-d);font-weight:600}
+.meta{margin-top:18px;padding:14px 16px;border-radius:14px;background:var(--gold-l);font-size:13px;line-height:1.7;color:var(--txt2)}
+@media (max-width:640px){
+  .wrap{padding:18px 12px 34px}
+  .card{padding:20px 16px}
+  h1{font-size:38px}
+  .lead{font-size:15px}
+}
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <div class="brand">
+        <img src="./eventise-logo.svg" alt="eventise" />
+      </div>
+      <h1>Delete Your Account</h1>
+      <p class="lead">
+        eventise lets users request deletion of their account and associated personal data.
+        Use the steps below to request deletion.
+      </p>
+
+      <div class="section">
+        <h2>How to request deletion</h2>
+        <p>
+          Send an account deletion request from the same email address used in your eventise account to:
+        </p>
+        <p class="mail">dinesh.reachme@gmail.com</p>
+        <a class="cta" href="mailto:dinesh.reachme@gmail.com?subject=eventise%20Account%20Deletion%20Request">Request account deletion</a>
+      </div>
+
+      <div class="section">
+        <h2>What will be deleted</h2>
+        <ul>
+          <li>Your eventise account details linked to your login email.</li>
+          <li>Your profile information such as name, email address, and phone number stored in the app.</li>
+          <li>Your event data you created or manage, including guests, gifts, rooms, and related records, unless retention is required for active collaboration with other users.</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>What may be retained</h2>
+        <ul>
+          <li>Records required for fraud prevention, legal compliance, dispute handling, or security purposes.</li>
+          <li>Backup data for a limited period before secure deletion from backup systems.</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>Retention period</h2>
+        <p>
+          We aim to process deletion requests within 7 business days. Backup or security logs may remain for up to 30 days before final deletion, unless a longer retention period is required by law.
+        </p>
+      </div>
+
+      <div class="meta">
+        If you signed in with Google, deleting your eventise account does not delete your Google account.
+        This page is provided for Google Play account deletion compliance and user transparency.
+      </div>
+    </section>
+  </main>
+</body>
+</html>

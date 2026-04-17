@@ -3530,27 +3530,32 @@ function openAddEvent(){
   document.getElementById('ev-color').value='rose';
   document.getElementById('ev-room-requests-enabled').checked=true;
   document.getElementById('ev-room-requests-enabled').disabled=false;
-  document.getElementById('ev-room-requests-enabled').closest('label').style.opacity='1';
+  const roomRequestsLabel=document.getElementById('ev-room-requests-enabled')?.closest('label');
+  if(roomRequestsLabel) roomRequestsLabel.style.opacity='1';
   document.getElementById('ev-feedback-enabled').checked=false;
   document.getElementById('ev-feedback-enabled').disabled=false;
-  document.getElementById('ev-feedback-enabled').closest('label').style.opacity='1';
+  const feedbackLabel=document.getElementById('ev-feedback-enabled')?.closest('label');
+  if(feedbackLabel) feedbackLabel.style.opacity='1';
   const inviteDietToggle=document.getElementById('ev-public-invite-diet-enabled');
   if(inviteDietToggle){
     inviteDietToggle.checked=true;
     inviteDietToggle.disabled=false;
-    inviteDietToggle.closest('label').style.opacity='1';
+    const inviteDietLabel=inviteDietToggle.closest('label');
+    if(inviteDietLabel) inviteDietLabel.style.opacity='1';
   }
   const inviteRoomToggle=document.getElementById('ev-public-invite-room-enabled');
   if(inviteRoomToggle){
     inviteRoomToggle.checked=true;
     inviteRoomToggle.disabled=false;
-    inviteRoomToggle.closest('label').style.opacity='1';
+    const inviteRoomLabel=inviteRoomToggle.closest('label');
+    if(inviteRoomLabel) inviteRoomLabel.style.opacity='1';
   }
   const inviteMenuToggle=document.getElementById('ev-public-invite-menu-enabled');
   if(inviteMenuToggle){
     inviteMenuToggle.checked=false;
     inviteMenuToggle.disabled=false;
-    inviteMenuToggle.closest('label').style.opacity='1';
+    const inviteMenuLabel=inviteMenuToggle.closest('label');
+    if(inviteMenuLabel) inviteMenuLabel.style.opacity='1';
   }
   const legacyEventContactsButton=document.getElementById('ev-contact-add-btn');
   if(legacyEventContactsButton){
@@ -3593,31 +3598,36 @@ function openEditEvent(id){
   if(reqToggle){
     reqToggle.checked=isRoomRequestEnabled(ev);
     reqToggle.disabled=!isOrg;
-    reqToggle.closest('label').style.opacity=isOrg?'1':'0.6';
+    const reqLabel=reqToggle.closest('label');
+    if(reqLabel) reqLabel.style.opacity=isOrg?'1':'0.6';
   }
   const feedbackToggle=document.getElementById('ev-feedback-enabled');
   if(feedbackToggle){
     feedbackToggle.checked=isFeedbackEnabled(ev);
     feedbackToggle.disabled=!isOrg;
-    feedbackToggle.closest('label').style.opacity=isOrg?'1':'0.6';
+    const feedbackToggleLabel=feedbackToggle.closest('label');
+    if(feedbackToggleLabel) feedbackToggleLabel.style.opacity=isOrg?'1':'0.6';
   }
   const inviteDietToggle=document.getElementById('ev-public-invite-diet-enabled');
   if(inviteDietToggle){
     inviteDietToggle.checked=ev.publicInviteDietEnabled!==false;
     inviteDietToggle.disabled=!isOrg;
-    inviteDietToggle.closest('label').style.opacity=isOrg?'1':'0.6';
+    const inviteDietToggleLabel=inviteDietToggle.closest('label');
+    if(inviteDietToggleLabel) inviteDietToggleLabel.style.opacity=isOrg?'1':'0.6';
   }
   const inviteRoomToggle=document.getElementById('ev-public-invite-room-enabled');
   if(inviteRoomToggle){
     inviteRoomToggle.checked=ev.publicInviteRoomEnabled!==false;
     inviteRoomToggle.disabled=!isOrg;
-    inviteRoomToggle.closest('label').style.opacity=isOrg?'1':'0.6';
+    const inviteRoomToggleLabel=inviteRoomToggle.closest('label');
+    if(inviteRoomToggleLabel) inviteRoomToggleLabel.style.opacity=isOrg?'1':'0.6';
   }
   const inviteMenuToggle=document.getElementById('ev-public-invite-menu-enabled');
   if(inviteMenuToggle){
     inviteMenuToggle.checked=ev.publicInviteMenuEnabled===true;
     inviteMenuToggle.disabled=!isOrg;
-    inviteMenuToggle.closest('label').style.opacity=isOrg?'1':'0.6';
+    const inviteMenuToggleLabel=inviteMenuToggle.closest('label');
+    if(inviteMenuToggleLabel) inviteMenuToggleLabel.style.opacity=isOrg?'1':'0.6';
   }
   const legacyEventContactsButton=document.getElementById('ev-contact-add-btn');
   if(legacyEventContactsButton){
@@ -3907,7 +3917,8 @@ function openPublicInviteShareModal(eventId){
     const hasMenu=normalizeEventMenus(ev.foodMenus).some(menu=>(menu.items||[]).some(item=>String(item||'').trim()));
     menuToggle.checked=hasMenu && ev.publicInviteMenuEnabled===true;
     menuToggle.disabled=!hasMenu;
-    menuToggle.closest('label').style.opacity=hasMenu?'1':'0.55';
+    const menuLabel=menuToggle.closest('label');
+    if(menuLabel) menuLabel.style.opacity=hasMenu?'1':'0.55';
   }
   openModal('public-invite-share');
 }
@@ -5968,8 +5979,10 @@ function unlockPremium(){
   DB.premium=true;save();closeModal('premium');render();
   toast('Premium unlocked. Ads removed.');
   if(!DB.premium) return;
-  document.querySelector('.ad-top').style.display='none';
-  document.querySelector('.ad-bot').style.display='none';
+  const adTop=document.querySelector('.ad-top');
+  const adBot=document.querySelector('.ad-bot');
+  if(adTop) adTop.style.display='none';
+  if(adBot) adBot.style.display='none';
 }
 
 function clearAllData(){
@@ -6496,8 +6509,10 @@ if (window.history && window.history.replaceState) {
 
 // Hide ads if premium
 if(DB.premium){
-  document.querySelector('.ad-top').style.display='none';
-  document.querySelector('.ad-bot').style.display='none';
+  const adTop=document.querySelector('.ad-top');
+  const adBot=document.querySelector('.ad-bot');
+  if(adTop) adTop.style.display='none';
+  if(adBot) adBot.style.display='none';
 }
 
 // Seed sample data if empty

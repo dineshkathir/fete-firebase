@@ -32,6 +32,12 @@ function contributorMatchesEmail(email){
   return (DB?.contributors||[]).some(item=>normalizeEmailValue(item?.email)===normalized);
 }
 
+function getContributorEntriesForEmail(email){
+  const normalized=normalizeEmailValue(email);
+  if(!normalized) return [];
+  return (DB?.contributors||[]).filter(item=>normalizeEmailValue(item?.email)===normalized);
+}
+
 function publicInviteGuestDocId(eventId, email, phone){
   const normalizedEmail=normalizeEmailValue(email);
   const normalizedPhone=normalizePhoneValue(phone);
@@ -3650,6 +3656,25 @@ function renderContributorBadge(){
   badge.style.display=contributorMatchesEmail(sessionEmail)?'inline-flex':'none';
 }
 
+async function openMyContributionsModal(){
+  try{ await Cloud.loadContributors(); }catch(e){}
+  const list=document.getElementById('my-contributions-list');
+  if(!list) return;
+  const session=Auth.currentSession();
+  const items=getContributorEntriesForEmail(session?.email);
+  list.innerHTML=items.length
+    ? items.map(item=>`<div class="request-row" style="display:block">
+        <div style="font-size:15px;font-weight:600;color:var(--txt)">${escapeHtml(item.name||'Contributor')}</div>
+        ${(item.email||item.phone)?`<div style="font-size:12px;color:var(--txt3);margin-top:4px;line-height:1.5">${[
+          item.email?escapeHtml(item.email):'',
+          item.phone?escapeHtml(item.phone):''
+        ].filter(Boolean).join(' · ')}</div>`:''}
+        <div style="font-size:13px;color:var(--txt2);margin-top:8px;line-height:1.6;white-space:pre-wrap">${escapeHtml(item.contribution||'')}</div>
+      </div>`).join('')
+    : `<div style="font-size:12.5px;color:var(--txt3);line-height:1.6;padding:8px 0">No contributions found for this account.</div>`;
+  openModal('my-contributions');
+}
+
 // ═══════════════════════════════════════════════
 // MAIN RENDER
 // ═══════════════════════════════════════════════
@@ -6670,7 +6695,7 @@ window.App={
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   openProfileModal,toggleSetting,enableAppNotifications,setCurrency,unlockPremium,clearAllData,
   openPublicInviteShareModal,copyPublicInviteLink,sharePublicInviteLink,submitPublicInviteForm,setPublicInviteToggle,setPublicInviteSwitch,
-  openContributorsModal,saveContributorEntry,editContributor,deleteContributorEntry,
+  openContributorsModal,openMyContributionsModal,saveContributorEntry,editContributor,deleteContributorEntry,
   _publicInviteShareEventId:()=>_publicInviteShareEventId,
   setGFilter,setGSearch,scrollToTop,openConfirm,closeConfirm,
   limitPhoneDigits,

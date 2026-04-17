@@ -1412,8 +1412,9 @@ function buildEventContactShareText(ev, contact){
 }
 
 function getEventContactForAction(eventId,index){
-  if(eventId && _editingEventContactsId===eventId && _eventContactsTemp[index]) return normalizeEventContacts(_eventContactsTemp)[index];
-  const ev=DB.events.find(item=>item.id===eventId);
+  const resolvedEventId=eventId || _eventContactActionEventId || _editingEventContactsId || DB.activeEvent;
+  if(resolvedEventId && _editingEventContactsId===resolvedEventId && _eventContactsTemp[index]) return normalizeEventContacts(_eventContactsTemp)[index];
+  const ev=DB.events.find(item=>item.id===resolvedEventId);
   return normalizeEventContacts(ev?.eventContacts)[index];
 }
 
@@ -1648,12 +1649,23 @@ function pushOverlayState(type,id){
 }
 
 function openModal(id,{fromPop=false}={}){
-  document.getElementById('mo-'+id)?.classList.add('open');
+  const modal=document.getElementById('mo-'+id);
+  if(modal){
+    modal.classList.remove('closing');
+    modal.classList.add('open');
+  }
   if(!fromPop) pushOverlayState('modal', id);
 }
 
 function closeModal(id,{fromPop=false}={}){
-  document.getElementById('mo-'+id)?.classList.remove('open');
+  const modal=document.getElementById('mo-'+id);
+  if(modal){
+    modal.classList.add('closing');
+    modal.classList.remove('open');
+    window.setTimeout(()=>{
+      modal.classList.remove('closing');
+    },260);
+  }
   if(id==='event-contacts'){
     _editingEventContactsId='';
     _eventContactsEditMode=false;
@@ -2219,10 +2231,10 @@ function renderEventContactsEditor(){
       `;
     }
     return `
-      <div class="event-contact-swipe-wrap" data-event-contact-index="${idx}">
+      <div class="event-contact-swipe-wrap" data-event-contact-index="${idx}" data-event-id="${_editingEventContactsId}">
         <div class="event-contact-swipe-under-left">${uiIcon('phone',14)} Call</div>
         <div class="event-contact-swipe-under-right">${uiIcon('whatsapp',14)} WhatsApp</div>
-        <div class="event-contact-card event-contact-view" role="button" tabindex="0" onclick="App.openEventContactActions('${_editingEventContactsId}',${idx})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();App.openEventContactActions('${_editingEventContactsId}',${idx});}">
+        <div class="event-contact-card event-contact-view" role="button" tabindex="0" onclick="App.openEventContactActions(this.closest('.event-contact-swipe-wrap')?.dataset.eventId||'${_editingEventContactsId}',${idx})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();App.openEventContactActions(this.closest('.event-contact-swipe-wrap')?.dataset.eventId||'${_editingEventContactsId}',${idx});}">
           <div class="event-contact-view-top">
             <div style="flex:1;min-width:0">
               <div class="event-contact-view-role">${uiIcon('contact',14)} ${escapeHtml(contact.name||'Contact')}</div>
@@ -2352,23 +2364,24 @@ function handleEventContactPhoneKey(event,idx){
 }
 
 function callEventContact(eventId,index){
-  const contact=getEventContactForAction(eventId,index);
+  const resolvedEventId=eventId || _eventContactActionEventId || _editingEventContactsId || DB.activeEvent;
+  const contact=getEventContactForAction(resolvedEventId,index);
   if(!contact?.phone){toast('⚠️ Phone number not found');return;}
   window.location.href=`tel:${contact.phone}`;
 }
 
 function whatsAppEventContact(eventId,index){
-  const ev=DB.events.find(item=>item.id===eventId);
-  const contact=getEventContactForAction(eventId,index);
+  const resolvedEventId=eventId || _eventContactActionEventId || _editingEventContactsId || DB.activeEvent;
+  const contact=getEventContactForAction(resolvedEventId,index);
   if(!contact?.phone){toast('⚠️ Phone number not found');return;}
   const digits=String(contact.phone||'').replace(/\D/g,'');
-  const message=encodeURIComponent(ev?.name?`${ev.name} contact`:'Event contact');
-  window.open(`https://wa.me/${digits}?text=${message}`,'_blank');
+  window.open(`https://wa.me/${digits}`,'_blank');
 }
 
 async function shareEventContact(eventId, index){
-  const ev=DB.events.find(item=>item.id===eventId);
-  const contact=getEventContactForAction(eventId,index);
+  const resolvedEventId=eventId || _eventContactActionEventId || _editingEventContactsId || DB.activeEvent;
+  const ev=DB.events.find(item=>item.id===resolvedEventId);
+  const contact=getEventContactForAction(resolvedEventId,index);
   if(!ev || !contact){toast('⚠️ Contact not found');return;}
   const text=buildEventContactShareText(ev, contact);
   try{
@@ -2395,9 +2408,10 @@ async function shareEventContact(eventId, index){
 }
 
 function openEventContactActions(eventId,index){
-  const contact=getEventContactForAction(eventId,index);
+  const resolvedEventId=eventId || _editingEventContactsId || DB.activeEvent;
+  const contact=getEventContactForAction(resolvedEventId,index);
   if(!contact){toast('⚠️ Contact not found');return;}
-  _eventContactActionEventId=eventId;
+  _eventContactActionEventId=resolvedEventId;
   _eventContactActionIndex=index;
   const sub=document.getElementById('event-contact-actions-sub');
   if(sub){
@@ -2495,12 +2509,14 @@ function initEventContactSwipeRows(){
       activePointerId=null;
       if(deltaX>=58){
         const idx=parseInt(wrap.dataset.eventContactIndex,10);
-        finishActionSwipe(18,()=>callEventContact(_editingEventContactsId,idx));
+        const eventId=wrap.dataset.eventId || _editingEventContactsId || DB.activeEvent;
+        finishActionSwipe(18,()=>callEventContact(eventId,idx));
         return;
       }
       if(deltaX<=-58){
         const idx=parseInt(wrap.dataset.eventContactIndex,10);
-        finishActionSwipe(-18,()=>whatsAppEventContact(_editingEventContactsId,idx));
+        const eventId=wrap.dataset.eventId || _editingEventContactsId || DB.activeEvent;
+        finishActionSwipe(-18,()=>whatsAppEventContact(eventId,idx));
         return;
       }
       resetSwipe();
@@ -2616,6 +2632,9 @@ function renderGuests(){
       const rsvp=normalizeGuestInviteStatus(g.rsvp);
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
+      const lastGroupHint=(DB.settings.lastGuestGroup||'').trim();
+      const swipeRightHint=lastGroupHint ? `Swipe right to add to ${escapeHtml(lastGroupHint)}` : 'Swipe right to add to the last used group';
+      const swipeLeftHint='Swipe left for room, gift, or cash gift';
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
         <div class="g-row g-swipe-card anim" onclick="App.handleGuestRowTap(event,'${g.id}')">
           <div class="g-av" style="${avStyle(g.id)}">${ini}</div>
@@ -2627,6 +2646,10 @@ function renderGuests(){
             <button class="rsvp-btn r-${rsvp}" onclick="event.stopPropagation();App.cycleRsvp('${g.id}')">${rsvpLabel}</button>
             ${isOrg&&_guestListEditMode?`<button class="g-del" onclick="event.stopPropagation();App.confirmDeleteGuest('${g.id}')">X</button>`:''}
           </div>
+        </div>
+        <div class="g-swipe-hint" aria-hidden="true">
+          <span class="g-swipe-hint-copy g-swipe-hint-right-copy">${uiIcon('guests',12)} ${swipeRightHint}</span>
+          <span class="g-swipe-hint-copy g-swipe-hint-left-copy">${uiIcon('gift',12)} ${swipeLeftHint}</span>
         </div>
       </div>`;
     });
@@ -3797,7 +3820,10 @@ function renderMasterGuestShares(){
     const peer=type==='incoming'?(share.senderName||share.senderEmail):(share.recipientEmail||'');
     const status=(share.status||'pending').replace(/^\w/,m=>m.toUpperCase());
     const action=type==='incoming' && share.status==='pending'
-      ? `<button class="ev-btn" style="padding:6px 10px" onclick="App.acceptMasterGuestShare('${share.id}')">Accept</button>`
+      ? `<div style="display:flex;gap:6px;align-items:center">
+          <button class="ev-btn" style="padding:6px 10px" onclick="App.acceptMasterGuestShare('${share.id}')">Accept</button>
+          <button class="ev-btn" style="padding:6px 10px;color:#932B2B;background:#FEE8E8" onclick="App.rejectMasterGuestShare('${share.id}')">Reject</button>
+        </div>`
       : `<span class="chip" style="white-space:nowrap">${status}</span>`;
     const groups=(share.groupNames||[]).length?`Groups: ${(share.groupNames||[]).join(', ')}`:'';
     return `<div class="g-row" style="align-items:flex-start">
@@ -3919,6 +3945,21 @@ async function acceptMasterGuestShare(id){
     await Cloud.updateMasterGuestShare(id,{status:'accepted',acceptedAt:Date.now()});
   }catch(e){}
   toast(`${result.added} added · ${result.updated} updated${result.skipped?` · ${result.skipped} skipped`:''}`);
+}
+
+async function rejectMasterGuestShare(id){
+  const share=_incomingMasterGuestShares.find(item=>item.id===id);
+  if(!share){toast('⚠️ Shared list not found');return;}
+  if(share.status!=='pending'){
+    toast('This shared list was already processed');
+    return;
+  }
+  try{
+    await Cloud.updateMasterGuestShare(id,{status:'rejected',rejectedAt:Date.now()});
+    toast('Shared guest list rejected');
+  }catch(e){
+    toast('⚠️ Could not reject shared list');
+  }
 }
 
 function renderMasterGuestList(){
@@ -5687,7 +5728,7 @@ window.App={
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
   confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,toggleGuestRowEdit,saveGuestRowEdit,undoGuestRemoval,
-  openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,toggleMasterGuestSelection,toggleMasterGuestGroupSelection,openMasterGuestShareComposer,sendMasterGuestShare,openMasterGuestShares,acceptMasterGuestShare,
+  openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,toggleMasterGuestSelection,toggleMasterGuestGroupSelection,openMasterGuestShareComposer,sendMasterGuestShare,openMasterGuestShares,acceptMasterGuestShare,rejectMasterGuestShare,
   openAddGift:openAddGiftGated,openEditGift:openEditGiftGated,saveGift,cycleTy,
   confirmDeleteGift:confirmDeleteGiftGated,handleGiftPhoto,
   setGiftTab,setGiftCatFilter,selectCat,

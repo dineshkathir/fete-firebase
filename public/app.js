@@ -17,6 +17,92 @@ const _fbAuth = getAuth(_fbApp);
 const _fbDb = getFirestore(_fbApp);
 const _gProvider = new GoogleAuthProvider();
 
+function normalizeEmailValue(value){
+  return String(value||'').trim().toLowerCase();
+}
+
+function normalizePhoneValue(value){
+  return String(value||'').replace(/\D/g,'').slice(0,15);
+}
+
+function publicInviteGuestDocId(eventId, email, phone){
+  const normalizedEmail=normalizeEmailValue(email);
+  const normalizedPhone=normalizePhoneValue(phone);
+  const key=normalizedEmail
+    ? normalizedEmail.replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-').slice(0,80)
+    : normalizedPhone;
+  return `invite_${eventId}_${key||uid()}`;
+}
+
+function mergeGuestRecords(primary, duplicate){
+  if(!primary || !duplicate) return primary;
+  const assignString=(key,{overwrite=false, transform=null}={})=>{
+    const nextRaw=duplicate[key];
+    const next=transform?transform(nextRaw):nextRaw;
+    if(next===undefined || next===null || next==='') return;
+    if(overwrite || !primary[key]) primary[key]=next;
+  };
+  assignString('first',{overwrite:true});
+  assignString('last',{overwrite:true});
+  assignString('contact',{overwrite:true,transform:normalizePhoneValue});
+  assignString('email',{overwrite:true,transform:normalizeEmailValue});
+  assignString('notes',{overwrite:true});
+  assignString('dietPreference',{overwrite:true});
+  assignString('table',{overwrite:false});
+  assignString('roomRequestType',{overwrite:true});
+  assignString('roomRequestStatus',{overwrite:true});
+  assignString('roomRequestNote',{overwrite:true});
+  if(duplicate.party) primary.party=duplicate.party;
+  if(duplicate.requestedRoomCount) primary.requestedRoomCount=duplicate.requestedRoomCount;
+  if(duplicate.requestedStayCount) primary.requestedStayCount=duplicate.requestedStayCount;
+  if(Array.isArray(duplicate.roomAssignments) && duplicate.roomAssignments.length) primary.roomAssignments=duplicate.roomAssignments;
+  if(duplicate.createdAt) primary.createdAt=Math.min(primary.createdAt||duplicate.createdAt, duplicate.createdAt);
+  if(duplicate.source==='public_invite') primary.source='public_invite';
+  return primary;
+}
+
+function reconcileEventGuestDuplicates(eventIds){
+  const targetIds=(Array.isArray(eventIds)?eventIds:[eventIds]).filter(Boolean);
+  if(!targetIds.length || typeof DB==='undefined') return [];
+  const changedEventIds=[];
+  targetIds.forEach(eventId=>{
+    const eventGuests=DB.guests.filter(guest=>guest.eventId===eventId);
+    if(eventGuests.length<2) return;
+    const byEmail=new Map();
+    const byPhone=new Map();
+    const removeIds=new Set();
+    eventGuests.forEach(guest=>{
+      if(removeIds.has(guest.id)) return;
+      const email=normalizeEmailValue(guest.email);
+      if(email){
+        const existing=byEmail.get(email);
+        if(existing && existing.id!==guest.id){
+          mergeGuestRecords(existing, guest);
+          removeIds.add(guest.id);
+          return;
+        }
+        byEmail.set(email, guest);
+      }
+      const phone=normalizePhoneValue(guest.contact);
+      if(phone){
+        const existing=byPhone.get(phone);
+        if(existing && existing.id!==guest.id){
+          mergeGuestRecords(existing, guest);
+          removeIds.add(guest.id);
+          return;
+        }
+        byPhone.set(phone, guest);
+      }
+    });
+    if(removeIds.size){
+      DB.guests=DB.guests.filter(guest=>!removeIds.has(guest.id));
+      changedEventIds.push(eventId);
+    }
+  });
+  if(changedEventIds.length) save();
+  return changedEventIds;
+}
+
 const Cloud = (() => {
   let _sessionToken = 0;
   let _unsubs = { eventsMem: null, eventsGst: null, guests: [], gifts: [], masterGuestInbox: null, masterGuestSent: null };
@@ -122,6 +208,7 @@ function serializeEvent(event, team, session) {
       publicGuestFormKey: event.publicGuestFormKey || '',
       publicInviteDietEnabled: event.publicInviteDietEnabled !== false,
       publicInviteRoomEnabled: event.publicInviteRoomEnabled !== false,
+      publicInviteMenuEnabled: event.publicInviteMenuEnabled === true,
       createdAt: event.createdAt || Date.now(),
       updatedAt: Date.now(),
       team: normalizedTeam,
@@ -156,7 +243,9 @@ function serializeEvent(event, team, session) {
     const flushData = () => {
       DB.guests = Array.from(guestsMap.values());
       DB.gifts = Array.from(giftsMap.values());
+      const reconciledEventIds=reconcileEventGuestDuplicates(eventIds);
       save();
+      reconciledEventIds.forEach(id=>syncEventData(id).catch(()=>{}));
       NotificationCenter.evaluateRoomAllocations(DB.guests, Auth.currentSession());
       render();
     };
@@ -299,6 +388,11 @@ function serializeEvent(event, team, session) {
       eventContacts: normalizeEventContacts(event.eventContacts),
       roomRequestsEnabled: event.roomRequestsEnabled !== false,
       feedbackEnabled: event.feedbackEnabled === true,
+      publicGuestFormEnabled: event.publicGuestFormEnabled !== false,
+      publicGuestFormKey: event.publicGuestFormKey || '',
+      publicInviteDietEnabled: event.publicInviteDietEnabled !== false,
+      publicInviteRoomEnabled: event.publicInviteRoomEnabled !== false,
+      publicInviteMenuEnabled: event.publicInviteMenuEnabled === true,
       createdAt: event.createdAt || Date.now()
     }));
     for (const event of events) {
@@ -720,6 +814,7 @@ function ensurePublicGuestFormConfig(event){
   if(!event.publicGuestFormKey) event.publicGuestFormKey=randomInviteKey();
   if(event.publicInviteDietEnabled===undefined) event.publicInviteDietEnabled=true;
   if(event.publicInviteRoomEnabled===undefined) event.publicInviteRoomEnabled=true;
+  if(event.publicInviteMenuEnabled===undefined) event.publicInviteMenuEnabled=false;
   return event;
 }
 
@@ -1658,6 +1753,7 @@ let _eventContactActionEventId='';
 let _eventContactActionIndex=-1;
 let _teamEventId='';
 let _eventMenuEditorDisabled=false;
+let _publicInviteShareEventId='';
 let _giftPhotoData=null;
 let _showPastEvents=false;
 let _suppressOverlayPop=false;
@@ -1704,6 +1800,9 @@ function closeModal(id,{fromPop=false}={}){
   if(id==='event-contact-actions'){
     _eventContactActionEventId='';
     _eventContactActionIndex=-1;
+  }
+  if(id==='public-invite-share'){
+    _publicInviteShareEventId='';
   }
   if(id==='master-guest-resolve' && _masterGuestConflictResolver){
     const resolver=_masterGuestConflictResolver;
@@ -2263,7 +2362,7 @@ function renderEvents(){
         <button class="ev-btn" onclick="App.setActive('${ae.id}');App.switchTab('guests')">Guests</button>
         <button class="ev-btn" onclick="App.setActive('${ae.id}');App.switchTab('gifts')">Gifts</button>
         <button class="ev-btn" onclick="App.openEventContacts('${ae.id}')">Event Contacts</button>
-        ${Auth.isOrganizer(ae.id)?`<button class="ev-btn" onclick="App.copyPublicInviteLink('${ae.id}')">Invite Form</button>`:''}
+        ${Auth.isOrganizer(ae.id)?`<button class="ev-btn" onclick="App.openPublicInviteShareModal('${ae.id}')">Invite Form</button>`:''}
       </div>`}
     </div>`;
   }
@@ -2303,7 +2402,7 @@ function renderEvents(){
               :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>
             <button class="ev-btn" onclick="event.stopPropagation();App.openEventContacts('${ev.id}')">Contacts</button>
-            ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.copyPublicInviteLink('${ev.id}')">Invite Form</button>`:''}`}
+            ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openPublicInviteShareModal('${ev.id}')">Invite Form</button>`:''}`}
           </div>
         </div>
       </div>
@@ -2798,7 +2897,8 @@ function renderGuests(){
       const swipeLeftHint=_guestListEditMode
         ? (lastGroupHint ? `Swipe left to remove from ${escapeHtml(lastGroupHint)}` : 'Swipe left to remove from the most recent group')
         : '';
-      listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
+      const searchHaystack=escapeHtml((`${first} ${last} ${contact} ${email} ${table} ${notes}`).toLowerCase());
+      listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}" data-search="${searchHaystack}">
         <div class="g-swipe-inline-manage" aria-hidden="${_guestListEditMode?'false':'true'}">
           ${canSwipeAllocate?`<button class="g-swipe-inline-btn room" type="button" title="Allocate room" aria-label="Allocate room" onclick="event.stopPropagation();App.swipeAllocateRoom('${g.id}')">${uiIcon('room',18)}</button>`:''}
           ${canSwipeGift?`<button class="g-swipe-inline-btn gift" type="button" title="Add gift" aria-label="Add gift" onclick="event.stopPropagation();App.swipeAddGift('${g.id}')">${uiIcon('gift',18)}</button>`:''}
@@ -2846,7 +2946,10 @@ function renderGuests(){
     statsHtml+
     organizerActions+
     `<div class="search-wrap"><span class="search-ico">${uiIcon('search',14)}</span><input class="search-inp" id="guest-search-input" type="text" placeholder="Search guests…" value="${_guestSearch}" oninput="App.setGSearch(this.value)" /></div>`+
-    filtersHtml+listHtml+feedbackHtml+
+    filtersHtml+
+    `<div id="guest-list-body">${listHtml}</div>`+
+    `<div class="empty" id="guest-search-empty" style="display:none"><div class="empty-ico" style="color:var(--txt3)">${uiIcon('search',42)}</div><div class="empty-t">No guests found</div><div class="empty-s">Try a different name, phone number, email, or group.</div></div>`+
+    feedbackHtml+
     `<div class="floating-stack">
       ${isOrg?`<button class="floating-bubble floating-bubble-primary" type="button" title="Add guest" aria-label="Add guest" onclick="App.openAddGuest()">${uiIcon('guests',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button>`:''}
     </div>`;
@@ -2861,6 +2964,7 @@ function renderGuests(){
       _preserveGuestSearchFocus=false;
     });
   }
+  if(_guestSearch) filterRenderedGuestRows(_guestSearch);
   initGuestSwipeRows();
 }
 
@@ -3442,6 +3546,12 @@ function openAddEvent(){
     inviteRoomToggle.disabled=false;
     inviteRoomToggle.closest('label').style.opacity='1';
   }
+  const inviteMenuToggle=document.getElementById('ev-public-invite-menu-enabled');
+  if(inviteMenuToggle){
+    inviteMenuToggle.checked=false;
+    inviteMenuToggle.disabled=false;
+    inviteMenuToggle.closest('label').style.opacity='1';
+  }
   const legacyEventContactsButton=document.getElementById('ev-contact-add-btn');
   if(legacyEventContactsButton){
     legacyEventContactsButton.style.display='none';
@@ -3502,6 +3612,12 @@ function openEditEvent(id){
     inviteRoomToggle.checked=ev.publicInviteRoomEnabled!==false;
     inviteRoomToggle.disabled=!isOrg;
     inviteRoomToggle.closest('label').style.opacity=isOrg?'1':'0.6';
+  }
+  const inviteMenuToggle=document.getElementById('ev-public-invite-menu-enabled');
+  if(inviteMenuToggle){
+    inviteMenuToggle.checked=ev.publicInviteMenuEnabled===true;
+    inviteMenuToggle.disabled=!isOrg;
+    inviteMenuToggle.closest('label').style.opacity=isOrg?'1':'0.6';
   }
   const legacyEventContactsButton=document.getElementById('ev-contact-add-btn');
   if(legacyEventContactsButton){
@@ -3582,6 +3698,7 @@ async function saveEvent(){
   const feedbackEnabledEl=document.getElementById('ev-feedback-enabled');
   const inviteDietEnabledEl=document.getElementById('ev-public-invite-diet-enabled');
   const inviteRoomEnabledEl=document.getElementById('ev-public-invite-room-enabled');
+  const inviteMenuEnabledEl=document.getElementById('ev-public-invite-menu-enabled');
   let savedEvent=null;
   if(_editing.event){
     const ev=DB.events.find(e=>e.id===_editing.event);
@@ -3606,6 +3723,7 @@ async function saveEvent(){
         if(feedbackEnabledEl) ev.feedbackEnabled=feedbackEnabledEl.checked;
         if(inviteDietEnabledEl) ev.publicInviteDietEnabled=inviteDietEnabledEl.checked;
         if(inviteRoomEnabledEl) ev.publicInviteRoomEnabled=inviteRoomEnabledEl.checked;
+        if(inviteMenuEnabledEl) ev.publicInviteMenuEnabled=inviteMenuEnabledEl.checked;
       }
       savedEvent=ev;
     }
@@ -3631,6 +3749,7 @@ async function saveEvent(){
       publicGuestFormKey:randomInviteKey(),
       publicInviteDietEnabled:inviteDietEnabledEl?inviteDietEnabledEl.checked:true,
       publicInviteRoomEnabled:inviteRoomEnabledEl?inviteRoomEnabledEl.checked:true,
+      publicInviteMenuEnabled:inviteMenuEnabledEl?inviteMenuEnabledEl.checked:false,
       createdAt:Date.now()
     };
     ensurePublicGuestFormConfig(ev);
@@ -3754,10 +3873,43 @@ function buildPublicInviteLink(eventId){
   url.searchParams.set('event', ev.name || 'Event');
   url.searchParams.set('diet', ev.publicInviteDietEnabled===false?'0':'1');
   url.searchParams.set('room', ev.publicInviteRoomEnabled===false?'0':'1');
+  url.searchParams.set('menu', ev.publicInviteMenuEnabled===true?'1':'0');
   if(ev.date) url.searchParams.set('date', ev.date);
   if(ev.time) url.searchParams.set('time', ev.time);
   if(ev.location) url.searchParams.set('location', ev.location);
+  if(ev.publicInviteMenuEnabled===true){
+    const menuText=normalizeEventMenus(ev.foodMenus)
+      .map(menu=>{
+        const items=(menu.items||[]).map(item=>String(item||'').trim()).filter(Boolean).join(', ');
+        return [menu.title, items].filter(Boolean).join(': ');
+      })
+      .filter(Boolean)
+      .join(' | ');
+    if(menuText) url.searchParams.set('menuText', menuText);
+  }
   return url.toString();
+}
+
+function openPublicInviteShareModal(eventId){
+  const ev=DB.events.find(item=>item.id===eventId);
+  if(!ev){toast('⚠️ Event not found');return;}
+  if(!Auth.isOrganizer(eventId)){toast('⚠️ Only organisers can share the guest form link');return;}
+  ensurePublicGuestFormConfig(ev);
+  _publicInviteShareEventId=eventId;
+  const title=document.getElementById('public-invite-share-event');
+  if(title) title.textContent=ev.name||'Event';
+  const dietToggle=document.getElementById('share-public-invite-diet-enabled');
+  const roomToggle=document.getElementById('share-public-invite-room-enabled');
+  const menuToggle=document.getElementById('share-public-invite-menu-enabled');
+  if(dietToggle) dietToggle.checked=ev.publicInviteDietEnabled!==false;
+  if(roomToggle) roomToggle.checked=ev.publicInviteRoomEnabled!==false;
+  if(menuToggle){
+    const hasMenu=normalizeEventMenus(ev.foodMenus).some(menu=>(menu.items||[]).some(item=>String(item||'').trim()));
+    menuToggle.checked=hasMenu && ev.publicInviteMenuEnabled===true;
+    menuToggle.disabled=!hasMenu;
+    menuToggle.closest('label').style.opacity=hasMenu?'1':'0.55';
+  }
+  openModal('public-invite-share');
 }
 
 async function copyPublicInviteLink(eventId){
@@ -3765,6 +3917,12 @@ async function copyPublicInviteLink(eventId){
   if(!ev){toast('⚠️ Event not found');return;}
   if(!Auth.isOrganizer(eventId)){toast('⚠️ Only organisers can copy the guest form link');return;}
   ensurePublicGuestFormConfig(ev);
+  const dietToggle=document.getElementById('share-public-invite-diet-enabled');
+  const roomToggle=document.getElementById('share-public-invite-room-enabled');
+  const menuToggle=document.getElementById('share-public-invite-menu-enabled');
+  if(dietToggle) ev.publicInviteDietEnabled=dietToggle.checked;
+  if(roomToggle) ev.publicInviteRoomEnabled=roomToggle.checked;
+  if(menuToggle && !menuToggle.disabled) ev.publicInviteMenuEnabled=menuToggle.checked;
   save();
   try{
     await Cloud.saveEvent(ev, Auth.getTeam(ev.id), Auth.currentSession());
@@ -3773,11 +3931,69 @@ async function copyPublicInviteLink(eventId){
   try{
     if(navigator.clipboard?.writeText){
       await navigator.clipboard.writeText(link);
+      closeModal('public-invite-share');
       toast('Invite form link copied');
       return;
     }
   }catch(e){}
   openConfirm('Guest form link', link, ()=>{});
+  const confirmOk=document.getElementById('confirm-ok');
+  if(confirmOk){
+    confirmOk.textContent='Close';
+    confirmOk.style.background='var(--txt2)';
+    confirmOk.style.borderColor='var(--txt2)';
+  }
+}
+
+function buildPublicInviteShareMessage(eventId, link){
+  const ev=DB.events.find(item=>item.id===eventId);
+  if(!ev) return link;
+  const parts=[`You're invited to ${ev.name || 'our event'}!`];
+  if(ev.date) parts.push(`Date: ${fmtDate(ev.date)}`);
+  if(ev.time) parts.push(`Time: ${fmtTime(ev.time)}`);
+  if(ev.location) parts.push(`Location: ${formatEventLocation(ev.location)}`);
+  parts.push('Please fill this guest form:');
+  parts.push(link);
+  return parts.join('\n');
+}
+
+async function sharePublicInviteLink(eventId){
+  const ev=DB.events.find(item=>item.id===eventId);
+  if(!ev){toast('⚠️ Event not found');return;}
+  const dietToggle=document.getElementById('share-public-invite-diet-enabled');
+  const roomToggle=document.getElementById('share-public-invite-room-enabled');
+  const menuToggle=document.getElementById('share-public-invite-menu-enabled');
+  if(dietToggle) ev.publicInviteDietEnabled=dietToggle.checked;
+  if(roomToggle) ev.publicInviteRoomEnabled=roomToggle.checked;
+  if(menuToggle && !menuToggle.disabled) ev.publicInviteMenuEnabled=menuToggle.checked;
+  save();
+  try{
+    await Cloud.saveEvent(ev, Auth.getTeam(ev.id), Auth.currentSession());
+  }catch(e){}
+  const link=buildPublicInviteLink(eventId);
+  const text=buildPublicInviteShareMessage(eventId, link);
+  if(navigator.share){
+    try{
+      await navigator.share({
+        title: ev.name || 'Event Invite',
+        text
+      });
+      closeModal('public-invite-share');
+      toast('Invite shared');
+      return;
+    }catch(e){
+      if(e?.name==='AbortError') return;
+    }
+  }
+  try{
+    if(navigator.clipboard?.writeText){
+      await navigator.clipboard.writeText(text);
+      closeModal('public-invite-share');
+      toast('Invite message copied');
+      return;
+    }
+  }catch(e){}
+  openConfirm('Share this invite', text, ()=>{});
   const confirmOk=document.getElementById('confirm-ok');
   if(confirmOk){
     confirmOk.textContent='Close';
@@ -3886,6 +4102,7 @@ function saveGuest(){
     rememberLastGuestGroup(document.getElementById('g-table').value.trim());
     toast(`${first} added`);
   }
+  reconcileEventGuestDuplicates(DB.activeEvent);
   save();syncActiveEventData();closeModal('add-guest');closeModal('guest-detail');render();
 }
 
@@ -5593,6 +5810,8 @@ function parsePublicInviteFromUrl(){
     eventName:(params.get('event')||'').trim() || 'Event',
     dietEnabled: params.get('diet') !== '0',
     roomEnabled: params.get('room') !== '0',
+    menuEnabled: params.get('menu') === '1',
+    menuText:(params.get('menuText')||'').trim(),
     eventDate:(params.get('date')||'').trim(),
     eventTime:(params.get('time')||'').trim(),
     eventLocation:(params.get('location')||'').trim(),
@@ -5604,9 +5823,10 @@ function renderPublicInviteScreen(context){
   const subEl=document.getElementById('public-invite-sub');
   const statusEl=document.getElementById('public-invite-status');
   const detailsEl=document.getElementById('public-invite-details');
+  const menuEl=document.getElementById('public-invite-menu');
   const dietWrap=document.getElementById('public-invite-diet-wrap');
   const roomWrap=document.getElementById('public-invite-room-wrap');
-  if(titleEl) titleEl.textContent=`${context?.eventName || 'Event'} Invite`;
+  if(titleEl) titleEl.textContent=context?.eventName || 'Event Invite';
   if(subEl) subEl.textContent='Fill in your details so the organiser can add you to the guest list.';
   if(detailsEl){
     const parts=[];
@@ -5623,6 +5843,10 @@ function renderPublicInviteScreen(context){
   }
   if(dietWrap) dietWrap.style.display=context?.dietEnabled===false?'none':'';
   if(roomWrap) roomWrap.style.display=context?.roomEnabled===false?'none':'';
+  if(menuEl){
+    menuEl.textContent=context?.menuText||'';
+    menuEl.style.display=context?.menuEnabled && context?.menuText ? 'block' : 'none';
+  }
   setPublicInviteToggle('diet','veg');
   setPublicInviteToggle('room','no');
 }
@@ -5649,19 +5873,23 @@ async function submitPublicInviteForm(){
     return;
   }
   const name=(document.getElementById('public-invite-name')?.value || '').trim();
-  const phone=(document.getElementById('public-invite-phone')?.value || '').replace(/\D/g,'').slice(0,15);
-  const email=(document.getElementById('public-invite-email')?.value || '').trim().toLowerCase();
+  const phone=normalizePhoneValue(document.getElementById('public-invite-phone')?.value || '');
+  const email=normalizeEmailValue(document.getElementById('public-invite-email')?.value || '');
   const diet=_publicInviteContext?.dietEnabled===false ? 'veg' : (document.getElementById('public-invite-diet')?.value || 'veg').trim().toLowerCase();
   const roomRequired=_publicInviteContext?.roomEnabled===false ? 'no' : (document.getElementById('public-invite-room')?.value || 'no').trim().toLowerCase();
   if(!name){
     setPublicInviteStatus('Please enter your name.');
     return;
   }
+  if(!phone && !email){
+    setPublicInviteStatus('Phone number or email ID is required.');
+    return;
+  }
   if(phone && phone.length>15){
     setPublicInviteStatus('Phone number cannot be more than 15 digits.');
     return;
   }
-  const guestId=uid();
+  const guestId=publicInviteGuestDocId(_publicInviteContext.eventId, email, phone);
   const payload={
     eventId:_publicInviteContext.eventId,
     first:name,
@@ -5854,8 +6082,31 @@ function filterMoi(val){
 function setGFilter(f){_guestFilter=f;renderGuests()}
 function setGSearch(v){
   _guestSearch=v;
+  const searchInput=document.getElementById('guest-search-input');
+  const list=document.getElementById('guest-list-body');
+  if(searchInput && list){
+    filterRenderedGuestRows(v);
+    return;
+  }
   _preserveGuestSearchFocus=true;
   renderGuests();
+}
+function filterRenderedGuestRows(term){
+  const list=document.getElementById('guest-list-body');
+  const empty=document.getElementById('guest-search-empty');
+  if(!list) return;
+  const q=String(term||'').trim().toLowerCase();
+  let visible=0;
+  list.querySelectorAll('.g-swipe-wrap[data-search]').forEach(row=>{
+    const hay=row.dataset.search||'';
+    const match=!q || hay.includes(q);
+    row.style.display=match?'':'none';
+    if(match) visible++;
+  });
+  if(empty){
+    empty.style.display=visible?'none':'';
+    empty.textContent=q?'No guests found for your search.':'No guests yet';
+  }
 }
 function scrollToTop(){
   const mainScroll=document.getElementById('main-scroll');
@@ -6152,7 +6403,8 @@ window.App={
   openGroupInviteModal,filterGroupInvite,importMasterGroup,importMasterGuest,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   openProfileModal,toggleSetting,enableAppNotifications,setCurrency,unlockPremium,clearAllData,
-  copyPublicInviteLink,submitPublicInviteForm,setPublicInviteToggle,
+  openPublicInviteShareModal,copyPublicInviteLink,sharePublicInviteLink,submitPublicInviteForm,setPublicInviteToggle,
+  _publicInviteShareEventId:()=>_publicInviteShareEventId,
   setGFilter,setGSearch,scrollToTop,openConfirm,closeConfirm,
   limitPhoneDigits,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,

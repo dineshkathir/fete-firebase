@@ -34,7 +34,12 @@ service cloud.firestore {
       );
     }
 
-    function isPublicInviteGuestCreate() {
+    function publicInviteHasIdentifier() {
+      return (request.resource.data.email is string && request.resource.data.email != '') ||
+        (request.resource.data.contact is string && request.resource.data.contact != '');
+    }
+
+    function isPublicInviteGuestPayload() {
       let eventId = request.resource.data.eventId;
       return eventId is string &&
         eventDoc(eventId).data.name is string &&
@@ -63,6 +68,7 @@ service cloud.firestore {
         request.resource.data.first.size() <= 120 &&
         (!('contact' in request.resource.data) || request.resource.data.contact is string) &&
         (!('email' in request.resource.data) || request.resource.data.email is string) &&
+        publicInviteHasIdentifier() &&
         (!('notes' in request.resource.data) || request.resource.data.notes is string) &&
         (!('dietPreference' in request.resource.data) || request.resource.data.dietPreference in ['veg', 'non-veg']) &&
         request.resource.data.party == 1 &&
@@ -79,6 +85,16 @@ service cloud.firestore {
         request.resource.data.createdAt is int;
     }
 
+    function isPublicInviteGuestUpdate() {
+      return resource.data.source == 'public_invite' &&
+        request.resource.data.eventId == resource.data.eventId &&
+        (
+          (request.resource.data.email is string && request.resource.data.email != '' && request.resource.data.email == resource.data.email) ||
+          (request.resource.data.contact is string && request.resource.data.contact != '' && request.resource.data.contact == resource.data.contact)
+        ) &&
+        isPublicInviteGuestPayload();
+    }
+
     match /events/{eventId} {
       allow read: if signedIn() && (myEmail() in resource.data.memberEmails || myEmail() in resource.data.get('guestEmails', []));
       allow create: if signedIn()
@@ -93,7 +109,9 @@ service cloud.firestore {
 
     match /guests/{guestId} {
       allow read: if signedIn() && (isEventMember(resource.data.eventId) || isGuestSelf(resource.data));
-      allow update: if signedIn() && (
+      allow update: if
+        isPublicInviteGuestUpdate() ||
+        (signedIn() && (
         isEventMember(resource.data.eventId) ||
         (
           isGuestSelf(resource.data) &&
@@ -125,9 +143,9 @@ service cloud.firestore {
             'foodMenuLikesUpdatedAt'
           ])
         )
-      );
+      ));
       allow delete: if signedIn() && isEventMember(resource.data.eventId);
-      allow create: if (signedIn() && isEventMember(request.resource.data.eventId)) || isPublicInviteGuestCreate();
+      allow create: if (signedIn() && isEventMember(request.resource.data.eventId)) || isPublicInviteGuestPayload();
     }
 
     match /gifts/{giftId} {

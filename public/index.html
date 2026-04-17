@@ -534,9 +534,61 @@ html.boot-authenticated #auth-screen{display:none}
 .picker-item:hover{background:var(--surf2);transform:translateX(2px);padding-left:15px}
 .picker-item-name{font-size:12.5px;font-weight:600;color:var(--txt)}
 .picker-item-sub{font-size:11px;color:var(--txt3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#public-invite-screen{position:fixed;inset:0;background:linear-gradient(145deg,#FAF0F3 0%,#FBF6EC 50%,#EEF5F0 100%);z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
+.public-invite-card{width:100%;max-width:380px;background:var(--surf);border-radius:22px;padding:28px 22px 24px;box-shadow:var(--sh3);border:1px solid var(--bord2)}
+.public-invite-logo{display:flex;justify-content:center;margin-bottom:6px}
+.public-invite-logo img{height:88px;width:auto}
+.public-invite-title{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:600;text-align:center;color:var(--txt);margin-bottom:6px}
+.public-invite-sub{font-size:12.5px;line-height:1.6;color:var(--txt3);text-align:center;margin-bottom:18px}
+.public-invite-status{display:none;background:var(--rose-l);color:var(--rose-d);border:1px solid var(--rose-m);border-radius:var(--rs);padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:14px}
+.public-invite-status.success{background:var(--sage-l);color:var(--sage-d);border-color:var(--sage-m)}
+.public-invite-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.public-invite-grid .fg{margin-bottom:0}
+@media (max-width:420px){
+  .public-invite-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body class="notranslate">
+<div id="public-invite-screen">
+  <div class="public-invite-card">
+    <div class="public-invite-logo">
+      <img class="brand-lockup" src="./eventise-logo.svg" alt="eventise" />
+    </div>
+    <div class="public-invite-title" id="public-invite-title">Event Invite</div>
+    <div class="public-invite-sub" id="public-invite-sub">Fill in your details so the organiser can add you to the guest list.</div>
+    <div class="public-invite-status" id="public-invite-status"></div>
+    <div class="fg">
+      <label class="fl">Name *</label>
+      <input class="fi" type="text" id="public-invite-name" placeholder="Your full name" />
+    </div>
+    <div class="public-invite-grid" style="margin-bottom:12px">
+      <div class="fg">
+        <label class="fl">Phone Number</label>
+        <input class="fi" type="tel" id="public-invite-phone" inputmode="tel" maxlength="15" placeholder="Phone number" oninput="this.value=this.value.replace(/\D/g,'').slice(0,15)" />
+      </div>
+      <div class="fg">
+        <label class="fl">Email ID</label>
+        <input class="fi" type="email" id="public-invite-email" placeholder="Email address" />
+      </div>
+      <div class="fg">
+        <label class="fl">Veg / Non-veg</label>
+        <select class="fi" id="public-invite-diet">
+          <option value="veg">Veg</option>
+          <option value="non-veg">Non-veg</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Room Required</label>
+        <select class="fi" id="public-invite-room">
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-p" onclick="App.submitPublicInviteForm()">Submit Details</button>
+  </div>
+</div>
 <!-- ════ AUTH SCREEN ════ -->
 <div id="auth-screen">
   <div class="auth-card">

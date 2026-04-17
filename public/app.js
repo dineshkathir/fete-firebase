@@ -118,6 +118,8 @@ function serializeEvent(event, team, session) {
       eventContacts: normalizeEventContacts(event.eventContacts),
       roomRequestsEnabled: event.roomRequestsEnabled !== false,
       feedbackEnabled: event.feedbackEnabled === true,
+      publicGuestFormEnabled: event.publicGuestFormEnabled !== false,
+      publicGuestFormKey: event.publicGuestFormKey || '',
       createdAt: event.createdAt || Date.now(),
       updatedAt: Date.now(),
       team: normalizedTeam,
@@ -707,6 +709,15 @@ function save(){
 }
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function randomInviteKey(){
+  return Math.random().toString(36).slice(2,8)+Math.random().toString(36).slice(2,8);
+}
+function ensurePublicGuestFormConfig(event){
+  if(!event) return event;
+  if(event.publicGuestFormEnabled===undefined) event.publicGuestFormEnabled=true;
+  if(!event.publicGuestFormKey) event.publicGuestFormKey=randomInviteKey();
+  return event;
+}
 
 const NotificationCenter = (() => {
   let _ready = false;
@@ -915,6 +926,7 @@ function uiIcon(name,size=14){
     save:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8 4.5v5h7v-5M9 15.5h6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     export:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 20V10M8.5 13.5 12 10l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5.5h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     share:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="18" cy="5.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="6" cy="12" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="18" cy="18.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8 11l7.7-4.2M8 13l7.7 4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+    link:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M9.7 14.3 7.6 16.4a3 3 0 1 1-4.2-4.2l3.2-3.2a3 3 0 0 1 4.2 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="m14.3 9.7 2.1-2.1a3 3 0 0 1 4.2 4.2l-3.2 3.2a3 3 0 0 1-4.2 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="m8.8 15.2 6.4-6.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     whatsapp:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 4.75a7.25 7.25 0 0 0-6.18 11.05L5 19.25l3.61-.78A7.25 7.25 0 1 0 12 4.75Z" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.2 9.55c.14-.3.3-.33.56-.33h.45c.17 0 .32.1.41.28l.58 1.3c.08.18.07.33 0 .46l-.38.62c-.09.15-.08.32.01.47.49.75 1.13 1.39 1.88 1.88.15.1.32.1.47.01l.62-.38c.13-.08.28-.09.46 0l1.3.58c.18.09.28.24.28.41v.45c0 .26-.03.42-.33.56-.47.22-.98.3-1.5.23-1.01-.13-2.16-.77-3.34-1.95-1.18-1.18-1.82-2.33-1.95-3.34-.07-.52.01-1.03.23-1.5Z" fill="currentColor" stroke="none"/></svg>`,
     gift:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 10h16v10H4zM12 10v10M4 14h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10s-3.8-1.5-3.8-3.9c0-1.3 1-2.2 2.2-2.2 1.1 0 1.9.6 2.6 2 .7-1.4 1.5-2 2.6-2 1.2 0 2.2.9 2.2 2.2C15.8 8.5 12 10 12 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>`,
     room:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 19V8.5A1.5 1.5 0 0 1 6.5 7h11A1.5 1.5 0 0 1 19 8.5V19M3 19h18M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M9 11h2v2H9zm4 0h2v2h-2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -1645,6 +1657,7 @@ let _eventMenuEditorDisabled=false;
 let _giftPhotoData=null;
 let _showPastEvents=false;
 let _suppressOverlayPop=false;
+let _publicInviteContext=null;
 
 function getOpenModalIds(){
   return Array.from(document.querySelectorAll('.mo.open'))
@@ -2246,6 +2259,7 @@ function renderEvents(){
         <button class="ev-btn" onclick="App.setActive('${ae.id}');App.switchTab('guests')">Guests</button>
         <button class="ev-btn" onclick="App.setActive('${ae.id}');App.switchTab('gifts')">Gifts</button>
         <button class="ev-btn" onclick="App.openEventContacts('${ae.id}')">Event Contacts</button>
+        ${Auth.isOrganizer(ae.id)?`<button class="ev-btn" onclick="App.copyPublicInviteLink('${ae.id}')">Invite Form</button>`:''}
       </div>`}
     </div>`;
   }
@@ -2284,7 +2298,8 @@ function renderEvents(){
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
               :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>
-            <button class="ev-btn" onclick="event.stopPropagation();App.openEventContacts('${ev.id}')">Contacts</button>`}
+            <button class="ev-btn" onclick="event.stopPropagation();App.openEventContacts('${ev.id}')">Contacts</button>
+            ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.copyPublicInviteLink('${ev.id}')">Invite Form</button>`:''}`}
           </div>
         </div>
       </div>
@@ -3541,6 +3556,7 @@ async function saveEvent(){
   if(_editing.event){
     const ev=DB.events.find(e=>e.id===_editing.event);
     if(ev){
+      ensurePublicGuestFormConfig(ev);
       const isOrg=Auth.isOrganizer(ev.id);
       if(isOrg && selectedDate<minDate && selectedDate!==String(ev.date||'')){
         toast('⚠️ Event date cannot be in the past');
@@ -3579,8 +3595,11 @@ async function saveEvent(){
       eventContacts:[],
       roomRequestsEnabled:roomRequestsEnabledEl?roomRequestsEnabledEl.checked:true,
       feedbackEnabled:feedbackEnabledEl?feedbackEnabledEl.checked:false,
+      publicGuestFormEnabled:true,
+      publicGuestFormKey:randomInviteKey(),
       createdAt:Date.now()
     };
+    ensurePublicGuestFormConfig(ev);
     DB.events.push(ev);
     if(!DB.activeEvent)DB.activeEvent=ev.id;
     Auth.addCreatorAsOrganizer(ev.id);
@@ -3688,6 +3707,45 @@ function openAddGuest(){
   if(conflictEl) conflictEl.style.display='none';
   openModal('add-guest');
   document.getElementById('g-first')?.focus();
+}
+
+function buildPublicInviteLink(eventId){
+  const ev=DB.events.find(item=>item.id===eventId);
+  if(!ev) return '';
+  ensurePublicGuestFormConfig(ev);
+  const url=new URL(window.location.href);
+  url.search='';
+  url.hash='';
+  url.searchParams.set('invite', ev.id);
+  url.searchParams.set('key', ev.publicGuestFormKey);
+  url.searchParams.set('event', ev.name || 'Event');
+  return url.toString();
+}
+
+async function copyPublicInviteLink(eventId){
+  const ev=DB.events.find(item=>item.id===eventId);
+  if(!ev){toast('⚠️ Event not found');return;}
+  if(!Auth.isOrganizer(eventId)){toast('⚠️ Only organisers can copy the guest form link');return;}
+  ensurePublicGuestFormConfig(ev);
+  save();
+  try{
+    await Cloud.saveEvent(ev, Auth.getTeam(ev.id), Auth.currentSession());
+  }catch(e){}
+  const link=buildPublicInviteLink(eventId);
+  try{
+    if(navigator.clipboard?.writeText){
+      await navigator.clipboard.writeText(link);
+      toast('Invite form link copied');
+      return;
+    }
+  }catch(e){}
+  openConfirm('Guest form link', link, ()=>{});
+  const confirmOk=document.getElementById('confirm-ok');
+  if(confirmOk){
+    confirmOk.textContent='Close';
+    confirmOk.style.background='var(--txt2)';
+    confirmOk.style.borderColor='var(--txt2)';
+  }
 }
 
 function openEditGuest(id){
@@ -5325,6 +5383,11 @@ function confirmDeleteGift(id){
   const gid=id||_editing.gift;
   const g=DB.gifts.find(x=>x.id===gid);
   if(!g)return;
+  if(DB.settings.removeGuestConfirmation===false){
+    DB.gifts=DB.gifts.filter(x=>x.id!==gid);
+    save();syncActiveEventData();closeModal('add-gift');closeModal('add-moi');render();toast('Gift deleted');
+    return;
+  }
   openConfirm('Delete this gift?','This gift record will be permanently removed.',()=>{
     DB.gifts=DB.gifts.filter(x=>x.id!==gid);
     save();syncActiveEventData();closeModal('add-gift');closeModal('add-moi');render();toast('Gift deleted');
@@ -5466,6 +5529,119 @@ function openProfileModal(show=true){
   if(emailEl) emailEl.textContent=email||'Sign in to sync across devices';
   if(avatarEl) avatarEl.textContent=avatar;
   if(show) openModal('profile');
+}
+
+function hideAllPrimaryScreens(){
+  const auth=document.getElementById('auth-screen');
+  const app=document.getElementById('app');
+  const invite=document.getElementById('public-invite-screen');
+  if(auth) auth.style.display='none';
+  if(app) app.style.display='none';
+  if(invite) invite.style.display='none';
+}
+
+function showPublicInviteScreen(){
+  hideAllPrimaryScreens();
+  const invite=document.getElementById('public-invite-screen');
+  if(invite) invite.style.display='flex';
+}
+
+function parsePublicInviteFromUrl(){
+  const params=new URLSearchParams(window.location.search||'');
+  const eventId=(params.get('invite')||'').trim();
+  const key=(params.get('key')||'').trim();
+  if(!eventId || !key) return null;
+  return {
+    eventId,
+    key,
+    eventName:(params.get('event')||'').trim() || 'Event',
+  };
+}
+
+function renderPublicInviteScreen(context){
+  const titleEl=document.getElementById('public-invite-title');
+  const subEl=document.getElementById('public-invite-sub');
+  const statusEl=document.getElementById('public-invite-status');
+  if(titleEl) titleEl.textContent=`${context?.eventName || 'Event'} Invite`;
+  if(subEl) subEl.textContent='Fill in your details so the organiser can add you to the guest list.';
+  if(statusEl){
+    statusEl.style.display='none';
+    statusEl.textContent='';
+    statusEl.classList.remove('success');
+  }
+}
+
+function setPublicInviteStatus(message, isSuccess=false){
+  const statusEl=document.getElementById('public-invite-status');
+  if(!statusEl) return;
+  statusEl.textContent=message;
+  statusEl.style.display=message?'block':'none';
+  statusEl.classList.toggle('success', !!isSuccess);
+}
+
+async function submitPublicInviteForm(){
+  if(!_publicInviteContext?.eventId || !_publicInviteContext?.key){
+    setPublicInviteStatus('This guest form link is invalid.');
+    return;
+  }
+  const name=(document.getElementById('public-invite-name')?.value || '').trim();
+  const phone=(document.getElementById('public-invite-phone')?.value || '').replace(/\D/g,'').slice(0,15);
+  const email=(document.getElementById('public-invite-email')?.value || '').trim().toLowerCase();
+  const diet=(document.getElementById('public-invite-diet')?.value || 'veg').trim().toLowerCase();
+  const roomRequired=(document.getElementById('public-invite-room')?.value || 'no').trim().toLowerCase();
+  if(!name){
+    setPublicInviteStatus('Please enter your name.');
+    return;
+  }
+  if(phone && phone.length>15){
+    setPublicInviteStatus('Phone number cannot be more than 15 digits.');
+    return;
+  }
+  const guestId=uid();
+  const payload={
+    eventId:_publicInviteContext.eventId,
+    first:name,
+    last:'',
+    contact:phone,
+    email,
+    party:1,
+    rsvp:'pending',
+    notes:diet==='non-veg'?'Non-veg':'Veg',
+    dietPreference:diet==='non-veg'?'non-veg':'veg',
+    table:'',
+    roomAssignments:[],
+    roomRequestType:roomRequired==='yes'?'needs_room':'no_room_needed',
+    requestedRoomCount:1,
+    requestedStayCount:1,
+    roomRequestNote:'',
+    roomRequestStatus:roomRequired==='yes'?'pending':'fulfilled',
+    source:'public_invite',
+    publicFormKey:_publicInviteContext.key,
+    createdAt:Date.now()
+  };
+  try{
+    await setDoc(doc(_fbDb, 'guests', guestId), payload);
+    setPublicInviteStatus('Details submitted. The organiser can now see you in the guest list.', true);
+    ['public-invite-name','public-invite-phone','public-invite-email'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.value='';
+    });
+    const dietEl=document.getElementById('public-invite-diet');
+    const roomEl=document.getElementById('public-invite-room');
+    if(dietEl) dietEl.value='veg';
+    if(roomEl) roomEl.value='no';
+  }catch(e){
+    setPublicInviteStatus('This link is invalid, expired, or could not be submitted right now.');
+  }
+}
+
+function initPublicInviteMode(){
+  const context=parsePublicInviteFromUrl();
+  if(!context) return false;
+  _publicInviteContext=context;
+  renderPublicInviteScreen(context);
+  showPublicInviteScreen();
+  return true;
 }
 
 function toggleSetting(key,btn){
@@ -5915,6 +6091,7 @@ window.App={
   openGroupInviteModal,filterGroupInvite,importMasterGroup,importMasterGuest,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   openProfileModal,toggleSetting,enableAppNotifications,setCurrency,unlockPremium,clearAllData,
+  copyPublicInviteLink,submitPublicInviteForm,
   setGFilter,setGSearch,scrollToTop,openConfirm,closeConfirm,
   limitPhoneDigits,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,
@@ -6038,7 +6215,9 @@ if(false && DB.events.length===0){
 }
 
 // Initialize auth — shows login screen or app based on session
-Auth.init();
+if(!initPublicInviteMode()){
+  Auth.init();
+}
 
 render();
 

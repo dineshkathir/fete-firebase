@@ -34,6 +34,55 @@ service cloud.firestore {
       );
     }
 
+    function isPublicInviteGuestCreate() {
+      let eventId = request.resource.data.eventId;
+      let eventData = eventDoc(eventId).data;
+      return eventId is string &&
+        eventData.publicGuestFormEnabled == true &&
+        request.resource.data.publicFormKey is string &&
+        request.resource.data.publicFormKey == eventData.publicGuestFormKey &&
+        request.resource.data.keys().hasOnly([
+          'eventId',
+          'first',
+          'last',
+          'contact',
+          'email',
+          'party',
+          'rsvp',
+          'notes',
+          'dietPreference',
+          'table',
+          'roomAssignments',
+          'roomRequestType',
+          'requestedRoomCount',
+          'requestedStayCount',
+          'roomRequestNote',
+          'roomRequestStatus',
+          'source',
+          'publicFormKey',
+          'createdAt'
+        ]) &&
+        request.resource.data.first is string &&
+        request.resource.data.first.size() > 0 &&
+        request.resource.data.first.size() <= 120 &&
+        (!('contact' in request.resource.data) || request.resource.data.contact is string) &&
+        (!('email' in request.resource.data) || request.resource.data.email is string) &&
+        (!('notes' in request.resource.data) || request.resource.data.notes is string) &&
+        (!('dietPreference' in request.resource.data) || request.resource.data.dietPreference in ['veg', 'non-veg']) &&
+        request.resource.data.party == 1 &&
+        request.resource.data.rsvp == 'pending' &&
+        request.resource.data.table == '' &&
+        request.resource.data.roomAssignments is list &&
+        request.resource.data.roomAssignments.size() == 0 &&
+        request.resource.data.requestedRoomCount == 1 &&
+        request.resource.data.requestedStayCount == 1 &&
+        request.resource.data.roomRequestNote == '' &&
+        request.resource.data.roomRequestType in ['needs_room', 'no_room_needed'] &&
+        request.resource.data.roomRequestStatus in ['pending', 'fulfilled'] &&
+        request.resource.data.source == 'public_invite' &&
+        request.resource.data.createdAt is int;
+    }
+
     match /events/{eventId} {
       allow read: if signedIn() && (myEmail() in resource.data.memberEmails || myEmail() in resource.data.get('guestEmails', []));
       allow create: if signedIn()
@@ -82,7 +131,7 @@ service cloud.firestore {
         )
       );
       allow delete: if signedIn() && isEventMember(resource.data.eventId);
-      allow create: if signedIn() && isEventMember(request.resource.data.eventId);
+      allow create: if (signedIn() && isEventMember(request.resource.data.eventId)) || isPublicInviteGuestCreate();
     }
 
     match /gifts/{giftId} {

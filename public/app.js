@@ -1780,7 +1780,7 @@ function setMasterGuestShareState(incoming, sent){
 
 const GUEST_SWIPE_RIGHT_ACTION=88;
 const GUEST_SWIPE_LEFT_REVEAL=196;
-const GUEST_SWIPE_CONTACT_REVEAL=124;
+const GUEST_SWIPE_CONTACT_REVEAL=150;
 
 function syncTabHistory(tab,{fromPop=false}={}) {
   if (fromPop || !window.history || !window.history.replaceState) return;

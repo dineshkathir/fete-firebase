@@ -1778,9 +1778,10 @@ function setMasterGuestShareState(incoming, sent){
   if(document.getElementById('mo-master-guest-shares')?.classList.contains('open')) renderMasterGuestShares();
 }
 
-const GUEST_SWIPE_RIGHT_ACTION=88;
+const GUEST_SWIPE_RIGHT_ACTION=196;
 const GUEST_SWIPE_LEFT_REVEAL=196;
 const GUEST_SWIPE_CONTACT_REVEAL=184;
+const GUEST_SWIPE_MANAGE_REVEAL=196;
 
 function syncTabHistory(tab,{fromPop=false}={}) {
   if (fromPop || !window.history || !window.history.replaceState) return;
@@ -1844,10 +1845,27 @@ function openGuestInlineContactActions(wrap){
   if(!wrap) return;
   const card=wrap.querySelector('.g-swipe-card');
   if(!card) return;
-  wrap.dataset.swipeOpen='true';
+  wrap.dataset.swipeOpen='contact';
   wrap.classList.add('swipe-hint-left');
   card.style.transition='transform .18s ease';
   card.style.transform=`translateX(-${GUEST_SWIPE_CONTACT_REVEAL}px)`;
+  _guestSwipeOpenId=wrap.dataset.guestId||null;
+}
+
+function openGuestInlineManageActions(wrap){
+  if(!wrap) return;
+  const card=wrap.querySelector('.g-swipe-card');
+  if(!card) return;
+  const manageLane=wrap.querySelector('.g-swipe-inline-manage');
+  if(!manageLane || !manageLane.children.length){
+    toast('⚠️ No guest actions available for your role');
+    resetGuestSwipeRow(wrap);
+    return;
+  }
+  wrap.dataset.swipeOpen='manage';
+  wrap.classList.add('swipe-hint-right');
+  card.style.transition='transform .18s ease';
+  card.style.transform=`translateX(${GUEST_SWIPE_MANAGE_REVEAL}px)`;
   _guestSwipeOpenId=wrap.dataset.guestId||null;
 }
 
@@ -2021,7 +2039,7 @@ function initGuestSwipeRows(){
     let horizontal=false;
     let activePointerId=null;
 
-    const isInlineActionTarget=target=>!!target?.closest?.('.g-swipe-inline-actions');
+    const isInlineActionTarget=target=>!!target?.closest?.('.g-swipe-inline-actions, .g-swipe-inline-manage');
 
     const beginSwipe=(clientX,clientY)=>{
       closeOpenGuestSwipe(wrap.dataset.guestId);
@@ -2059,10 +2077,12 @@ function initGuestSwipeRows(){
       activePointerId=null;
       card.style.transition='';
       if(deltaX>=56){
+        if(!_guestListEditMode){
+          resetGuestSwipeRow(wrap);
+          return;
+        }
         _guestSwipeTapBlockUntil=Date.now()+250;
-        wrap.classList.add('swipe-commit');
-        resetGuestSwipeRow(wrap);
-        applyLastGuestGroup(wrap.dataset.guestId);
+        openGuestInlineManageActions(wrap);
         return;
       }
       if(deltaX<=-72){
@@ -2589,7 +2609,7 @@ function initEventContactSwipeRows(){
         horizontal=true;
       }
       if(event?.cancelable) event.preventDefault();
-      deltaX=Math.max(-82,Math.min(82,dx));
+      deltaX=Math.max(-96,Math.min(96,dx));
       card.style.transform=`translateX(${deltaX}px)`;
     };
 
@@ -2601,7 +2621,7 @@ function initEventContactSwipeRows(){
       tracking=false;
       horizontal=false;
       activePointerId=null;
-      if(deltaX>=58){
+      if(deltaX>=62){
         const idx=parseInt(wrap.dataset.eventContactIndex,10);
         const eventId=wrap.dataset.eventId || _editingEventContactsId || DB.activeEvent;
         finishActionSwipe(18,()=>callEventContact(eventId,idx));
@@ -2703,6 +2723,10 @@ function renderGuests(){
     <span class="fchip ${_guestFilter==='invited'?'on':''}" onclick="App.setGFilter('invited')">Invited (${invited})</span>
   </div>`;
   const isOrg=Auth.isOrganizer(DB.activeEvent);
+  const role=Auth.currentRole(DB.activeEvent);
+  const canSwipeAllocate=role==='organizer'||role==='room';
+  const canSwipeGift=role==='organizer';
+  const canSwipeCash=role==='organizer'||role==='cash';
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       ${feedbackGuests.length?`<button class="fchip" style="padding:8px 14px;font-size:12px" onclick="App.scrollGuestsToFeedback()">Jump to Feedback</button>`:''}
     </div>`:'';
@@ -2727,9 +2751,14 @@ function renderGuests(){
       const rsvpLabel=rsvp.charAt(0).toUpperCase()+rsvp.slice(1);
       const ini=initials(first,last);
       const lastGroupHint=getPreferredGuestGroup();
-      const swipeRightHint=lastGroupHint ? `Swipe right to add to ${escapeHtml(lastGroupHint)}` : 'Swipe right to add to the most recent group';
+      const swipeRightHint=_guestListEditMode ? 'Swipe right to reveal room, gift, and cash gift' : '';
       const swipeLeftHint='';
       listHtml+=`<div class="g-swipe-wrap" data-guest-id="${g.id}">
+        <div class="g-swipe-inline-manage" aria-hidden="${_guestListEditMode?'false':'true'}">
+          ${canSwipeAllocate?`<button class="g-swipe-inline-btn room" type="button" title="Allocate room" aria-label="Allocate room" onclick="event.stopPropagation();App.swipeAllocateRoom('${g.id}')">${uiIcon('room',18)}</button>`:''}
+          ${canSwipeGift?`<button class="g-swipe-inline-btn gift" type="button" title="Add gift" aria-label="Add gift" onclick="event.stopPropagation();App.swipeAddGift('${g.id}')">${uiIcon('gift',18)}</button>`:''}
+          ${canSwipeCash?`<button class="g-swipe-inline-btn cash" type="button" title="Add cash gift" aria-label="Add cash gift" onclick="event.stopPropagation();App.swipeAddCashGift('${g.id}')"><span style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;line-height:1">${escapeHtml(currencySymbol().trim()||'¤')}</span></button>`:''}
+        </div>
         <div class="g-swipe-inline-actions" aria-hidden="false">
           <button class="g-swipe-inline-btn call" type="button" title="Call guest" aria-label="Call guest" onclick="event.stopPropagation();App.swipeCallGuest('${g.id}')">${uiIcon('phone',18)}</button>
           <button class="g-swipe-inline-btn whatsapp" type="button" title="WhatsApp guest" aria-label="WhatsApp guest" onclick="event.stopPropagation();App.swipeWhatsAppGuest('${g.id}')">${uiIcon('whatsapp',18)}</button>
@@ -2746,7 +2775,7 @@ function renderGuests(){
           </div>
         </div>
         <div class="g-swipe-hint" aria-hidden="true">
-          <span class="g-swipe-hint-copy g-swipe-hint-right-copy">${uiIcon('guests',12)} ${swipeRightHint}</span>
+          <span class="g-swipe-hint-copy g-swipe-hint-right-copy">${swipeRightHint?`${uiIcon('gift',12)} ${swipeRightHint}`:''}</span>
           <span class="g-swipe-hint-copy g-swipe-hint-left-copy"></span>
         </div>
       </div>`;

@@ -152,11 +152,16 @@ body{overscroll-behavior:none}
 .g-swipe-wrap.swipe-hint-right::before{opacity:1;transform:translateX(0)}
 .g-swipe-wrap.swipe-hint-left::after{opacity:1;transform:translateX(0)}
 .g-swipe-wrap.swipe-commit .g-swipe-card{animation:guestSwipeCommit .24s ease}
+.g-swipe-inline-manage{position:absolute;top:0;left:0;bottom:0;width:196px;display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:0 12px;background:linear-gradient(90deg,rgba(245,240,232,.98) 0%,rgba(245,240,232,.94) 62%,rgba(245,240,232,0) 100%);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;transform:translateX(-10px);z-index:3}
 .g-swipe-inline-actions{position:absolute;top:0;right:0;bottom:0;width:184px;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:0 14px;background:linear-gradient(270deg,rgba(233,248,239,.98) 0%,rgba(233,248,239,.92) 58%,rgba(233,248,239,0) 100%);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;transform:translateX(10px);z-index:3}
-.g-swipe-wrap[data-swipe-open="true"] .g-swipe-inline-actions{opacity:1;pointer-events:auto;transform:translateX(0)}
+.g-swipe-wrap[data-swipe-open="manage"] .g-swipe-inline-manage{opacity:1;pointer-events:auto;transform:translateX(0)}
+.g-swipe-wrap[data-swipe-open="contact"] .g-swipe-inline-actions{opacity:1;pointer-events:auto;transform:translateX(0)}
 .g-swipe-inline-btn{width:40px;height:40px;border:none;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 16px rgba(30,20,16,.12);transition:transform .16s ease,box-shadow .16s ease,opacity .16s ease;border:1px solid transparent}
 .g-swipe-inline-btn:hover{transform:translateY(-1px);box-shadow:0 10px 18px rgba(30,20,16,.16)}
 .g-swipe-inline-btn:active{transform:scale(.96)}
+.g-swipe-inline-btn.room{background:var(--slate-l);color:var(--slate-d);border-color:var(--slate-m)}
+.g-swipe-inline-btn.gift{background:var(--rose-l);color:var(--rose-d);border-color:var(--rose-m)}
+.g-swipe-inline-btn.cash{background:var(--gold-l);color:var(--gold-d);border-color:var(--gold-m)}
 .g-swipe-inline-btn.call{background:#DDEDDD;color:#27553C;border-color:#B9D2C1}
 .g-swipe-inline-btn.whatsapp{background:#25D366;color:#FFFFFF;border-color:#25D366;box-shadow:0 10px 20px rgba(37,211,102,.2)}
 .g-swipe-inline-btn svg{width:18px;height:18px;display:block;stroke:currentColor}
@@ -317,6 +322,7 @@ body{overscroll-behavior:none}
 .ms::-webkit-scrollbar{display:none}
 .m-handle{width:36px;height:4px;background:var(--bord);border-radius:2px;margin:0 auto 18px}
 .m-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--txt);margin-bottom:16px}
+.m-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
 .fg{margin-bottom:12px}
 .fl{font-size:11px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px}
 .fi{width:100%;padding:10px 13px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;color:var(--txt);outline:none;transition:border-color .15s;appearance:none}
@@ -460,9 +466,9 @@ body{overscroll-behavior:none}
 .request-btn.secondary{background:var(--surf2);color:var(--txt2);border:1px solid var(--bord)}
 .event-contact-empty{background:var(--surf);border:1px dashed var(--bord);border-radius:var(--rs);padding:16px;font-size:12.5px;color:var(--txt3);line-height:1.7}
 .event-contact-swipe-wrap{position:relative;overflow:hidden;border-radius:var(--rs);margin-bottom:10px}
-.event-contact-swipe-under-left,.event-contact-swipe-under-right{position:absolute;inset:0;display:flex;align-items:center;padding:0 14px;border-radius:var(--rs);font-size:12px;font-weight:700;letter-spacing:.2px}
-.event-contact-swipe-under-left{justify-content:flex-start;background:var(--sage-l);color:var(--sage-d);gap:8px;text-align:left}
-.event-contact-swipe-under-right{justify-content:flex-end;background:#E9F8EF;color:#146C43;gap:8px;text-align:right}
+.event-contact-swipe-under-left,.event-contact-swipe-under-right{position:absolute;top:0;bottom:0;display:flex;align-items:center;gap:8px;padding:0 12px;font-size:12px;font-weight:700;letter-spacing:.2px;z-index:1}
+.event-contact-swipe-under-left{left:0;width:94px;justify-content:center;background:var(--sage-l);color:var(--sage-d);text-align:center}
+.event-contact-swipe-under-right{right:0;width:112px;justify-content:center;background:#E9F8EF;color:#146C43;text-align:center}
 .event-contact-swipe-under-left svg,.event-contact-swipe-under-right svg{flex:0 0 auto}
 .event-contact-card{position:relative;z-index:2;touch-action:pan-y;transition:transform .18s ease}
 .event-contact-view{background:var(--surf);border:1px solid var(--bord2);border-radius:var(--rs);padding:14px;box-shadow:var(--sh1)}
@@ -477,6 +483,9 @@ body{overscroll-behavior:none}
 .event-contact-icon-btn{width:28px;height:28px;border-radius:50%;border:none;background:transparent;color:var(--txt4);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
 .event-contact-icon-btn:hover{background:#FEE8E8;color:#932B2B}
 @media (max-width:640px){.event-contact-grid{grid-template-columns:1fr 1fr}}
+.event-contacts-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.event-contacts-title-wrap{min-width:0;flex:1}
+.event-contacts-header .m-title{margin-bottom:0}
 
 /* ── AUTH SCREEN ── */
 #auth-screen{position:fixed;inset:0;background:linear-gradient(145deg,#FAF0F3 0%,#FBF6EC 50%,#EEF5F0 100%);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -581,7 +590,7 @@ html.boot-authenticated #auth-screen{display:none}
         <div id="event-contacts-sub" style="font-size:12px;color:var(--txt3);margin-top:4px;line-height:1.6">Manage event contact names and phone numbers here.</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <button class="g-edit" id="event-contact-mode-btn" type="button" onclick="App.handleEventContactsHeaderAction()" title="Edit contacts" aria-label="Edit contacts" style="display:none;width:32px;height:32px;min-width:32px"></button>
+        <button class="g-edit" id="event-contact-mode-btn" type="button" onclick="App.handleEventContactsHeaderAction()" title="Edit contacts" aria-label="Edit contacts" style="display:none;width:32px;height:32px;min-width:32px;margin-top:2px"></button>
       </div>
     </div>
     <div id="event-contacts-list"></div>

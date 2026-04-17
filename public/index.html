@@ -758,6 +758,27 @@ html.boot-authenticated #auth-screen{display:none}
   </div>
 </div>
 
+<div class="mo" id="mo-contributors">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title">Contributors</div>
+    <div id="contributors-admin-note" style="font-size:12px;color:var(--txt3);margin:-8px 0 14px;line-height:1.6"></div>
+    <div id="contributors-list" style="display:grid;gap:10px;margin-bottom:14px"></div>
+    <div id="contributors-editor">
+      <div class="fg">
+        <label class="fl">Name</label>
+        <input class="fi" type="text" id="contributors-name" placeholder="Contributor name" />
+      </div>
+      <div class="fg">
+        <label class="fl">Contribution</label>
+        <textarea class="fi" id="contributors-contribution" rows="4" style="resize:vertical" placeholder="Contribution details"></textarea>
+      </div>
+      <button class="btn-p" onclick="App.saveContributorEntry()">Save Contributor</button>
+    </div>
+    <button class="btn-s" onclick="App.closeModal('contributors')">Close</button>
+  </div>
+</div>
+
 <div id="app">
   <header class="hdr">
     <div class="logo">

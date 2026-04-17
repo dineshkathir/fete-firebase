@@ -16,6 +16,7 @@ const _fbApp = initializeApp({
 const _fbAuth = getAuth(_fbApp);
 const _fbDb = getFirestore(_fbApp);
 const _gProvider = new GoogleAuthProvider();
+const CONTRIBUTORS_ADMIN_EMAIL='dinesh.reachme@gmail.com';
 
 function normalizeEmailValue(value){
   return String(value||'').trim().toLowerCase();
@@ -510,7 +511,30 @@ function serializeEvent(event, team, session) {
     await setDoc(doc(_fbDb, 'masterGuestShares', shareId), cleanData({ ...updates, updatedAt: Date.now() }), { merge: true });
   }
 
-  return { unsubscribeAll, loadEventsForSession, saveEvent, deleteEvent, migrateLocalEvents, hydrateTeamForSession, syncEventData, clearAllCloudData, createMasterGuestShare, updateMasterGuestShare };
+  async function loadContributors() {
+    const snap=await getDocs(collection(_fbDb,'contributors'));
+    DB.contributors=snap.docs
+      .map(docSnap=>({id:docSnap.id,...docSnap.data()}))
+      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+    save();
+    return DB.contributors;
+  }
+
+  async function saveContributor(contributor) {
+    const id=contributor.id||uid();
+    await setDoc(doc(_fbDb,'contributors',id), cleanData({
+      name:String(contributor.name||'').trim(),
+      contribution:String(contributor.contribution||'').trim(),
+      updatedAt:Date.now()
+    }), { merge:true });
+    return id;
+  }
+
+  async function deleteContributor(id) {
+    await deleteDoc(doc(_fbDb,'contributors',id));
+  }
+
+  return { unsubscribeAll, loadEventsForSession, saveEvent, deleteEvent, migrateLocalEvents, hydrateTeamForSession, syncEventData, clearAllCloudData, createMasterGuestShare, updateMasterGuestShare, loadContributors, saveContributor, deleteContributor };
 })();
 
 // ═══════════════════════════════════════════════
@@ -801,6 +825,7 @@ let DB = {
   guests: STORE.get('guests')||[],
   gifts: STORE.get('gifts')||[],
   masterGuests: STORE.get('masterGuests')||[],
+  contributors: STORE.get('contributors')||[],
   activeEvent: STORE.get('activeEvent')||null,
   profile: STORE.get('profile')||{name:'',email:''},
   premium: STORE.get('premium')||false,
@@ -812,6 +837,7 @@ function save(){
   STORE.set('guests',DB.guests);
   STORE.set('gifts',DB.gifts);
   STORE.set('masterGuests',DB.masterGuests);
+  STORE.set('contributors',DB.contributors);
   STORE.set('activeEvent',DB.activeEvent);
   STORE.set('profile',DB.profile);
   STORE.set('premium',DB.premium);
@@ -3400,6 +3426,7 @@ function renderSettings(){
   const el=document.getElementById('scr-settings');
   const canManageGuestDelete=Auth.isOrganizer(DB.activeEvent);
   const currency=currentCurrencyCode();
+  const canManageContributors=(Auth.currentSession()?.email||'').trim().toLowerCase()===CONTRIBUTORS_ADMIN_EMAIL;
   el.innerHTML=`
   <div class="ph"><div class="ph-title">Settings</div></div>
   <div class="set-sec">
@@ -3450,6 +3477,13 @@ function renderSettings(){
   </div>`:''}
   <div class="set-sec">
     <div class="set-sec-t">Data & Export</div>
+    <div class="set-item" onclick="App.openContributorsModal()">
+      <div class="set-left">
+        <div class="set-ico" style="background:var(--gold-l)">CB</div>
+        <div><div class="set-lbl">Contributors</div><div class="set-sub">${DB.contributors.length} contributor${DB.contributors.length!==1?'s':''}${canManageContributors?' · You can manage this list':' · View only'}</div></div>
+      </div>
+      <span class="chev">></span>
+    </div>
     <div class="set-item" onclick="App.openMasterGuestModal('manage')">
       <div class="set-left">
         <div class="set-ico" style="background:var(--slate-l)">MG</div>
@@ -3497,6 +3531,87 @@ function renderSettings(){
     </div>
   </div>
   <div style="text-align:center;padding:10px 0 20px;font-size:11.5px;color:var(--txt4)">eventise v1.0</div>`;
+}
+
+let _editingContributorId='';
+function canManageContributors(){
+  return (Auth.currentSession()?.email||'').trim().toLowerCase()===CONTRIBUTORS_ADMIN_EMAIL;
+}
+
+function renderContributorsModal(){
+  const list=document.getElementById('contributors-list');
+  const editor=document.getElementById('contributors-editor');
+  const nameInput=document.getElementById('contributors-name');
+  const contributionInput=document.getElementById('contributors-contribution');
+  const adminNote=document.getElementById('contributors-admin-note');
+  const manage=canManageContributors();
+  if(editor) editor.style.display=manage?'block':'none';
+  if(adminNote) adminNote.textContent=manage?'Only you can add, edit, or delete contributors here.':'View only. Only dinesh.reachme@gmail.com can add, edit, or delete contributors.';
+  if(list){
+    list.innerHTML=DB.contributors.length
+      ? DB.contributors.map(item=>`<div class="request-row" style="display:block">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div style="min-width:0;flex:1">
+              <div style="font-size:15px;font-weight:600;color:var(--txt)">${escapeHtml(item.name||'Contributor')}</div>
+              <div style="font-size:13px;color:var(--txt2);margin-top:6px;line-height:1.55;white-space:pre-wrap">${escapeHtml(item.contribution||'')}</div>
+            </div>
+            ${manage?`<div style="display:flex;gap:6px;flex-shrink:0">
+              <button class="g-edit" type="button" onclick="event.stopPropagation();App.editContributor('${item.id}')">${uiIcon('edit',14)}</button>
+              <button class="g-del" type="button" onclick="event.stopPropagation();App.deleteContributorEntry('${item.id}')">X</button>
+            </div>`:''}
+          </div>
+        </div>`).join('')
+      : `<div style="font-size:12.5px;color:var(--txt3);line-height:1.6;padding:8px 0">${manage?'Add the first contributor below.':'No contributors added yet.'}</div>`;
+  }
+  if(nameInput && !_editingContributorId) nameInput.value='';
+  if(contributionInput && !_editingContributorId) contributionInput.value='';
+}
+
+async function openContributorsModal(){
+  try{ await Cloud.loadContributors(); }catch(e){}
+  _editingContributorId='';
+  renderContributorsModal();
+  openModal('contributors');
+}
+
+function editContributor(id){
+  if(!canManageContributors()) return;
+  const item=DB.contributors.find(entry=>entry.id===id);
+  if(!item) return;
+  _editingContributorId=id;
+  const nameInput=document.getElementById('contributors-name');
+  const contributionInput=document.getElementById('contributors-contribution');
+  if(nameInput) nameInput.value=item.name||'';
+  if(contributionInput) contributionInput.value=item.contribution||'';
+}
+
+async function saveContributorEntry(){
+  if(!canManageContributors()){toast('⚠️ View only');return;}
+  const name=(document.getElementById('contributors-name')?.value||'').trim();
+  const contribution=(document.getElementById('contributors-contribution')?.value||'').trim();
+  if(!name || !contribution){toast('⚠️ Enter name and contribution');return;}
+  const id=await Cloud.saveContributor({id:_editingContributorId,name,contribution});
+  await Cloud.loadContributors();
+  _editingContributorId='';
+  const nameInput=document.getElementById('contributors-name');
+  const contributionInput=document.getElementById('contributors-contribution');
+  if(nameInput) nameInput.value='';
+  if(contributionInput) contributionInput.value='';
+  renderContributorsModal();
+  renderSettings();
+  toast(id?'Contributor saved':'Contributor updated');
+}
+
+async function deleteContributorEntry(id){
+  if(!canManageContributors()){toast('⚠️ View only');return;}
+  openConfirm('Delete contributor?','This contributor entry will be removed.',async()=>{
+    await Cloud.deleteContributor(id);
+    await Cloud.loadContributors();
+    if(_editingContributorId===id) _editingContributorId='';
+    renderContributorsModal();
+    renderSettings();
+    toast('Contributor deleted');
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -6518,6 +6633,7 @@ window.App={
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   openProfileModal,toggleSetting,enableAppNotifications,setCurrency,unlockPremium,clearAllData,
   openPublicInviteShareModal,copyPublicInviteLink,sharePublicInviteLink,submitPublicInviteForm,setPublicInviteToggle,setPublicInviteSwitch,
+  openContributorsModal,saveContributorEntry,editContributor,deleteContributorEntry,
   _publicInviteShareEventId:()=>_publicInviteShareEventId,
   setGFilter,setGSearch,scrollToTop,openConfirm,closeConfirm,
   limitPhoneDigits,

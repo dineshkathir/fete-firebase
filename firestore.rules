@@ -9,6 +9,10 @@ service cloud.firestore {
       return request.auth.token.email.lower();
     }
 
+    function isContributorsAdmin() {
+      return signedIn() && myEmail() == 'dinesh.reachme@gmail.com';
+    }
+
     function eventDoc(eventId) {
       return get(/databases/$(database)/documents/events/$(eventId));
     }
@@ -158,6 +162,11 @@ service cloud.firestore {
       allow create: if signedIn() && isEventOrganizer(request.resource.data.eventId);
       allow update: if signedIn() && isEventOrganizer(resource.data.eventId);
       allow delete: if signedIn() && isEventOrganizer(resource.data.eventId);
+    }
+
+    match /contributors/{contributorId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isContributorsAdmin();
     }
 
     match /masterGuestShares/{shareId} {

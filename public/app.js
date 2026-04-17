@@ -3912,7 +3912,7 @@ function buildPublicInviteLink(eventId){
   if(ev.publicInviteMenuEnabled===true){
     const menuText=normalizeEventMenus(ev.foodMenus)
       .map(menu=>{
-        const items=(menu.items||[]).map(item=>String(item||'').trim()).filter(Boolean).join(', ');
+        const items=normalizeMenuItems(menu.items).join(', ');
         return [menu.title, items].filter(Boolean).join(': ');
       })
       .filter(Boolean)
@@ -3936,7 +3936,7 @@ function openPublicInviteShareModal(eventId){
   if(dietToggle) dietToggle.checked=ev.publicInviteDietEnabled!==false;
   if(roomToggle) roomToggle.checked=ev.publicInviteRoomEnabled!==false;
   if(menuToggle){
-    const hasMenu=normalizeEventMenus(ev.foodMenus).some(menu=>(menu.items||[]).some(item=>String(item||'').trim()));
+    const hasMenu=normalizeEventMenus(ev.foodMenus).some(menu=>normalizeMenuItems(menu.items).length>0);
     menuToggle.checked=hasMenu && ev.publicInviteMenuEnabled===true;
     menuToggle.disabled=!hasMenu;
     const menuLabel=menuToggle.closest('label');

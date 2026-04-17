@@ -1489,7 +1489,9 @@ function normalizeEventMenus(foodMenus){
     ? foodMenus
         .map(menu=>({
           title:(menu?.title||'').trim(),
-          items:(menu?.items||'').trim()
+          items:Array.isArray(menu?.items)
+            ? menu.items.map(item=>String(item||'').trim()).filter(Boolean).join('\n')
+            : String(menu?.items||'').trim()
         }))
         .filter(menu=>menu.title||menu.items)
     : [];

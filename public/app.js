@@ -3546,7 +3546,7 @@ function renderContributorsModal(){
   const adminNote=document.getElementById('contributors-admin-note');
   const manage=canManageContributors();
   if(editor) editor.style.display=manage?'block':'none';
-  if(adminNote) adminNote.textContent=manage?'Only you can add, edit, or delete contributors here.':'View only. Only dinesh.reachme@gmail.com can add, edit, or delete contributors.';
+  if(adminNote) adminNote.textContent=manage?'Only you can add, edit, or delete contributors here.':'';
   if(list){
     list.innerHTML=DB.contributors.length
       ? DB.contributors.map(item=>`<div class="request-row" style="display:block">

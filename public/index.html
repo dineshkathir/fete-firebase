@@ -540,10 +540,14 @@ html.boot-authenticated #auth-screen{display:none}
 .public-invite-logo img{height:88px;width:auto}
 .public-invite-title{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:600;text-align:center;color:var(--txt);margin-bottom:6px}
 .public-invite-sub{font-size:12.5px;line-height:1.6;color:var(--txt3);text-align:center;margin-bottom:18px}
+.public-invite-details{display:none;background:var(--gold-l);border:1px solid var(--gold-m);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px;font-size:12px;line-height:1.7;color:var(--txt2)}
 .public-invite-status{display:none;background:var(--rose-l);color:var(--rose-d);border:1px solid var(--rose-m);border-radius:var(--rs);padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:14px}
 .public-invite-status.success{background:var(--sage-l);color:var(--sage-d);border-color:var(--sage-m)}
 .public-invite-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .public-invite-grid .fg{margin-bottom:0}
+.public-toggle-wrap{display:flex;gap:8px;flex-wrap:wrap}
+.public-toggle-btn{flex:1;padding:11px 12px;border-radius:999px;border:1px solid var(--bord);background:var(--surf2);color:var(--txt2);font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:all .18s var(--ease-out)}
+.public-toggle-btn.active{background:var(--rose-d);border-color:var(--rose-d);color:#fff;box-shadow:0 8px 16px rgba(139,58,82,.16)}
 @media (max-width:420px){
   .public-invite-grid{grid-template-columns:1fr}
 }
@@ -557,6 +561,7 @@ html.boot-authenticated #auth-screen{display:none}
     </div>
     <div class="public-invite-title" id="public-invite-title">Event Invite</div>
     <div class="public-invite-sub" id="public-invite-sub">Fill in your details so the organiser can add you to the guest list.</div>
+    <div class="public-invite-details" id="public-invite-details"></div>
     <div class="public-invite-status" id="public-invite-status"></div>
     <div class="fg">
       <label class="fl">Name *</label>
@@ -571,19 +576,21 @@ html.boot-authenticated #auth-screen{display:none}
         <label class="fl">Email ID</label>
         <input class="fi" type="email" id="public-invite-email" placeholder="Email address" />
       </div>
-      <div class="fg">
+      <div class="fg" id="public-invite-diet-wrap">
         <label class="fl">Veg / Non-veg</label>
-        <select class="fi" id="public-invite-diet">
-          <option value="veg">Veg</option>
-          <option value="non-veg">Non-veg</option>
-        </select>
+        <input type="hidden" id="public-invite-diet" value="veg" />
+        <div class="public-toggle-wrap">
+          <button class="public-toggle-btn active" type="button" data-public-toggle="diet" data-value="veg" onclick="App.setPublicInviteToggle('diet','veg')">Veg</button>
+          <button class="public-toggle-btn" type="button" data-public-toggle="diet" data-value="non-veg" onclick="App.setPublicInviteToggle('diet','non-veg')">Non-veg</button>
+        </div>
       </div>
-      <div class="fg">
+      <div class="fg" id="public-invite-room-wrap">
         <label class="fl">Room Required</label>
-        <select class="fi" id="public-invite-room">
-          <option value="no">No</option>
-          <option value="yes">Yes</option>
-        </select>
+        <input type="hidden" id="public-invite-room" value="no" />
+        <div class="public-toggle-wrap">
+          <button class="public-toggle-btn active" type="button" data-public-toggle="room" data-value="no" onclick="App.setPublicInviteToggle('room','no')">No</button>
+          <button class="public-toggle-btn" type="button" data-public-toggle="room" data-value="yes" onclick="App.setPublicInviteToggle('room','yes')">Yes</button>
+        </div>
       </div>
     </div>
     <button class="btn-p" onclick="App.submitPublicInviteForm()">Submit Details</button>
@@ -784,6 +791,23 @@ html.boot-authenticated #auth-screen{display:none}
         <div>
           <div style="font-size:14px;font-weight:600;color:var(--txt)">Allow guests to send wishes and ratings</div>
           <div style="font-size:12px;color:var(--txt3);margin-top:2px">Guests can share wishes plus 5-star ratings for food, event, and rooms when this is turned on.</div>
+        </div>
+      </label>
+    </div>
+    <div class="fg">
+      <label class="fl">Invite Form Fields</label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);cursor:pointer;margin-bottom:8px">
+        <input type="checkbox" id="ev-public-invite-diet-enabled" checked />
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--txt)">Ask Veg / Non-veg</div>
+          <div style="font-size:12px;color:var(--txt3);margin-top:2px">Turn this off if you do not want food preference in the guest invite form.</div>
+        </div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);cursor:pointer">
+        <input type="checkbox" id="ev-public-invite-room-enabled" checked />
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--txt)">Ask Room Required</div>
+          <div style="font-size:12px;color:var(--txt3);margin-top:2px">Turn this off if you do not want room requirement in the guest invite form.</div>
         </div>
       </label>
     </div>

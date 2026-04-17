@@ -36,11 +36,8 @@ service cloud.firestore {
 
     function isPublicInviteGuestCreate() {
       let eventId = request.resource.data.eventId;
-      let eventData = eventDoc(eventId).data;
       return eventId is string &&
-        eventData.publicGuestFormEnabled == true &&
-        request.resource.data.publicFormKey is string &&
-        request.resource.data.publicFormKey == eventData.publicGuestFormKey &&
+        eventDoc(eventId).data.name is string &&
         request.resource.data.keys().hasOnly([
           'eventId',
           'first',
@@ -59,7 +56,6 @@ service cloud.firestore {
           'roomRequestNote',
           'roomRequestStatus',
           'source',
-          'publicFormKey',
           'createdAt'
         ]) &&
         request.resource.data.first is string &&

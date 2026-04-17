@@ -120,6 +120,8 @@ function serializeEvent(event, team, session) {
       feedbackEnabled: event.feedbackEnabled === true,
       publicGuestFormEnabled: event.publicGuestFormEnabled !== false,
       publicGuestFormKey: event.publicGuestFormKey || '',
+      publicInviteDietEnabled: event.publicInviteDietEnabled !== false,
+      publicInviteRoomEnabled: event.publicInviteRoomEnabled !== false,
       createdAt: event.createdAt || Date.now(),
       updatedAt: Date.now(),
       team: normalizedTeam,
@@ -716,6 +718,8 @@ function ensurePublicGuestFormConfig(event){
   if(!event) return event;
   if(event.publicGuestFormEnabled===undefined) event.publicGuestFormEnabled=true;
   if(!event.publicGuestFormKey) event.publicGuestFormKey=randomInviteKey();
+  if(event.publicInviteDietEnabled===undefined) event.publicInviteDietEnabled=true;
+  if(event.publicInviteRoomEnabled===undefined) event.publicInviteRoomEnabled=true;
   return event;
 }
 
@@ -3426,6 +3430,18 @@ function openAddEvent(){
   document.getElementById('ev-feedback-enabled').checked=false;
   document.getElementById('ev-feedback-enabled').disabled=false;
   document.getElementById('ev-feedback-enabled').closest('label').style.opacity='1';
+  const inviteDietToggle=document.getElementById('ev-public-invite-diet-enabled');
+  if(inviteDietToggle){
+    inviteDietToggle.checked=true;
+    inviteDietToggle.disabled=false;
+    inviteDietToggle.closest('label').style.opacity='1';
+  }
+  const inviteRoomToggle=document.getElementById('ev-public-invite-room-enabled');
+  if(inviteRoomToggle){
+    inviteRoomToggle.checked=true;
+    inviteRoomToggle.disabled=false;
+    inviteRoomToggle.closest('label').style.opacity='1';
+  }
   const legacyEventContactsButton=document.getElementById('ev-contact-add-btn');
   if(legacyEventContactsButton){
     legacyEventContactsButton.style.display='none';
@@ -3474,6 +3490,18 @@ function openEditEvent(id){
     feedbackToggle.checked=isFeedbackEnabled(ev);
     feedbackToggle.disabled=!isOrg;
     feedbackToggle.closest('label').style.opacity=isOrg?'1':'0.6';
+  }
+  const inviteDietToggle=document.getElementById('ev-public-invite-diet-enabled');
+  if(inviteDietToggle){
+    inviteDietToggle.checked=ev.publicInviteDietEnabled!==false;
+    inviteDietToggle.disabled=!isOrg;
+    inviteDietToggle.closest('label').style.opacity=isOrg?'1':'0.6';
+  }
+  const inviteRoomToggle=document.getElementById('ev-public-invite-room-enabled');
+  if(inviteRoomToggle){
+    inviteRoomToggle.checked=ev.publicInviteRoomEnabled!==false;
+    inviteRoomToggle.disabled=!isOrg;
+    inviteRoomToggle.closest('label').style.opacity=isOrg?'1':'0.6';
   }
   const legacyEventContactsButton=document.getElementById('ev-contact-add-btn');
   if(legacyEventContactsButton){
@@ -3552,6 +3580,8 @@ async function saveEvent(){
   const eventTime=document.getElementById('ev-time').value.trim();
   const roomRequestsEnabledEl=document.getElementById('ev-room-requests-enabled');
   const feedbackEnabledEl=document.getElementById('ev-feedback-enabled');
+  const inviteDietEnabledEl=document.getElementById('ev-public-invite-diet-enabled');
+  const inviteRoomEnabledEl=document.getElementById('ev-public-invite-room-enabled');
   let savedEvent=null;
   if(_editing.event){
     const ev=DB.events.find(e=>e.id===_editing.event);
@@ -3574,6 +3604,8 @@ async function saveEvent(){
         ev.foodMenus=JSON.parse(JSON.stringify(normalizeEventMenus(_eventMenusTemp)));
         if(roomRequestsEnabledEl) ev.roomRequestsEnabled=roomRequestsEnabledEl.checked;
         if(feedbackEnabledEl) ev.feedbackEnabled=feedbackEnabledEl.checked;
+        if(inviteDietEnabledEl) ev.publicInviteDietEnabled=inviteDietEnabledEl.checked;
+        if(inviteRoomEnabledEl) ev.publicInviteRoomEnabled=inviteRoomEnabledEl.checked;
       }
       savedEvent=ev;
     }
@@ -3597,6 +3629,8 @@ async function saveEvent(){
       feedbackEnabled:feedbackEnabledEl?feedbackEnabledEl.checked:false,
       publicGuestFormEnabled:true,
       publicGuestFormKey:randomInviteKey(),
+      publicInviteDietEnabled:inviteDietEnabledEl?inviteDietEnabledEl.checked:true,
+      publicInviteRoomEnabled:inviteRoomEnabledEl?inviteRoomEnabledEl.checked:true,
       createdAt:Date.now()
     };
     ensurePublicGuestFormConfig(ev);
@@ -3717,8 +3751,12 @@ function buildPublicInviteLink(eventId){
   url.search='';
   url.hash='';
   url.searchParams.set('invite', ev.id);
-  url.searchParams.set('key', ev.publicGuestFormKey);
   url.searchParams.set('event', ev.name || 'Event');
+  url.searchParams.set('diet', ev.publicInviteDietEnabled===false?'0':'1');
+  url.searchParams.set('room', ev.publicInviteRoomEnabled===false?'0':'1');
+  if(ev.date) url.searchParams.set('date', ev.date);
+  if(ev.time) url.searchParams.set('time', ev.time);
+  if(ev.location) url.searchParams.set('location', ev.location);
   return url.toString();
 }
 
@@ -5549,12 +5587,15 @@ function showPublicInviteScreen(){
 function parsePublicInviteFromUrl(){
   const params=new URLSearchParams(window.location.search||'');
   const eventId=(params.get('invite')||'').trim();
-  const key=(params.get('key')||'').trim();
-  if(!eventId || !key) return null;
+  if(!eventId) return null;
   return {
     eventId,
-    key,
     eventName:(params.get('event')||'').trim() || 'Event',
+    dietEnabled: params.get('diet') !== '0',
+    roomEnabled: params.get('room') !== '0',
+    eventDate:(params.get('date')||'').trim(),
+    eventTime:(params.get('time')||'').trim(),
+    eventLocation:(params.get('location')||'').trim(),
   };
 }
 
@@ -5562,13 +5603,28 @@ function renderPublicInviteScreen(context){
   const titleEl=document.getElementById('public-invite-title');
   const subEl=document.getElementById('public-invite-sub');
   const statusEl=document.getElementById('public-invite-status');
+  const detailsEl=document.getElementById('public-invite-details');
+  const dietWrap=document.getElementById('public-invite-diet-wrap');
+  const roomWrap=document.getElementById('public-invite-room-wrap');
   if(titleEl) titleEl.textContent=`${context?.eventName || 'Event'} Invite`;
   if(subEl) subEl.textContent='Fill in your details so the organiser can add you to the guest list.';
+  if(detailsEl){
+    const parts=[];
+    if(context?.eventDate) parts.push(`${uiIcon('calendar',12)} ${fmtDate(context.eventDate)}`);
+    if(context?.eventTime) parts.push(`${uiIcon('time',12)} ${fmtTime(context.eventTime)}`);
+    if(context?.eventLocation) parts.push(`${uiIcon('location',12)} ${escapeHtml(formatEventLocation(context.eventLocation))}`);
+    detailsEl.innerHTML=parts.join('<br>');
+    detailsEl.style.display=parts.length?'block':'none';
+  }
   if(statusEl){
     statusEl.style.display='none';
     statusEl.textContent='';
     statusEl.classList.remove('success');
   }
+  if(dietWrap) dietWrap.style.display=context?.dietEnabled===false?'none':'';
+  if(roomWrap) roomWrap.style.display=context?.roomEnabled===false?'none':'';
+  setPublicInviteToggle('diet','veg');
+  setPublicInviteToggle('room','no');
 }
 
 function setPublicInviteStatus(message, isSuccess=false){
@@ -5579,16 +5635,24 @@ function setPublicInviteStatus(message, isSuccess=false){
   statusEl.classList.toggle('success', !!isSuccess);
 }
 
+function setPublicInviteToggle(group,value){
+  document.querySelectorAll(`[data-public-toggle="${group}"]`).forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.value===value);
+  });
+  const hidden=document.getElementById(`public-invite-${group}`);
+  if(hidden) hidden.value=value;
+}
+
 async function submitPublicInviteForm(){
-  if(!_publicInviteContext?.eventId || !_publicInviteContext?.key){
+  if(!_publicInviteContext?.eventId){
     setPublicInviteStatus('This guest form link is invalid.');
     return;
   }
   const name=(document.getElementById('public-invite-name')?.value || '').trim();
   const phone=(document.getElementById('public-invite-phone')?.value || '').replace(/\D/g,'').slice(0,15);
   const email=(document.getElementById('public-invite-email')?.value || '').trim().toLowerCase();
-  const diet=(document.getElementById('public-invite-diet')?.value || 'veg').trim().toLowerCase();
-  const roomRequired=(document.getElementById('public-invite-room')?.value || 'no').trim().toLowerCase();
+  const diet=_publicInviteContext?.dietEnabled===false ? 'veg' : (document.getElementById('public-invite-diet')?.value || 'veg').trim().toLowerCase();
+  const roomRequired=_publicInviteContext?.roomEnabled===false ? 'no' : (document.getElementById('public-invite-room')?.value || 'no').trim().toLowerCase();
   if(!name){
     setPublicInviteStatus('Please enter your name.');
     return;
@@ -5616,7 +5680,6 @@ async function submitPublicInviteForm(){
     roomRequestNote:'',
     roomRequestStatus:roomRequired==='yes'?'pending':'fulfilled',
     source:'public_invite',
-    publicFormKey:_publicInviteContext.key,
     createdAt:Date.now()
   };
   try{
@@ -5626,10 +5689,8 @@ async function submitPublicInviteForm(){
       const el=document.getElementById(id);
       if(el) el.value='';
     });
-    const dietEl=document.getElementById('public-invite-diet');
-    const roomEl=document.getElementById('public-invite-room');
-    if(dietEl) dietEl.value='veg';
-    if(roomEl) roomEl.value='no';
+    setPublicInviteToggle('diet','veg');
+    setPublicInviteToggle('room','no');
   }catch(e){
     setPublicInviteStatus('This link is invalid, expired, or could not be submitted right now.');
   }
@@ -6091,7 +6152,7 @@ window.App={
   openGroupInviteModal,filterGroupInvite,importMasterGroup,importMasterGuest,
   pickEvent,pickExportEvent,exportGuests,exportGifts,
   openProfileModal,toggleSetting,enableAppNotifications,setCurrency,unlockPremium,clearAllData,
-  copyPublicInviteLink,submitPublicInviteForm,
+  copyPublicInviteLink,submitPublicInviteForm,setPublicInviteToggle,
   setGFilter,setGSearch,scrollToTop,openConfirm,closeConfirm,
   limitPhoneDigits,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,

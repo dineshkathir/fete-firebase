@@ -1511,6 +1511,30 @@ function formatGuestRooms(guest){
 function myManagedEvents(){
   return DB.events.filter(ev=>!ev._isGuestOnly);
 }
+function getUpcomingManagedEvents(){
+  return myManagedEvents().filter(ev=>{
+    const days=daysUntil(ev.date);
+    return days===null || days>=0;
+  });
+}
+function getDefaultManagedEventId({ includePast=false }={}){
+  const events=includePast?myManagedEvents():getUpcomingManagedEvents();
+  return events[0]?.id||null;
+}
+function ensureManagedActiveEvent({ includePast=false }={}){
+  const activeEvent=DB.events.find(ev=>ev.id===DB.activeEvent);
+  if(activeEvent && !activeEvent._isGuestOnly){
+    if(includePast) return activeEvent.id;
+    const days=daysUntil(activeEvent.date);
+    if(days===null || days>=0) return activeEvent.id;
+  }
+  const fallbackId=getDefaultManagedEventId({ includePast })||getDefaultManagedEventId({ includePast:true });
+  if(fallbackId && DB.activeEvent!==fallbackId){
+    DB.activeEvent=fallbackId;
+    save();
+  }
+  return fallbackId;
+}
 function renderCreateEventState(title,message){
   return `<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('event',42)}</div><div class="empty-t">${title}</div><div class="empty-s">${message}</div></div><div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add event" aria-label="Add event" onclick="App.openAddEvent()">${uiIcon('event',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
 }
@@ -2057,8 +2081,20 @@ function syncTabHistory(tab,{fromPop=false}={}) {
 }
 
 function switchTab(tab, options={}) {
-  const ev = DB.events.find(e => e.id === DB.activeEvent);
-  const isGuestOnly = ev && ev._isGuestOnly;
+  const needsManagedEvent=tab==='guests'||tab==='gifts';
+  if(needsManagedEvent){
+    ensureManagedActiveEvent({ includePast:true });
+  }
+  let ev = DB.events.find(e => e.id === DB.activeEvent);
+  let isGuestOnly = ev && ev._isGuestOnly;
+
+  if (isGuestOnly && needsManagedEvent) {
+    const fallbackId=ensureManagedActiveEvent({ includePast:true });
+    if(fallbackId){
+      ev = DB.events.find(e => e.id === DB.activeEvent);
+      isGuestOnly = ev && ev._isGuestOnly;
+    }
+  }
 
   if (isGuestOnly && tab !== 'events' && tab !== 'rooms' && tab !== 'settings') {
     tab = 'events';
@@ -2081,7 +2117,7 @@ function switchTab(tab, options={}) {
   const navTabs = document.querySelector('.tabs');
   if (navTabs) navTabs.style.display = 'flex';
   const teamBtn = document.getElementById('hdr-team-btn');
-  if (teamBtn) teamBtn.style.display = isGuestOnly ? 'none' : 'block';
+  if (teamBtn) teamBtn.style.display = myManagedEvents().length ? 'block' : 'none';
   
   render();
 }
@@ -3741,9 +3777,8 @@ async function openMyContributionsModal(){
 // ═══════════════════════════════════════════════
 function render(){
   try{
-    const ev=DB.events.find(e=>e.id===DB.activeEvent);
     const teamBtn=document.getElementById('hdr-team-btn');
-    if(teamBtn) teamBtn.style.display=ev&&ev._isGuestOnly?'none':'block';
+    if(teamBtn) teamBtn.style.display=myManagedEvents().length?'block':'none';
     if(_tab==='events') renderEvents();
     else if(_tab==='guests') renderGuests();
     else if(_tab==='gifts') renderGifts();
@@ -3863,7 +3898,7 @@ function openAddEvent(){
   const roomSection=document.getElementById('ev-room-section');
   if(roomSection) roomSection.style.display='none';
   const foodSection=document.getElementById('ev-food-section');
-  if(foodSection) foodSection.style.display='none';
+  if(foodSection) foodSection.style.display='';
   document.getElementById('del-event-btn').style.display='none';
   _roomLocsTemp=[];
   _eventMenusTemp=[];
@@ -3973,11 +4008,19 @@ function openEditEvent(id){
 function openEventFoodMenuEditor(){
   const eventId=_editing.event;
   const ev=DB.events.find(e=>e.id===eventId);
-  if(!ev){toast('⚠️ Save the event first before editing food menu');return;}
-  if(!Auth.isOrganizer(ev.id)){toast('⚠️ Only Organisers can update food menu');return;}
-  _eventFoodMenuModalEventId=ev.id;
-  _eventMenusTemp=JSON.parse(JSON.stringify(normalizeEventMenus(ev.foodMenus)));
-  document.getElementById('event-food-menu-title').textContent=`${ev.name} Food Menu`;
+  if(ev){
+    if(!Auth.isOrganizer(ev.id)){toast('⚠️ Only Organisers can update food menu');return;}
+    _eventFoodMenuModalEventId=ev.id;
+    _eventMenusTemp=JSON.parse(JSON.stringify(normalizeEventMenus(ev.foodMenus)));
+    document.getElementById('event-food-menu-title').textContent=`${ev.name} Food Menu`;
+  }else{
+    _eventFoodMenuModalEventId='';
+    _eventMenuEditorDisabled=false;
+    const draftEventName=document.getElementById('ev-name')?.value?.trim() || 'New Event';
+    document.getElementById('event-food-menu-title').textContent=`${draftEventName} Food Menu`;
+  }
+  const sub=document.getElementById('event-food-menu-sub');
+  if(sub) sub.textContent='Add one or more menu sections like Breakfast, Lunch, or Evening Snacks with an optional serving time.';
   renderEventMenusEditor();
   openModal('event-food-menu');
 }
@@ -4180,6 +4223,12 @@ async function saveRoomConfig(){
 }
 
 async function saveEventFoodMenus(){
+  if(!_eventFoodMenuModalEventId){
+    _eventMenusTemp=JSON.parse(JSON.stringify(normalizeEventMenus(_eventMenusTemp)));
+    closeModal('event-food-menu');
+    toast('Food menu added to this event draft');
+    return;
+  }
   const ev=DB.events.find(e=>e.id===_eventFoodMenuModalEventId);
   if(!ev){toast('⚠️ Event not found');return;}
   if(!Auth.isOrganizer(ev.id)){toast('⚠️ Only Organisers can update food menu');return;}
@@ -6722,14 +6771,13 @@ function handleMoiFieldEnter(field,e){
 // TEAM & AUTH UI
 // ═══════════════════════════════════════════════
 function openTeamModal(){
-  if(!DB.activeEvent){toast('⚠️ Select an event first');return;}
-  _teamEventId=DB.activeEvent;
-  if(!Auth.isOrganizer(DB.activeEvent)){
+  const targetEventId=ensureManagedActiveEvent()||ensureManagedActiveEvent({ includePast:true });
+  if(!targetEventId){toast('⚠️ No upcoming team events available');return;}
+  _teamEventId=targetEventId;
+  if(!Auth.isOrganizer(targetEventId)){
     // Non-organizers can view team but not edit
   }
   renderTeamEventPickerLabelOnly();
-  const picker=document.getElementById('team-event-picker');
-  if(picker) picker.style.display='none';
   Auth.renderTeamModal(_teamEventId);
   openModal('team');
 }
@@ -6751,7 +6799,7 @@ async function sendTeamInvite(){
   Auth.renderTeamModal(targetEventId);
 }
 
-function renderTeamEventPicker(){
+function renderTeamEventPicker(toggle=true){
   const selectedId=_teamEventId||DB.activeEvent;
   const selectedEvent=DB.events.find(ev=>ev.id===selectedId);
   const label=document.getElementById('team-event-name');
@@ -6760,11 +6808,17 @@ function renderTeamEventPicker(){
   if(!picker) return;
   const sess=Auth.currentSession();
   const accessibleEvents=DB.events.filter(ev=>{
+    if(ev._isGuestOnly) return false;
     const hasAccess=Auth.getTeam(ev.id).some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase()));
     if(!hasAccess) return false;
     const days=daysUntil(ev.date);
     return days===null || days>=0;
   });
+  if(!accessibleEvents.length){
+    picker.innerHTML=`<div class="empty" style="padding:16px 0"><div class="empty-ico">${uiIcon('event',38)}</div><div class="empty-t" style="font-size:15px">No upcoming team events</div></div>`;
+    picker.style.display='block';
+    return;
+  }
   picker.innerHTML=accessibleEvents.map(ev=>{
     const col=COLORS[ev.color]||COLORS.rose;
     return `<div class="ep-item ${ev.id===selectedId?'sel':''}" onclick="App.pickTeamEvent('${ev.id}')">
@@ -6772,15 +6826,20 @@ function renderTeamEventPicker(){
       <div><div style="font-size:13.5px;font-weight:500">${ev.name}</div><div style="font-size:11.5px;color:var(--txt3)">${ev.date?fmtDate(ev.date):''}</div></div>
     </div>`;
   }).join('');
-  picker.style.display=picker.style.display==='block'?'none':'block';
+  if(toggle){
+    picker.style.display=picker.style.display==='block'?'none':'block';
+  }
 }
 
 function pickTeamEvent(id){
   _teamEventId=id;
+  DB.activeEvent=id;
+  save();
   const picker=document.getElementById('team-event-picker');
   if(picker) picker.style.display='none';
   renderTeamEventPickerLabelOnly();
   Auth.renderTeamModal(id);
+  render();
 }
 
 function renderTeamEventPickerLabelOnly(){

@@ -695,6 +695,14 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="m-handle"></div>
     <div class="m-title">Team & Roles</div>
     <div style="font-size:12px;color:var(--txt3);margin:-8px 0 14px">Manage who can access this event and what they can do.</div>
+    <div class="ev-sel" onclick="App.renderTeamEventPicker()" style="margin-bottom:10px">
+      <div>
+        <div class="ev-sel-lbl">Current Event</div>
+        <div class="ev-sel-val" id="team-event-name">Select an event</div>
+      </div>
+      <span class="chev">&#9662;</span>
+    </div>
+    <div id="team-event-picker" style="display:none;margin-bottom:12px"></div>
     <div id="team-member-list"></div>
     <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">Invite by Email</div>
     <div style="display:flex;gap:8px;margin-bottom:8px">

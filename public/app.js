@@ -885,7 +885,7 @@ function buildPublicInviteRecord(event){
     ? normalizeEventMenus(event.foodMenus)
         .map(menu=>{
           const items=normalizeMenuItems(menu.items).join(', ');
-          return [menu.title, items].filter(Boolean).join(': ');
+          return [formatTimelineTime(menu.time), menu.title, items].filter(Boolean).join(' · ');
         })
         .filter(Boolean)
         .join(' | ')
@@ -1124,6 +1124,7 @@ function uiIcon(name,size=14){
     link:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M9.7 14.3 7.6 16.4a3 3 0 1 1-4.2-4.2l3.2-3.2a3 3 0 0 1 4.2 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="m14.3 9.7 2.1-2.1a3 3 0 0 1 4.2 4.2l-3.2 3.2a3 3 0 0 1-4.2 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="m8.8 15.2 6.4-6.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
     whatsapp:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 4.75a7.25 7.25 0 0 0-6.18 11.05L5 19.25l3.61-.78A7.25 7.25 0 1 0 12 4.75Z" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.2 9.55c.14-.3.3-.33.56-.33h.45c.17 0 .32.1.41.28l.58 1.3c.08.18.07.33 0 .46l-.38.62c-.09.15-.08.32.01.47.49.75 1.13 1.39 1.88 1.88.15.1.32.1.47.01l.62-.38c.13-.08.28-.09.46 0l1.3.58c.18.09.28.24.28.41v.45c0 .26-.03.42-.33.56-.47.22-.98.3-1.5.23-1.01-.13-2.16-.77-3.34-1.95-1.18-1.18-1.82-2.33-1.95-3.34-.07-.52.01-1.03.23-1.5Z" fill="currentColor" stroke="none"/></svg>`,
     gift:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M4 10h16v10H4zM12 10v10M4 14h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10s-3.8-1.5-3.8-3.9c0-1.3 1-2.2 2.2-2.2 1.1 0 1.9.6 2.6 2 .7-1.4 1.5-2 2.6-2 1.2 0 2.2.9 2.2 2.2C15.8 8.5 12 10 12 10Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>`,
+    star:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="m12 4.8 2.2 4.45 4.9.72-3.55 3.46.84 4.89L12 16.98 7.61 18.3l.84-4.89L4.9 9.97l4.9-.72L12 4.8Z" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linejoin="round"/></svg>`,
     room:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M5 19V8.5A1.5 1.5 0 0 1 6.5 7h11A1.5 1.5 0 0 1 19 8.5V19M3 19h18M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M9 11h2v2H9zm4 0h2v2h-2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     search:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`
   };
@@ -1582,12 +1583,13 @@ function normalizeEventMenus(foodMenus){
   return Array.isArray(foodMenus)
     ? foodMenus
         .map(menu=>({
+          time:toTimeInputValue(menu?.time||''),
           title:(menu?.title||'').trim(),
           items:Array.isArray(menu?.items)
             ? menu.items.map(item=>String(item||'').trim()).filter(Boolean).join('\n')
             : String(menu?.items||'').trim()
         }))
-        .filter(menu=>menu.title||menu.items)
+        .filter(menu=>menu.time||menu.title||menu.items)
     : [];
 }
 
@@ -1665,11 +1667,11 @@ function getEventContactForAction(eventId,index){
 }
 
 function getFoodMenuLikeKey(menu, itemText){
-  return `${(menu?.title||'menu').trim().toLowerCase()}::${String(itemText||'').trim().toLowerCase()}`;
+  return `${toTimeInputValue(menu?.time||'')}::${(menu?.title||'menu').trim().toLowerCase()}::${String(itemText||'').trim().toLowerCase()}`;
 }
 
 function getFoodMenuSectionLikeKey(menu){
-  return `${(menu?.title||'menu').trim().toLowerCase()}::section`;
+  return `${toTimeInputValue(menu?.time||'')}::${(menu?.title||'menu').trim().toLowerCase()}::section`;
 }
 
 function ensureGuestFoodLikesDefaults(guest){
@@ -1757,19 +1759,27 @@ function openGuestFeedbackModal(eventId){
 
 function renderGuestFoodMenuSection(ev, guest, mode='portal'){
   const menus=normalizeEventMenus(ev?.foodMenus);
-  if(!menus.length) return '';
+  const timeline=normalizeEventTimeline(ev?.timeline);
+  if(!menus.length && !timeline.length) return '';
   ensureGuestFoodLikesDefaults(guest);
   const likedKeys=new Set((guest.foodMenuLikes||[]).map(item=>String(item)));
   return `<div class="guest-card${mode==='portal'?' anim':''}">
-      <div class="guest-card-title">Food Menu</div>
-      <div style="font-size:12px;color:var(--txt3);line-height:1.6;margin-bottom:12px">Tap the heart for a whole menu section or for any item you love.</div>
+      <div class="guest-card-title">${timeline.length&&menus.length?'Agenda & Food Menu':timeline.length?'Agenda':'Food Menu'}</div>
+      <div style="font-size:12px;color:var(--txt3);line-height:1.6;margin-bottom:12px">${menus.length?'Tap the heart for a whole menu section or for any item you love.':'See the organiser timeline below.'}</div>
       <div style="display:grid;gap:10px">
+        ${timeline.length?`<div style="padding:12px 14px;border-radius:var(--rs);background:var(--surf2);border:1px solid var(--bord2)">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:10px">Agenda</div>
+            ${renderEventTimelineBlock(ev,{guest:true})}
+          </div>`:''}
         ${menus.map((menu,sectionIdx)=>{
           const items=normalizeMenuItems(menu.items);
           const sectionLiked=likedKeys.has(getFoodMenuSectionLikeKey(menu));
           return `<div style="padding:12px 14px;border-radius:var(--rs);background:var(--surf2);border:1px solid var(--bord2)">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:${items.length?'8px':'0'}">
-                <div style="font-size:13px;font-weight:600;color:var(--txt)">${menu.title||'Menu'}</div>
+                <div>
+                  ${menu.time?`<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-d);margin-bottom:3px">${formatTimelineTime(menu.time)}</div>`:''}
+                  <div style="font-size:13px;font-weight:600;color:var(--txt)">${menu.title||'Menu'}</div>
+                </div>
                 <button type="button" onclick="App.toggleGuestFoodSectionLike(${sectionIdx},'${ev.id}')" style="flex-shrink:0;min-width:40px;height:34px;border-radius:999px;border:1px solid ${sectionLiked?'var(--rose-d)':'var(--bord)'};background:${sectionLiked?'var(--rose-l)':'var(--surf)'};color:${sectionLiked?'var(--rose-d)':'var(--txt3)'};font-size:15px;font-weight:600;cursor:pointer">${sectionLiked?'♥':'♡'}</button>
               </div>
               ${items.length
@@ -1795,7 +1805,7 @@ function renderGuestFoodMenuModalContent(eventId){
   const me=ensureGuestFoodLikesDefaults(getCurrentGuestInvite(targetId));
   const contentEl=document.getElementById('gm-content');
   if(!ev||!ev._isGuestOnly||!me||!contentEl) return;
-  document.getElementById('gm-title').textContent='Food Menu';
+  document.getElementById('gm-title').textContent='Agenda & Food Menu';
   document.getElementById('gm-event-name').textContent=ev.name;
   document.getElementById('gm-event-meta').innerHTML=`${ev.date?`${uiIcon('calendar',12)} ${fmtDate(ev.date)}<br>`:''}${ev.time?`${uiIcon('time',12)} ${fmtTime(ev.time)}<br>`:''}${ev.location?`${uiIcon('location',12)} ${formatEventLocation(ev.location)}<br>`:''}${uiIcon('user',12)} ${me.first} ${me.last}`;
   contentEl.innerHTML=renderGuestFoodMenuSection(ev, me, 'modal');
@@ -1804,8 +1814,8 @@ function renderGuestFoodMenuModalContent(eventId){
 function openGuestFoodMenuModal(eventId){
   const targetId=eventId||DB.activeEvent;
   const ev=DB.events.find(e=>e.id===targetId);
-  if(!ev||!ev._isGuestOnly){toast('⚠️ Food menu not available');return;}
-  if(!normalizeEventMenus(ev.foodMenus).length){toast('ℹ️ Food menu not added yet');return;}
+  if(!ev||!ev._isGuestOnly){toast('⚠️ Event details not available');return;}
+  if(!normalizeEventMenus(ev.foodMenus).length && !normalizeEventTimeline(ev.timeline).length){toast('ℹ️ Agenda or food menu not added yet');return;}
   DB.activeEvent=targetId;
   save();
   renderGuestFoodMenuModalContent(targetId);
@@ -2488,9 +2498,9 @@ function renderEvents(){
       </div>
       ${days!==null?`<div class="dash-cd">${days>0?days+' days away':days===0?'Today':'Past event'}</div>`:''}
       ${ae._isGuestOnly?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()">
-        ${normalizeEventMenus(ae.foodMenus).length?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFoodMenuModal('${ae.id}')">Food Menu</button>`:''}
-        <button class="ev-btn" onclick="App.setActive('${ae.id}');${isRoomRequestEnabled(ae)?`App.openGuestRequestModal('${ae.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ae)?'Request Room':'View Rooms'}</button>
-        ${isFeedbackEnabled(ae)?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFeedbackModal('${ae.id}')">Feedback</button>`:''}
+        ${(normalizeEventMenus(ae.foodMenus).length||normalizeEventTimeline(ae.timeline).length)?`<button class="ev-btn" title="Agenda and food menu" aria-label="Agenda and food menu" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="App.setActive('${ae.id}');App.openGuestFoodMenuModal('${ae.id}')">${uiIcon('calendar',16)}</button>`:''}
+        <button class="ev-btn" title="${isRoomRequestEnabled(ae)?'Request room':'View rooms'}" aria-label="${isRoomRequestEnabled(ae)?'Request room':'View rooms'}" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="App.setActive('${ae.id}');${isRoomRequestEnabled(ae)?`App.openGuestRequestModal('${ae.id}')`:`App.switchTab('rooms')`}">${uiIcon('room',16)}</button>
+        ${isFeedbackEnabled(ae)?`<button class="ev-btn" title="Feedback" aria-label="Feedback" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="App.setActive('${ae.id}');App.openGuestFeedbackModal('${ae.id}')">${uiIcon('star',16)}</button>`:''}
       </div>`:`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()">
         <button class="ev-btn" title="Guests" aria-label="Guests" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="App.setActive('${ae.id}');App.switchTab('guests')">${uiIcon('guests',16)}</button>
         <button class="ev-btn" title="Gifts" aria-label="Gifts" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="App.setActive('${ae.id}');App.switchTab('gifts')">${uiIcon('gift',16)}</button>
@@ -2529,9 +2539,9 @@ function renderEvents(){
           ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?days+' days':days===0?'Today':'Past'}</span>`:'<span></span>'}
           <div class="ev-actions">
             ${ev._isGuestOnly
-              ?`${normalizeEventMenus(ev.foodMenus).length?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFoodMenuModal('${ev.id}')">Food Menu</button>`:''}
-            ${isFeedbackEnabled(ev)?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFeedbackModal('${ev.id}')">Feedback</button>`:''}
-            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
+              ?`${(normalizeEventMenus(ev.foodMenus).length||normalizeEventTimeline(ev.timeline).length)?`<button class="ev-btn" title="Agenda and food menu" aria-label="Agenda and food menu" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFoodMenuModal('${ev.id}')">${uiIcon('calendar',16)}</button>`:''}
+            ${isFeedbackEnabled(ev)?`<button class="ev-btn" title="Feedback" aria-label="Feedback" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFeedbackModal('${ev.id}')">${uiIcon('star',16)}</button>`:''}
+            <button class="ev-btn" title="${isRoomRequestEnabled(ev)?'Request room':'View rooms'}" aria-label="${isRoomRequestEnabled(ev)?'Request room':'View rooms'}" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${uiIcon('room',16)}</button>`
               :`<button class="ev-btn" title="Guests" aria-label="Guests" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">${uiIcon('guests',16)}</button>
             <button class="ev-btn" title="Gifts" aria-label="Gifts" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">${uiIcon('gift',16)}</button>
             <button class="ev-btn" title="Contacts" aria-label="Contacts" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.openEventContacts('${ev.id}')">${uiIcon('contact',16)}</button>
@@ -5297,14 +5307,15 @@ function renderEventMenusEditor(){
   const canViewLikes=!!targetEventId&&Auth.isOrganizer(targetEventId);
   const likeCounts=canViewLikes?getEventFoodLikeCounts(targetEventId):new Map();
   if(_eventMenusTemp.length===0){
-    container.innerHTML=`<div style="font-size:12px;color:var(--txt3);line-height:1.6">Add one or more menu sections like Breakfast, Lunch, or Evening Snacks.</div>`;
+    container.innerHTML=`<div style="font-size:12px;color:var(--txt3);line-height:1.6">Add one or more menu sections like Breakfast, Lunch, or Evening Snacks with an optional serving time.</div>`;
     return;
   }
   container.innerHTML=_eventMenusTemp.map((menu,idx)=>`
     <div class="room-loc-block">
-      <div class="room-loc-name" style="margin-bottom:10px">
-        <input style="flex:1;background:transparent;border:none;outline:none;font-size:12.5px;font-weight:600;color:var(--txt2);font-family:'Plus Jakarta Sans',sans-serif" value="${menu.title||''}" placeholder="Section title (e.g. Breakfast)" oninput="App._updateEventMenuTitle(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''} />
-        ${_eventMenuEditorDisabled?'':`<button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 0 0 6px;font-weight:700" onclick="App._removeEventMenu(${idx})" title="Remove menu section">X</button>`}
+      <div style="display:grid;grid-template-columns:132px 1fr auto;gap:10px;align-items:center;margin-bottom:10px">
+        <input class="fi" type="time" value="${escapeHtml(toTimeInputValue(menu.time||''))}" onchange="App._updateEventMenuTime(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''} />
+        <input class="fi" style="min-width:0" value="${escapeHtml(menu.title||'')}" placeholder="Section title (e.g. Breakfast)" oninput="App._updateEventMenuTitle(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''} />
+        ${_eventMenuEditorDisabled?'':`<button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 4px;font-weight:700" onclick="App._removeEventMenu(${idx})" title="Remove menu section">X</button>`}
       </div>
       <textarea class="fi" rows="4" style="resize:vertical" placeholder="Enter each menu item on a new line" oninput="App._updateEventMenuItems(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''}>${menu.items||''}</textarea>
       ${canViewLikes?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surf);border:1px solid var(--bord2)">
@@ -5327,9 +5338,10 @@ function renderEventMenusEditor(){
 }
 
 function addEventMenu(){
-  _eventMenusTemp.push({title:'',items:''});
+  _eventMenusTemp.push({time:'',title:'',items:''});
   renderEventMenusEditor();
 }
+function _updateEventMenuTime(idx,val){ if(_eventMenusTemp[idx]) _eventMenusTemp[idx].time=toTimeInputValue(val); }
 function _updateEventMenuTitle(idx,val){ if(_eventMenusTemp[idx]) _eventMenusTemp[idx].title=val; }
 function _updateEventMenuItems(idx,val){ if(_eventMenusTemp[idx]) _eventMenusTemp[idx].items=val; }
 function _removeEventMenu(idx){
@@ -5344,6 +5356,7 @@ function renderEventMenusDisplay(ev){
       <div class="guest-card-title">Food Menu</div>
       <div style="display:grid;gap:10px">
         ${menus.map(menu=>`<div style="padding:12px 14px;border-radius:var(--rs);background:var(--surf2);border:1px solid var(--bord2)">
+            ${menu.time?`<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-d);margin-bottom:4px">${formatTimelineTime(menu.time)}</div>`:''}
             <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:6px">${menu.title||'Menu'}</div>
             <div style="font-size:12px;color:var(--txt2);line-height:1.7;white-space:pre-line">${menu.items||'Menu details coming soon.'}</div>
           </div>`).join('')}
@@ -6859,7 +6872,7 @@ window.App={
   setGFilter,setGSearch,scrollToTop,openConfirm,closeConfirm,
   limitPhoneDigits,
   locSearch,pickLoc,openWhatsApp,sendWhatsApp,
-  addEventMenu,_updateEventMenuTitle,_updateEventMenuItems,_removeEventMenu,
+  addEventMenu,_updateEventMenuTime,_updateEventMenuTitle,_updateEventMenuItems,_removeEventMenu,
   addRoomLocation:addRoomLocationGated,_updateLocName,_removeLocation,_addRoom,_removeRoom,
   populateRoomSelects,refreshRoomNumbers,checkRoomConflict,sendGuestInvite,
   renderRooms,openRoomDetail,

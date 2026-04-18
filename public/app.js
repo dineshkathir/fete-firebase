@@ -658,6 +658,7 @@ const Auth = (() => {
     Cloud.loadContributors().then(()=>{ render(); }).catch(()=>{});
     NotificationCenter.initKnownState();
     render();
+    finishBoot();
     if(showWelcomeToast) toast(`Welcome, ${sess.name}!`);
   }
 
@@ -789,10 +790,9 @@ const Auth = (() => {
       DB.profile.name=cachedSession.name||DB.profile.name||'';
       DB.profile.email=cachedSession.email||DB.profile.email||'';
       save();
-      showAppShell();
-      render();
     } else {
       showAuthScreen();
+      finishBoot();
     }
     onAuthStateChanged(_fbAuth, user => {
       if(user){
@@ -815,6 +815,7 @@ const Auth = (() => {
       NotificationCenter.reset();
       save();
       showAuthScreen();
+      finishBoot();
     }
   });
 }
@@ -832,6 +833,21 @@ const STORE = {
   get(k){try{return JSON.parse(localStorage.getItem('fete_'+k))||null}catch{return null}},
   set(k,v){localStorage.setItem('fete_'+k,JSON.stringify(v))},
 };
+
+function finishBoot(){
+  const root=document.documentElement;
+  if(!root.classList.contains('boot-loading')) return;
+  const bootScreen=document.getElementById('boot-screen');
+  if(bootScreen){
+    bootScreen.classList.add('boot-hide');
+    window.setTimeout(()=>{
+      root.classList.remove('boot-loading');
+      bootScreen.classList.remove('boot-hide');
+    },180);
+    return;
+  }
+  root.classList.remove('boot-loading');
+}
 
 function syncActiveEventData(){
   const sess = Auth.currentSession();
@@ -5356,6 +5372,10 @@ function renderEventMenusEditor(){
     addBtn.textContent='+ Add Menu Section';
   }
   if(!container) return;
+  if(!Array.isArray(_eventMenusTemp)) _eventMenusTemp=[];
+  if(!_eventMenuEditorDisabled && _eventMenusTemp.length===0){
+    _eventMenusTemp=[{time:'',title:'',items:''}];
+  }
   const targetEventId=_eventFoodMenuModalEventId||_editing.event;
   const canViewLikes=!!targetEventId&&Auth.isOrganizer(targetEventId);
   const likeCounts=canViewLikes?getEventFoodLikeCounts(targetEventId):new Map();
@@ -5398,6 +5418,11 @@ function addEventMenu(){
   if(!Array.isArray(_eventMenusTemp)) _eventMenusTemp=[];
   _eventMenusTemp.push({time:'',title:'',items:''});
   renderEventMenusEditor();
+  requestAnimationFrame(()=>{
+    const menuInputs=document.querySelectorAll('#ev-food-menus input.fi, #ev-food-menus textarea.fi');
+    const lastInput=menuInputs[menuInputs.length-3] || menuInputs[menuInputs.length-1];
+    if(lastInput && typeof lastInput.focus==='function') lastInput.focus();
+  });
 }
 function _updateEventMenuTime(idx,val){ if(_eventMenusTemp[idx]) _eventMenusTemp[idx].time=toTimeInputValue(val); }
 function _updateEventMenuTitle(idx,val){ if(_eventMenusTemp[idx]) _eventMenusTemp[idx].title=val; }
@@ -7069,9 +7094,11 @@ initPublicInviteMode().then(isInviteMode=>{
     return;
   }
   render();
+  finishBoot();
 }).catch(()=>{
   Auth.init();
   render();
+  finishBoot();
 });
 
 document.getElementById('main-scroll')?.addEventListener('scroll',()=>{

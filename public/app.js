@@ -4019,6 +4019,10 @@ function openEventFoodMenuEditor(){
     const draftEventName=document.getElementById('ev-name')?.value?.trim() || 'New Event';
     document.getElementById('event-food-menu-title').textContent=`${draftEventName} Food Menu`;
   }
+  if(!Array.isArray(_eventMenusTemp)) _eventMenusTemp=[];
+  if(_eventMenusTemp.length===0){
+    _eventMenusTemp=[{time:'',title:'',items:''}];
+  }
   const sub=document.getElementById('event-food-menu-sub');
   if(sub) sub.textContent='Add one or more menu sections like Breakfast, Lunch, or Evening Snacks with an optional serving time.';
   renderEventMenusEditor();
@@ -5387,6 +5391,11 @@ function renderEventMenusEditor(){
 }
 
 function addEventMenu(){
+  if(_eventMenuEditorDisabled){
+    toast('⚠️ Only Organisers can update food menu');
+    return;
+  }
+  if(!Array.isArray(_eventMenusTemp)) _eventMenusTemp=[];
   _eventMenusTemp.push({time:'',title:'',items:''});
   renderEventMenusEditor();
 }

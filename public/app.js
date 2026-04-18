@@ -5383,32 +5383,9 @@ function renderEventMenusEditor(){
     container.innerHTML=`<div style="font-size:12px;color:var(--txt3);line-height:1.6">Add one or more menu sections like Breakfast, Lunch, or Evening Snacks with an optional serving time.</div>`;
     return;
   }
-  container.innerHTML=_eventMenusTemp.map((menu,idx)=>`
-    <div class="room-loc-block" id="event-menu-row-${idx}">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px">Menu Section ${idx+1}</div>
-      <div style="display:grid;grid-template-columns:132px 1fr auto;gap:10px;align-items:center;margin-bottom:10px">
-        <input class="fi" type="time" value="${escapeHtml(toTimeInputValue(menu.time||''))}" onchange="App._updateEventMenuTime(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''} />
-        <input class="fi" style="min-width:0" value="${escapeHtml(menu.title||'')}" placeholder="Section title (e.g. Breakfast)" oninput="App._updateEventMenuTitle(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''} />
-        ${_eventMenuEditorDisabled?'':`<button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 4px;font-weight:700" onclick="App._removeEventMenu(${idx})" title="Remove menu section">X</button>`}
-      </div>
-      <textarea class="fi" rows="4" style="resize:vertical" placeholder="Enter each menu item on a new line" oninput="App._updateEventMenuItems(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''}>${menu.items||''}</textarea>
-      ${canViewLikes?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surf);border:1px solid var(--bord2)">
-        <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Guest Hearts</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--txt2);margin-bottom:${normalizeMenuItems(menu.items).length?'8px':'0'}${normalizeMenuItems(menu.items).length?';padding-bottom:8px;border-bottom:1px solid var(--bord2)':''}">
-          <span style="line-height:1.5">${menu.title||'Menu'} section</span>
-          <span style="flex-shrink:0;padding:3px 9px;border-radius:999px;background:${(likeCounts.get(getFoodMenuSectionLikeKey(menu))||0)?'var(--rose-l)':'var(--surf2)'};color:${(likeCounts.get(getFoodMenuSectionLikeKey(menu))||0)?'var(--rose-d)':'var(--txt3)'};font-weight:600">${likeCounts.get(getFoodMenuSectionLikeKey(menu))||0} heart${(likeCounts.get(getFoodMenuSectionLikeKey(menu))||0)===1?'':'s'}</span>
-        </div>
-        ${normalizeMenuItems(menu.items).length?`<div style="display:grid;gap:6px">
-          ${normalizeMenuItems(menu.items).map(itemText=>{
-            const count=likeCounts.get(getFoodMenuLikeKey(menu,itemText))||0;
-            return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--txt2)">
-                <span style="line-height:1.5">${itemText}</span>
-                <span style="flex-shrink:0;padding:3px 9px;border-radius:999px;background:${count?'var(--rose-l)':'var(--surf2)'};color:${count?'var(--rose-d)':'var(--txt3)'};font-weight:600">${count} heart${count===1?'':'s'}</span>
-              </div>`;
-          }).join('')}
-        </div>`:''}
-      </div>`:''}
-    </div>`).join('');
+  container.innerHTML=_eventMenusTemp
+    .map((menu,idx)=>buildEventMenuEditorRow(menu,idx,likeCounts,canViewLikes))
+    .join('');
 }
 
 function buildEventMenuEditorRow(menu,idx,likeCounts,canViewLikes){

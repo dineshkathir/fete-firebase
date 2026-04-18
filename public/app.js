@@ -5384,7 +5384,8 @@ function renderEventMenusEditor(){
     return;
   }
   container.innerHTML=_eventMenusTemp.map((menu,idx)=>`
-    <div class="room-loc-block">
+    <div class="room-loc-block" id="event-menu-row-${idx}">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px">Menu Section ${idx+1}</div>
       <div style="display:grid;grid-template-columns:132px 1fr auto;gap:10px;align-items:center;margin-bottom:10px">
         <input class="fi" type="time" value="${escapeHtml(toTimeInputValue(menu.time||''))}" onchange="App._updateEventMenuTime(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''} />
         <input class="fi" style="min-width:0" value="${escapeHtml(menu.title||'')}" placeholder="Section title (e.g. Breakfast)" oninput="App._updateEventMenuTitle(${idx},this.value)" ${_eventMenuEditorDisabled?'disabled':''} />
@@ -5419,8 +5420,12 @@ function addEventMenu(){
   _eventMenusTemp.push({time:'',title:'',items:''});
   renderEventMenusEditor();
   requestAnimationFrame(()=>{
-    const menuInputs=document.querySelectorAll('#ev-food-menus input.fi, #ev-food-menus textarea.fi');
-    const lastInput=menuInputs[menuInputs.length-3] || menuInputs[menuInputs.length-1];
+    const newIndex=_eventMenusTemp.length-1;
+    const newRow=document.getElementById(`event-menu-row-${newIndex}`);
+    if(newRow && typeof newRow.scrollIntoView==='function'){
+      newRow.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    const lastInput=document.querySelector(`#event-menu-row-${newIndex} input.fi`) || document.querySelector(`#event-menu-row-${newIndex} textarea.fi`);
     if(lastInput && typeof lastInput.focus==='function') lastInput.focus();
   });
 }

@@ -220,6 +220,7 @@ function serializeEvent(event, team, session) {
       roomLocs: Array.isArray(event.roomLocs) ? event.roomLocs : [],
       foodMenus: normalizeEventMenus(event.foodMenus),
       eventContacts: normalizeEventContacts(event.eventContacts),
+      timeline: normalizeEventTimeline(event.timeline),
       roomRequestsEnabled: event.roomRequestsEnabled !== false,
       feedbackEnabled: event.feedbackEnabled === true,
       publicGuestFormEnabled: event.publicGuestFormEnabled !== false,
@@ -227,6 +228,7 @@ function serializeEvent(event, team, session) {
       publicInviteDietEnabled: event.publicInviteDietEnabled !== false,
       publicInviteRoomEnabled: event.publicInviteRoomEnabled !== false,
       publicInviteMenuEnabled: event.publicInviteMenuEnabled === true,
+      publicInviteTimelineEnabled: event.publicInviteTimelineEnabled === true,
       createdAt: event.createdAt || Date.now(),
       updatedAt: Date.now(),
       team: normalizedTeam,
@@ -404,6 +406,7 @@ function serializeEvent(event, team, session) {
       roomLocs: Array.isArray(event.roomLocs) ? event.roomLocs : [],
       foodMenus: normalizeEventMenus(event.foodMenus),
       eventContacts: normalizeEventContacts(event.eventContacts),
+      timeline: normalizeEventTimeline(event.timeline),
       roomRequestsEnabled: event.roomRequestsEnabled !== false,
       feedbackEnabled: event.feedbackEnabled === true,
       publicGuestFormEnabled: event.publicGuestFormEnabled !== false,
@@ -411,6 +414,7 @@ function serializeEvent(event, team, session) {
       publicInviteDietEnabled: event.publicInviteDietEnabled !== false,
       publicInviteRoomEnabled: event.publicInviteRoomEnabled !== false,
       publicInviteMenuEnabled: event.publicInviteMenuEnabled === true,
+      publicInviteTimelineEnabled: event.publicInviteTimelineEnabled === true,
       createdAt: event.createdAt || Date.now()
     }));
     for (const event of events) {
@@ -870,6 +874,7 @@ function ensurePublicGuestFormConfig(event){
   if(event.publicInviteDietEnabled===undefined) event.publicInviteDietEnabled=true;
   if(event.publicInviteRoomEnabled===undefined) event.publicInviteRoomEnabled=true;
   if(event.publicInviteMenuEnabled===undefined) event.publicInviteMenuEnabled=false;
+  if(event.publicInviteTimelineEnabled===undefined) event.publicInviteTimelineEnabled=false;
   return event;
 }
 
@@ -885,6 +890,12 @@ function buildPublicInviteRecord(event){
         .filter(Boolean)
         .join(' | ')
     : '';
+  const timelineText=event.publicInviteTimelineEnabled===true
+    ? normalizeEventTimeline(event.timeline)
+        .map(item=>`${formatTimelineTime(item.time)} - ${item.title || 'Event'}`)
+        .filter(Boolean)
+        .join('\n')
+    : '';
   return {
     key:event.publicGuestFormKey,
     eventId:event.id,
@@ -893,7 +904,9 @@ function buildPublicInviteRecord(event){
     dietEnabled:event.publicInviteDietEnabled!==false,
     roomEnabled:event.publicInviteRoomEnabled!==false,
     menuEnabled:event.publicInviteMenuEnabled===true,
+    timelineEnabled:event.publicInviteTimelineEnabled===true,
     menuText,
+    timelineText,
     eventDate:event.date||'',
     eventTime:event.time||'',
     eventLocation:event.location||'',
@@ -1589,6 +1602,37 @@ function normalizeEventContacts(eventContacts){
     : [];
 }
 
+function normalizeEventTimeline(timeline){
+  return Array.isArray(timeline)
+    ? timeline
+        .map(item=>({
+          time:toTimeInputValue(item?.time||''),
+          title:String(item?.title||item?.event||'').trim()
+        }))
+        .filter(item=>item.time || item.title)
+        .sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')))
+    : [];
+}
+
+function formatTimelineTime(value){
+  return value ? fmtTime(toTimeInputValue(value)) : 'Time';
+}
+
+function renderEventTimelineBlock(ev,{guest=false}={}){
+  const timeline=normalizeEventTimeline(ev?.timeline);
+  if(!timeline.length){
+    return guest
+      ? `<div style="font-size:12.5px;color:var(--txt3);line-height:1.6">The organiser has not added a timeline yet.</div>`
+      : `<div style="font-size:12.5px;color:var(--txt3);line-height:1.6">No timeline added yet.</div>`;
+  }
+  return `<div style="display:grid;gap:10px">${timeline.map(item=>`
+    <div style="display:grid;grid-template-columns:88px 1fr;gap:12px;align-items:start">
+      <div style="font-size:12px;font-weight:700;color:var(--rose-d);padding-top:1px">${escapeHtml(formatTimelineTime(item.time))}</div>
+      <div style="font-size:13.5px;color:var(--txt);line-height:1.55">${escapeHtml(item.title||'Event')}</div>
+    </div>
+  `).join('')}</div>`;
+}
+
 function normalizeMenuItems(items){
   return String(items||'')
     .split(/\r?\n/)
@@ -1829,6 +1873,9 @@ let _roomLocsTemp=[];
 let _roomConfigEventId='';
 let _eventMenusTemp=[];
 let _eventFoodMenuModalEventId='';
+let _eventTimelineTemp=[];
+let _eventTimelineModalEventId='';
+let _eventTimelineEditorDisabled=false;
 let _eventContactsTemp=[];
 let _editingEventContactsId='';
 let _eventContactsEditMode=false;
@@ -1879,6 +1926,9 @@ function closeModal(id,{fromPop=false}={}){
   }
   if(id==='event-food-menu'){
     _eventFoodMenuModalEventId='';
+  }
+  if(id==='event-timeline'){
+    _eventTimelineModalEventId='';
   }
   if(id==='event-contact-actions'){
     _eventContactActionEventId='';
@@ -2442,10 +2492,10 @@ function renderEvents(){
         <button class="ev-btn" onclick="App.setActive('${ae.id}');${isRoomRequestEnabled(ae)?`App.openGuestRequestModal('${ae.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ae)?'Request Room':'View Rooms'}</button>
         ${isFeedbackEnabled(ae)?`<button class="ev-btn" onclick="App.setActive('${ae.id}');App.openGuestFeedbackModal('${ae.id}')">Feedback</button>`:''}
       </div>`:`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()">
-        <button class="ev-btn" onclick="App.setActive('${ae.id}');App.switchTab('guests')">Guests</button>
-        <button class="ev-btn" onclick="App.setActive('${ae.id}');App.switchTab('gifts')">Gifts</button>
-        <button class="ev-btn" onclick="App.openEventContacts('${ae.id}')">Event Contacts</button>
-        ${Auth.isOrganizer(ae.id)?`<button class="ev-btn" onclick="App.openPublicInviteShareModal('${ae.id}')">Invite Form</button>`:''}
+        <button class="ev-btn" title="Guests" aria-label="Guests" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="App.setActive('${ae.id}');App.switchTab('guests')">${uiIcon('guests',16)}</button>
+        <button class="ev-btn" title="Gifts" aria-label="Gifts" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="App.setActive('${ae.id}');App.switchTab('gifts')">${uiIcon('gift',16)}</button>
+        <button class="ev-btn" title="Event contacts" aria-label="Event contacts" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="App.openEventContacts('${ae.id}')">${uiIcon('contact',16)}</button>
+        ${Auth.isOrganizer(ae.id)?`<button class="ev-btn" title="Invite link" aria-label="Invite link" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="App.openPublicInviteShareModal('${ae.id}')">${uiIcon('link',16)}</button>`:''}
       </div>`}
     </div>`;
   }
@@ -2482,10 +2532,10 @@ function renderEvents(){
               ?`${normalizeEventMenus(ev.foodMenus).length?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFoodMenuModal('${ev.id}')">Food Menu</button>`:''}
             ${isFeedbackEnabled(ev)?`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFeedbackModal('${ev.id}')">Feedback</button>`:''}
             <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${isRoomRequestEnabled(ev)?'Request Room':'View Rooms'}</button>`
-              :`<button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">Guests</button>
-            <button class="ev-btn" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">Gifts</button>
-            <button class="ev-btn" onclick="event.stopPropagation();App.openEventContacts('${ev.id}')">Contacts</button>
-            ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" onclick="event.stopPropagation();App.openPublicInviteShareModal('${ev.id}')">Invite Form</button>`:''}`}
+              :`<button class="ev-btn" title="Guests" aria-label="Guests" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">${uiIcon('guests',16)}</button>
+            <button class="ev-btn" title="Gifts" aria-label="Gifts" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">${uiIcon('gift',16)}</button>
+            <button class="ev-btn" title="Contacts" aria-label="Contacts" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.openEventContacts('${ev.id}')">${uiIcon('contact',16)}</button>
+            ${Auth.isOrganizer(ev.id)?`<button class="ev-btn" title="Invite link" aria-label="Invite link" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.openPublicInviteShareModal('${ev.id}')">${uiIcon('link',16)}</button>`:''}`}
           </div>
         </div>
       </div>
@@ -3097,6 +3147,7 @@ function renderGuestPortal(){
         ${ev.time?`Time: ${fmtTime(ev.time)}<br>`:''}
         ${ev.location?`Location: ${formatEventLocation(ev.location)}`:'Location will be shared by the organiser.'}
       </div>
+      ${normalizeEventTimeline(ev.timeline).length?`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bord2)">${renderEventTimelineBlock(ev,{guest:true})}</div>`:''}
     </div>`+
     `<div class="guest-card anim">
       <div class="guest-card-title">Room Allocation</div>
@@ -3743,6 +3794,7 @@ function updateBadges(){
 function openAddEvent(){
   _editing.event=null;
   _eventMenuEditorDisabled=false;
+  _eventTimelineEditorDisabled=false;
   setEventEditorMode(true);
   document.getElementById('mo-event-title').textContent='New Event';
   document.getElementById('ev-name').value='';
@@ -3805,6 +3857,7 @@ function openAddEvent(){
   document.getElementById('del-event-btn').style.display='none';
   _roomLocsTemp=[];
   _eventMenusTemp=[];
+  _eventTimelineTemp=[];
   openModal('add-event');
 }
 
@@ -3887,7 +3940,9 @@ function openEditEvent(id){
   // load room locations
   _roomLocsTemp=JSON.parse(JSON.stringify(ev.roomLocs||[]));
   _eventMenuEditorDisabled=!isOrg;
+  _eventTimelineEditorDisabled=!isOrg;
   _eventMenusTemp=JSON.parse(JSON.stringify(normalizeEventMenus(ev.foodMenus)));
+  _eventTimelineTemp=JSON.parse(JSON.stringify(normalizeEventTimeline(ev.timeline)));
   // restore map preview if coords saved
   if(ev.locLat&&ev.locLon){
     const frame=document.getElementById('loc-map-frame');
@@ -3915,6 +3970,82 @@ function openEventFoodMenuEditor(){
   document.getElementById('event-food-menu-title').textContent=`${ev.name} Food Menu`;
   renderEventMenusEditor();
   openModal('event-food-menu');
+}
+
+function renderEventTimelineEditor(){
+  const container=document.getElementById('event-timeline-list');
+  const addBtn=document.getElementById('ev-timeline-add-btn');
+  const saveBtn=document.getElementById('ev-timeline-save-btn');
+  if(addBtn) addBtn.style.display=_eventTimelineEditorDisabled?'none':'block';
+  if(saveBtn) saveBtn.style.display=_eventTimelineEditorDisabled?'none':'block';
+  if(!container) return;
+  if(_eventTimelineTemp.length===0){
+    container.innerHTML=`<div style="font-size:12px;color:var(--txt3);line-height:1.6">Add a schedule item like <b>06:00 PM - Welcome Guests</b> or <b>07:30 PM - Dinner</b>.</div>`;
+    return;
+  }
+  container.innerHTML=_eventTimelineTemp.map((item,idx)=>`
+    <div class="room-loc-block" style="display:grid;gap:10px">
+      <div style="display:grid;grid-template-columns:130px 1fr auto;gap:10px;align-items:center">
+        <input class="fi" type="time" value="${escapeHtml(toTimeInputValue(item.time||''))}" onchange="App._updateEventTimelineTime(${idx},this.value)" ${_eventTimelineEditorDisabled?'disabled':''} />
+        <input class="fi" value="${escapeHtml(item.title||'')}" placeholder="Event title" oninput="App._updateEventTimelineTitle(${idx},this.value)" ${_eventTimelineEditorDisabled?'disabled':''} />
+        ${_eventTimelineEditorDisabled?'':`<button type="button" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 4px;font-weight:700" onclick="App._removeEventTimeline(${idx})" title="Remove timeline item">X</button>`}
+      </div>
+    </div>`).join('');
+}
+
+function openEventTimelineEditor(){
+  const eventId=_editing.event;
+  const ev=DB.events.find(e=>e.id===eventId);
+  if(!ev){toast('⚠️ Save the event first before editing timeline');return;}
+  _eventTimelineModalEventId=ev.id;
+  _eventTimelineEditorDisabled=!Auth.isOrganizer(ev.id);
+  _eventTimelineTemp=JSON.parse(JSON.stringify(normalizeEventTimeline(ev.timeline)));
+  document.getElementById('event-timeline-title').textContent=`${ev.name} Timeline`;
+  const sub=document.getElementById('event-timeline-sub');
+  if(sub){
+    sub.textContent=_eventTimelineEditorDisabled
+      ?'Guests can view this event timeline. Only organisers can update it.'
+      :'Add the important moments of your event with time and title.';
+  }
+  renderEventTimelineEditor();
+  openModal('event-timeline');
+}
+
+function addEventTimelineRow(){
+  _eventTimelineTemp.push({time:'',title:''});
+  renderEventTimelineEditor();
+}
+
+function _updateEventTimelineTime(idx,val){
+  if(_eventTimelineTemp[idx]) _eventTimelineTemp[idx].time=toTimeInputValue(val);
+}
+
+function _updateEventTimelineTitle(idx,val){
+  if(_eventTimelineTemp[idx]) _eventTimelineTemp[idx].title=String(val||'');
+}
+
+function _removeEventTimeline(idx){
+  _eventTimelineTemp.splice(idx,1);
+  renderEventTimelineEditor();
+}
+
+async function saveEventTimeline(){
+  const ev=DB.events.find(e=>e.id===_eventTimelineModalEventId);
+  if(!ev){toast('⚠️ Event not found');return;}
+  if(!Auth.isOrganizer(ev.id)){toast('⚠️ Only Organisers can update timeline');return;}
+  ev.timeline=JSON.parse(JSON.stringify(normalizeEventTimeline(_eventTimelineTemp)));
+  save();
+  try{
+    await Cloud.saveEvent(ev, Auth.getTeam(ev.id), Auth.currentSession());
+    await Cloud.loadEventsForSession(Auth.currentSession());
+  }catch(e){
+    toast('⚠️ Timeline saved locally, but cloud sync failed');
+    render();
+    return;
+  }
+  closeModal('event-timeline');
+  render();
+  toast('Timeline updated');
 }
 
 function openRoomConfig(id){
@@ -3965,6 +4096,7 @@ async function saveEvent(){
         ev.locLon=locLon;
         ev.color=document.getElementById('ev-color').value;
         ev.foodMenus=JSON.parse(JSON.stringify(normalizeEventMenus(_eventMenusTemp)));
+        ev.timeline=JSON.parse(JSON.stringify(normalizeEventTimeline(_eventTimelineTemp)));
         if(roomRequestsEnabledEl) ev.roomRequestsEnabled=roomRequestsEnabledEl.checked;
         if(feedbackEnabledEl) ev.feedbackEnabled=feedbackEnabledEl.checked;
         if(inviteDietEnabledEl) ev.publicInviteDietEnabled=inviteDietEnabledEl.checked;
@@ -3988,6 +4120,7 @@ async function saveEvent(){
       color:document.getElementById('ev-color').value,
       roomLocs:JSON.parse(JSON.stringify(_roomLocsTemp)),
       foodMenus:JSON.parse(JSON.stringify(normalizeEventMenus(_eventMenusTemp))),
+      timeline:JSON.parse(JSON.stringify(normalizeEventTimeline(_eventTimelineTemp))),
       eventContacts:[],
       roomRequestsEnabled:roomRequestsEnabledEl?roomRequestsEnabledEl.checked:true,
       feedbackEnabled:feedbackEnabledEl?feedbackEnabledEl.checked:false,
@@ -4131,14 +4264,22 @@ function openPublicInviteShareModal(eventId){
   const dietToggle=document.getElementById('share-public-invite-diet-enabled');
   const roomToggle=document.getElementById('share-public-invite-room-enabled');
   const menuToggle=document.getElementById('share-public-invite-menu-enabled');
+  const agendaToggle=document.getElementById('share-public-invite-agenda-enabled');
   if(dietToggle) dietToggle.checked=ev.publicInviteDietEnabled!==false;
   if(roomToggle) roomToggle.checked=ev.publicInviteRoomEnabled!==false;
   if(menuToggle){
     const hasMenu=normalizeEventMenus(ev.foodMenus).some(menu=>normalizeMenuItems(menu.items).length>0);
     menuToggle.checked=hasMenu && ev.publicInviteMenuEnabled===true;
     menuToggle.disabled=!hasMenu;
-    const menuLabel=menuToggle.closest('label');
-    if(menuLabel) menuLabel.style.opacity=hasMenu?'1':'0.55';
+    const menuRow=document.getElementById('share-public-invite-menu-enabled')?.closest('.switch-row');
+    if(menuRow) menuRow.style.opacity=hasMenu?'1':'0.55';
+  }
+  if(agendaToggle){
+    const hasAgenda=normalizeEventTimeline(ev.timeline).length>0;
+    agendaToggle.checked=hasAgenda && ev.publicInviteTimelineEnabled===true;
+    agendaToggle.disabled=!hasAgenda;
+    const agendaRow=document.getElementById('share-public-invite-agenda-row');
+    if(agendaRow) agendaRow.style.opacity=hasAgenda?'1':'0.55';
   }
   openModal('public-invite-share');
 }
@@ -4151,9 +4292,11 @@ async function copyPublicInviteLink(eventId){
   const dietToggle=document.getElementById('share-public-invite-diet-enabled');
   const roomToggle=document.getElementById('share-public-invite-room-enabled');
   const menuToggle=document.getElementById('share-public-invite-menu-enabled');
+  const agendaToggle=document.getElementById('share-public-invite-agenda-enabled');
   if(dietToggle) ev.publicInviteDietEnabled=dietToggle.checked;
   if(roomToggle) ev.publicInviteRoomEnabled=roomToggle.checked;
-  if(menuToggle && !menuToggle.disabled) ev.publicInviteMenuEnabled=menuToggle.checked;
+  if(menuToggle) ev.publicInviteMenuEnabled=!menuToggle.disabled && menuToggle.checked;
+  if(agendaToggle) ev.publicInviteTimelineEnabled=!agendaToggle.disabled && agendaToggle.checked;
   save();
   try{
     await Cloud.saveEvent(ev, Auth.getTeam(ev.id), Auth.currentSession());
@@ -4194,9 +4337,11 @@ async function sharePublicInviteLink(eventId){
   const dietToggle=document.getElementById('share-public-invite-diet-enabled');
   const roomToggle=document.getElementById('share-public-invite-room-enabled');
   const menuToggle=document.getElementById('share-public-invite-menu-enabled');
+  const agendaToggle=document.getElementById('share-public-invite-agenda-enabled');
   if(dietToggle) ev.publicInviteDietEnabled=dietToggle.checked;
   if(roomToggle) ev.publicInviteRoomEnabled=roomToggle.checked;
-  if(menuToggle && !menuToggle.disabled) ev.publicInviteMenuEnabled=menuToggle.checked;
+  if(menuToggle) ev.publicInviteMenuEnabled=!menuToggle.disabled && menuToggle.checked;
+  if(agendaToggle) ev.publicInviteTimelineEnabled=!agendaToggle.disabled && agendaToggle.checked;
   save();
   try{
     await Cloud.saveEvent(ev, Auth.getTeam(ev.id), Auth.currentSession());
@@ -6051,7 +6196,9 @@ async function parsePublicInviteFromUrl(){
           dietEnabled:data.dietEnabled!==false,
           roomEnabled:data.roomEnabled!==false,
           menuEnabled:data.menuEnabled===true,
+          timelineEnabled:data.timelineEnabled===true,
           menuText:String(data.menuText||'').trim(),
+          timelineText:String(data.timelineText||'').trim(),
           eventDate:String(data.eventDate||'').trim(),
           eventTime:String(data.eventTime||'').trim(),
           eventLocation:String(data.eventLocation||'').trim(),
@@ -6067,7 +6214,9 @@ async function parsePublicInviteFromUrl(){
     dietEnabled: (params.get('d') ?? params.get('diet')) !== '0',
     roomEnabled: (params.get('r') ?? params.get('room')) !== '0',
     menuEnabled: (params.get('m') ?? params.get('menu')) === '1',
+    timelineEnabled: (params.get('a') ?? params.get('agenda')) === '1',
     menuText:(params.get('mt')||params.get('menuText')||'').trim(),
+    timelineText:(params.get('at')||params.get('agendaText')||'').trim(),
     eventDate:(params.get('dt')||params.get('date')||'').trim(),
     eventTime:(params.get('t')||params.get('time')||'').trim(),
     eventLocation:(params.get('l')||params.get('location')||'').trim(),
@@ -6079,6 +6228,7 @@ function renderPublicInviteScreen(context){
   const subEl=document.getElementById('public-invite-sub');
   const statusEl=document.getElementById('public-invite-status');
   const detailsEl=document.getElementById('public-invite-details');
+  const agendaEl=document.getElementById('public-invite-agenda');
   const menuEl=document.getElementById('public-invite-menu');
   const dietWrap=document.getElementById('public-invite-diet-wrap');
   const roomWrap=document.getElementById('public-invite-room-wrap');
@@ -6107,8 +6257,16 @@ function renderPublicInviteScreen(context){
   }
   if(dietWrap) dietWrap.style.display=context?.dietEnabled===false?'none':'';
   if(roomWrap) roomWrap.style.display=context?.roomEnabled===false?'none':'';
+  if(agendaEl){
+    agendaEl.innerHTML=context?.timelineEnabled && context?.timelineText
+      ? `<div class="public-invite-panel-title">Agenda</div>${escapeHtml(context.timelineText)}`
+      : '';
+    agendaEl.style.display=context?.timelineEnabled && context?.timelineText ? 'block' : 'none';
+  }
   if(menuEl){
-    menuEl.textContent=context?.menuText||'';
+    menuEl.innerHTML=context?.menuEnabled && context?.menuText
+      ? `<div class="public-invite-panel-title">Food Menu</div>${escapeHtml(context.menuText)}`
+      : '';
     menuEl.style.display=context?.menuEnabled && context?.menuText ? 'block' : 'none';
   }
   setPublicInviteToggle('diet','veg');
@@ -6677,6 +6835,7 @@ window.App={
   togglePastEvents(show){_showPastEvents=!!show; renderEvents();},
   switchTab,openModal: window.openModal,closeModal,
   openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,openRoomConfig:_requireRoom(openRoomConfig),openEventFoodMenuEditor,saveEvent,saveRoomConfig,saveEventFoodMenus,confirmDeleteEvent:confirmDeleteEventGated,
+  openEventTimelineEditor,saveEventTimeline,addEventTimelineRow,_updateEventTimelineTime,_updateEventTimelineTitle,_removeEventTimeline,
   addEventContact,_updateEventContact,_removeEventContact,openEventContacts,saveEventContacts,toggleEventContactsEditMode,handleEventContactsHeaderAction,handleEventContactPhoneKey,shareEventContact,callEventContact,whatsAppEventContact,openEventContactActions,callActiveEventContact,whatsAppActiveEventContact,shareActiveEventContact,
   setActive,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,

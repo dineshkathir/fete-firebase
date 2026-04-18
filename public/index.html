@@ -565,6 +565,8 @@ html.boot-authenticated #auth-screen{display:none}
 .public-invite-detail-line + .public-invite-detail-line{margin-top:6px}
 .public-invite-detail-icon{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--gold-d);margin-top:1px}
 .public-invite-detail-text{flex:1;min-width:0}
+.public-invite-panel{display:none;background:var(--sage-l);border:1px solid var(--sage-m);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px;font-size:12px;line-height:1.7;color:var(--txt2);white-space:pre-wrap}
+.public-invite-panel-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--sage-d);margin-bottom:6px}
 .public-invite-menu{display:none;background:var(--sage-l);border:1px solid var(--sage-m);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px;font-size:12px;line-height:1.7;color:var(--txt2);white-space:pre-wrap}
 .public-invite-status{display:none;background:var(--rose-l);color:var(--rose-d);border:1px solid var(--rose-m);border-radius:var(--rs);padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:14px}
 .public-invite-status.success{background:var(--sage-l);color:var(--sage-d);border-color:var(--sage-m)}
@@ -588,6 +590,8 @@ html.boot-authenticated #auth-screen{display:none}
 .switch-control-diet input:checked + .switch-slider{background:#1FAF78;border-color:#1FAF78;box-shadow:0 8px 16px rgba(31,175,120,.18)}
 .switch-control-room input + .switch-slider{background:var(--surf3);border-color:var(--bord);box-shadow:none}
 .switch-control-room input:checked + .switch-slider{background:#2F80ED;border-color:#2F80ED;box-shadow:0 8px 16px rgba(47,128,237,.18)}
+.switch-control-general input + .switch-slider{background:var(--surf3);border-color:var(--bord);box-shadow:none}
+.switch-control-general input:checked + .switch-slider{background:#2F80ED;border-color:#2F80ED;box-shadow:0 8px 16px rgba(47,128,237,.18)}
 .switch-control-guest-diet input + .switch-slider{background:#D95858;border-color:#D95858;box-shadow:0 8px 16px rgba(217,88,88,.18)}
 .switch-control-guest-diet input:checked + .switch-slider{background:#1FAF78;border-color:#1FAF78;box-shadow:0 8px 16px rgba(31,175,120,.18)}
 .switch-control-guest-room input + .switch-slider{background:var(--surf3);border-color:var(--bord);box-shadow:none}
@@ -612,7 +616,8 @@ html.boot-authenticated #auth-screen{display:none}
     <div class="public-invite-title" id="public-invite-title">Event Invite</div>
     <div class="public-invite-sub" id="public-invite-sub">Fill in your details so the organiser can add you to the guest list.</div>
     <div class="public-invite-details" id="public-invite-details"></div>
-    <div class="public-invite-menu" id="public-invite-menu"></div>
+    <div class="public-invite-panel" id="public-invite-agenda"></div>
+    <div class="public-invite-panel" id="public-invite-menu"></div>
     <div class="public-invite-status" id="public-invite-status"></div>
     <div class="fg">
       <label class="fl">Name *</label>
@@ -763,13 +768,26 @@ html.boot-authenticated #auth-screen{display:none}
         <span class="switch-slider"></span>
       </label>
     </div>
-    <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);cursor:pointer;margin-bottom:14px">
-      <input type="checkbox" id="share-public-invite-menu-enabled" />
-      <div>
-        <div style="font-size:14px;font-weight:600;color:var(--txt)">Show Event Menu</div>
-        <div style="font-size:12px;color:var(--txt3);margin-top:2px">Include the food menu in the guest form when available.</div>
+    <div class="switch-row">
+      <div class="switch-copy">
+        <div class="switch-copy-title">Show Food Menu</div>
+        <div class="switch-copy-sub">Include the food menu in the guest form when available.</div>
       </div>
-    </label>
+      <label class="switch-control switch-control-general" aria-label="Show food menu">
+        <input type="checkbox" id="share-public-invite-menu-enabled" />
+        <span class="switch-slider"></span>
+      </label>
+    </div>
+    <div class="switch-row" id="share-public-invite-agenda-row">
+      <div class="switch-copy">
+        <div class="switch-copy-title">Show Agenda</div>
+        <div class="switch-copy-sub">Include the event timeline in the guest form when available.</div>
+      </div>
+      <label class="switch-control switch-control-general" aria-label="Show agenda">
+        <input type="checkbox" id="share-public-invite-agenda-enabled" />
+        <span class="switch-slider"></span>
+      </label>
+    </div>
     <button class="btn-p" onclick="App.copyPublicInviteLink(App._publicInviteShareEventId())">Copy Invite Link</button>
     <button class="btn-s" style="margin-top:8px" onclick="App.sharePublicInviteLink(App._publicInviteShareEventId())">Share Invite</button>
     <button class="btn-s" onclick="App.closeModal('public-invite-share')">Close</button>
@@ -934,6 +952,10 @@ html.boot-authenticated #auth-screen{display:none}
       <label class="fl">Food Menu</label>
       <button class="btn-s" id="ev-food-menu-open-btn" type="button" onclick="App.openEventFoodMenuEditor()">Food Menu</button>
     </div>
+    <div class="fg" id="ev-timeline-section">
+      <label class="fl">Timeline</label>
+      <button class="btn-s" id="ev-timeline-open-btn" type="button" onclick="App.openEventTimelineEditor()">Timeline</button>
+    </div>
     <div class="fg">
       <label class="fl">Guest Room Requests</label>
       <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bord2);border-radius:var(--rs);background:var(--surf);box-shadow:var(--sh1);cursor:pointer">
@@ -993,6 +1015,18 @@ html.boot-authenticated #auth-screen{display:none}
     <button class="add-loc-btn" id="ev-food-menu-add-btn" onclick="App.addEventMenu()">＋ Add Menu Section</button>
     <button class="btn-p" onclick="App.saveEventFoodMenus()">Save Food Menu</button>
     <button class="btn-s" onclick="App.closeModal('event-food-menu')">Close</button>
+  </div>
+</div>
+
+<div class="mo" id="mo-event-timeline">
+  <div class="ms">
+    <div class="m-handle"></div>
+    <div class="m-title" id="event-timeline-title">Event Timeline</div>
+    <div id="event-timeline-sub" style="font-size:12px;color:var(--txt3);margin:-10px 0 14px;line-height:1.6">Add the important moments of your event with time and title.</div>
+    <div id="event-timeline-list"></div>
+    <button class="add-loc-btn" id="ev-timeline-add-btn" onclick="App.addEventTimelineRow()">＋ Add Timeline Item</button>
+    <button class="btn-p" id="ev-timeline-save-btn" onclick="App.saveEventTimeline()">Save Timeline</button>
+    <button class="btn-s" onclick="App.closeModal('event-timeline')">Close</button>
   </div>
 </div>
 

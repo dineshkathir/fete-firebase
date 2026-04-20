@@ -25,6 +25,7 @@ try{
 window.__eventiseBoot={
   released:false,
   timer:null,
+  appStarted:false,
   release(reason=''){
     if(this.released) return;
     this.released=true;
@@ -42,13 +43,19 @@ window.__eventiseBoot={
       const auth=document.getElementById('auth-screen');
       const app=document.getElementById('app');
       const invite=document.getElementById('public-invite-screen');
+      const events=document.getElementById('scr-events');
       if(invite) invite.style.display='none';
-      if(localStorage.getItem('fete_session')){
-        if(auth) auth.style.display='none';
-        if(app) app.style.display='flex';
-      }else{
-        if(app) app.style.display='none';
-        if(auth) auth.style.display='flex';
+      if(auth) auth.style.display='none';
+      if(app) app.style.display='flex';
+      document.documentElement.classList.remove('boot-authenticated');
+      if(events && !this.appStarted){
+        events.innerHTML=`
+          <div style="background:var(--surf);border:1px solid var(--rose-m);border-radius:18px;padding:20px;box-shadow:var(--sh1)">
+            <div style="font-size:18px;font-weight:600;color:var(--txt);margin-bottom:8px">Startup problem</div>
+            <div style="font-size:13px;line-height:1.6;color:var(--txt2);margin-bottom:12px">The app shell loaded, but the main script did not finish starting.</div>
+            <div style="font-size:12px;line-height:1.6;color:var(--txt3);background:var(--rose-l);border:1px solid var(--rose-m);border-radius:12px;padding:12px">${message}</div>
+            <div style="font-size:12px;line-height:1.6;color:var(--txt3);margin-top:12px">This usually means a blocked CDN script, stale cache, or a module load failure before the app could render.</div>
+          </div>`;
       }
     }catch(e){}
     this.release(message);

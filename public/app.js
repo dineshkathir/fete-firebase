@@ -1,6 +1,7 @@
 ﻿// ═══════════════════════════════════════════════
 // FIREBASE — real Google OAuth only
 // ═══════════════════════════════════════════════
+window.__eventiseBoot && (window.__eventiseBoot.appStarted = true);
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut as fbSignOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { collection, deleteDoc, doc, getDoc, getDocs, getFirestore, query, setDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";

@@ -918,6 +918,9 @@ const STORE = {
 };
 
 function finishBoot(){
+  if(window.__eventiseBoot && typeof window.__eventiseBoot.release==='function'){
+    window.__eventiseBoot.release();
+  }
   const root=document.documentElement;
   if(!root.classList.contains('boot-loading')) return;
   const bootScreen=document.getElementById('boot-screen');

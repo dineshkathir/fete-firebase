@@ -22,6 +22,55 @@ try{
   }
 }catch(e){}
 
+window.__eventiseBoot={
+  released:false,
+  timer:null,
+  release(reason=''){
+    if(this.released) return;
+    this.released=true;
+    try{
+      if(this.timer) window.clearTimeout(this.timer);
+      document.documentElement.classList.remove('boot-loading');
+      const status=document.getElementById('boot-status');
+      if(status && reason) status.textContent=reason;
+    }catch(e){}
+  },
+  fail(message='App failed to start.'){
+    try{
+      const status=document.getElementById('boot-status');
+      if(status) status.textContent=message;
+      const auth=document.getElementById('auth-screen');
+      const app=document.getElementById('app');
+      const invite=document.getElementById('public-invite-screen');
+      if(invite) invite.style.display='none';
+      if(localStorage.getItem('fete_session')){
+        if(auth) auth.style.display='none';
+        if(app) app.style.display='flex';
+      }else{
+        if(app) app.style.display='none';
+        if(auth) auth.style.display='flex';
+      }
+    }catch(e){}
+    this.release(message);
+  }
+};
+
+window.__eventiseBoot.timer=window.setTimeout(()=>{
+  window.__eventiseBoot.fail('Startup is taking longer than expected. Showing fallback screen.');
+}, 4500);
+
+window.addEventListener('error', event=>{
+  const target=event && event.target;
+  if(target && target.tagName==='SCRIPT'){
+    window.__eventiseBoot.fail('A startup script could not be loaded.');
+  }
+});
+
+window.addEventListener('unhandledrejection', event=>{
+  const message=event?.reason?.message || 'A startup error occurred.';
+  window.__eventiseBoot.fail(message);
+});
+
 try{
   const adsHosts=new Set([
     'fete-app-c07ec.web.app',
@@ -514,8 +563,10 @@ html.boot-loading #boot-screen{display:flex}
 html.boot-loading #app{visibility:hidden}
 html.boot-loading #auth-screen{visibility:hidden}
 .boot-card{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.boot-card-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
 .boot-card .brand-lockup{height:136px;width:auto}
 .boot-hide{opacity:0;pointer-events:none}
+.boot-status{font-size:12px;line-height:1.5;color:var(--txt3);max-width:280px;text-align:center;min-height:18px}
 .auth-card{width:100%;max-width:360px;background:var(--surf);border-radius:20px;padding:36px 28px 30px;box-shadow:var(--sh3);text-align:center}
 .auth-logo{display:flex;align-items:center;justify-content:center;margin-bottom:8px}
 .auth-tagline{font-size:13px;color:var(--txt3);margin-bottom:32px}
@@ -618,7 +669,10 @@ html.boot-loading #auth-screen{visibility:hidden}
 <body class="notranslate">
 <div id="boot-screen" aria-hidden="true">
   <div class="boot-card">
-    <img class="brand-lockup" src="./eventise-logo.svg" alt="eventise" />
+    <div class="boot-card-inner">
+      <img class="brand-lockup" src="./eventise-logo.svg" alt="eventise" />
+      <div class="boot-status" id="boot-status"></div>
+    </div>
   </div>
 </div>
 <div id="public-invite-screen">
@@ -1621,7 +1675,7 @@ html.boot-loading #auth-screen{visibility:hidden}
 <!-- TOAST -->
 <div id="toast"></div>
 
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js" onerror="window.__eventiseBoot.fail('The app script failed to load.')"></script>
 
 </body>
 </html>

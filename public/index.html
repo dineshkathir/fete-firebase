@@ -23,6 +23,7 @@ try{
 }catch(e){}
 
 window.App = window.App || {};
+window.__eventiseBuild = '20260420-2';
 
 window.__eventiseBoot={
   released:false,
@@ -58,6 +59,7 @@ window.__eventiseBoot={
             <div style="font-size:13px;line-height:1.6;color:var(--txt2);margin-bottom:12px">The app shell loaded, but the first screen did not render successfully.</div>
             <div style="font-size:12px;line-height:1.6;color:var(--txt3);background:var(--rose-l);border:1px solid var(--rose-m);border-radius:12px;padding:12px">${message}</div>
             <div style="font-size:12px;line-height:1.6;color:var(--txt3);margin-top:12px">This usually means startup stalled before the first successful render, or cached state prevented the initial screen from being built.</div>
+            <div style="font-size:11px;line-height:1.5;color:var(--txt4);margin-top:10px">Build ${window.__eventiseBuild}</div>
           </div>`;
       }
     }catch(e){}
@@ -1690,7 +1692,7 @@ html.boot-loading #auth-screen{visibility:hidden}
 <!-- TOAST -->
 <div id="toast"></div>
 
-<script type="module" src="app.js?v=20260420-1" onerror="window.__eventiseBoot.fail('The app script failed to load.')"></script>
+<script type="module" src="app.js?v=20260420-2" onerror="window.__eventiseBoot.fail('The app script failed to load.')"></script>
 
 </body>
 </html>

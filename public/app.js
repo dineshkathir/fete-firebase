@@ -2175,7 +2175,7 @@ function closeConfirm({fromPop=false}={}){
     window.history.back();
   }
 }
-document.getElementById('confirm-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('confirm-overlay'))closeConfirm()});
+document.getElementById('confirm-overlay')?.addEventListener('click',e=>{if(e.target===document.getElementById('confirm-overlay'))closeConfirm()});
 
 // ═══════════════════════════════════════════════
 // TAB SWITCHING
@@ -6315,7 +6315,7 @@ function pickEvent(id){
   render();
 }
 
-document.getElementById('mo-event-pick').addEventListener('click',e=>{
+document.getElementById('mo-event-pick')?.addEventListener('click',e=>{
   if(e.target===document.getElementById('mo-event-pick'))return;
 });
 // Open hook
@@ -7218,20 +7218,24 @@ function setupMasterGuestSharingUi(){
 }
 
 // Pre-populate profile modal
-setupMasterGuestSharingUi();
-openProfileModal(false);
-const groupInviteSearchIcon=document.querySelector('#mo-group-invite .search-ico');
-if(groupInviteSearchIcon) groupInviteSearchIcon.textContent='⌕';
-if (window.history && window.history.replaceState) {
-  window.history.replaceState({ tab: 'events' }, '', window.location.href);
-}
+try{
+  setupMasterGuestSharingUi();
+  openProfileModal(false);
+  const groupInviteSearchIcon=document.querySelector('#mo-group-invite .search-ico');
+  if(groupInviteSearchIcon) groupInviteSearchIcon.textContent='⌕';
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState({ tab: 'events' }, '', window.location.href);
+  }
 
-// Hide ads if premium
-if(DB.premium){
-  const adTop=document.querySelector('.ad-top');
-  const adBot=document.querySelector('.ad-bot');
-  if(adTop) adTop.style.display='none';
-  if(adBot) adBot.style.display='none';
+  // Hide ads if premium
+  if(DB.premium){
+    const adTop=document.querySelector('.ad-top');
+    const adBot=document.querySelector('.ad-bot');
+    if(adTop) adTop.style.display='none';
+    if(adBot) adBot.style.display='none';
+  }
+}catch(err){
+  console.error('Pre-init setup failed', err);
 }
 
 // Seed sample data if empty

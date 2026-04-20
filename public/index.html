@@ -71,6 +71,11 @@ window.addEventListener('error', event=>{
   const target=event && event.target;
   if(target && target.tagName==='SCRIPT'){
     window.__eventiseBoot.fail('A startup script could not be loaded.');
+    return;
+  }
+  const message=event?.message || event?.error?.message || '';
+  if(message){
+    window.__eventiseBoot.fail(`Startup error: ${message}`);
   }
 });
 

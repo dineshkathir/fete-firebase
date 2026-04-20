@@ -3967,7 +3967,8 @@ function render(){
     };
     const target=document.getElementById(screenMap[_tab]||'scr-events');
     if(target){
-      target.innerHTML=`<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('event',42)}</div><div class="empty-t">We hit a loading issue</div><div class="empty-s">Please refresh once. If it still happens, the app data for one item may need cleanup.</div></div>`;
+      const detail=escapeHtml(err?.message || String(err || 'Unknown render error'));
+      target.innerHTML=`<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('event',42)}</div><div class="empty-t">We hit a loading issue</div><div class="empty-s">Please refresh once. If it still happens, the app data for one item may need cleanup.</div><div style="margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--rose-l);border:1px solid var(--rose-m);font-size:12px;line-height:1.6;color:var(--txt2);max-width:520px">${detail}</div></div>`;
     }
     toast('⚠️ Screen could not load fully');
   }

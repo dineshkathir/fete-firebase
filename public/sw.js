@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eventise-shell-v2';
+const CACHE_NAME = 'eventise-shell-v3';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -28,40 +28,51 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const requestUrl = new URL(event.request.url);
   const isSameOrigin = requestUrl.origin === self.location.origin;
+  const isNavigation = event.request.mode === 'navigate';
   const isCoreAsset =
     isSameOrigin &&
     (
-      event.request.mode === 'navigate' ||
       requestUrl.pathname === '/' ||
       requestUrl.pathname.endsWith('/index.html') ||
       requestUrl.pathname.endsWith('/app.js') ||
       requestUrl.pathname.endsWith('/site.webmanifest')
     );
 
-  if (isCoreAsset) {
+  if (isNavigation || isCoreAsset) {
     event.respondWith(
-      fetch(event.request).then(response => {
-        if (response && response.status === 200) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-        }
-        return response;
-      }).catch(() => caches.match(event.request).then(cached => cached || caches.match('/index.html')))
+      fetch(event.request)
+        .then(response => {
+          if (response && response.status === 200 && isSameOrigin) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(event.request);
+          if (cached) return cached;
+          if (isNavigation) return caches.match('/index.html');
+          return Response.error();
+        })
     );
     return;
   }
 
+  if (!isSameOrigin) return;
+
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
-      return fetch(event.request).then(response => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
+      return fetch(event.request)
+        .then(response => {
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
           return response;
-        }
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-        return response;
-      }).catch(() => caches.match('/index.html'));
+        })
+        .catch(() => Response.error());
     })
   );
 });

@@ -3924,6 +3924,9 @@ async function openMyContributionsModal(){
 // MAIN RENDER
 // ═══════════════════════════════════════════════
 function render(){
+  if(window.__eventiseBoot){
+    window.__eventiseBoot.rendered=true;
+  }
   try{
     const teamBtn=document.getElementById('hdr-team-btn');
     if(teamBtn) teamBtn.style.display=myManagedEvents().length?'block':'none';

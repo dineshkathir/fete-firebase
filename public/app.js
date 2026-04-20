@@ -27,6 +27,38 @@ function normalizePhoneValue(value){
   return String(value||'').replace(/\D/g,'').slice(0,15);
 }
 
+function normalizeTeamRoles(memberOrRoles) {
+  const valid = new Set(['organizer', 'cash', 'room']);
+  const source = Array.isArray(memberOrRoles)
+    ? memberOrRoles
+    : Array.isArray(memberOrRoles?.roles)
+      ? memberOrRoles.roles
+      : memberOrRoles?.role
+        ? [memberOrRoles.role]
+        : [];
+  const roles = [...new Set(source.map(role => String(role || '').trim().toLowerCase()).filter(role => valid.has(role)))];
+  if (roles.includes('organizer')) return ['organizer'];
+  const secondaryRoles = roles.filter(role => role === 'cash' || role === 'room');
+  return secondaryRoles.length ? secondaryRoles : ['room'];
+}
+
+function mergeTeamRoles(existingRoles, incomingRoles) {
+  const merged = [...new Set([...normalizeTeamRoles(existingRoles), ...normalizeTeamRoles(incomingRoles)])];
+  return merged.includes('organizer') ? ['organizer'] : merged;
+}
+
+function getPrimaryTeamRole(memberOrRoles) {
+  const roles = normalizeTeamRoles(memberOrRoles);
+  if (roles.includes('organizer')) return 'organizer';
+  if (roles.includes('cash')) return 'cash';
+  if (roles.includes('room')) return 'room';
+  return null;
+}
+
+function teamMemberHasRole(member, role) {
+  return normalizeTeamRoles(member).includes(role);
+}
+
 function getTeamRoleLabelFromRoles(memberOrRoles){
   const source = Array.isArray(memberOrRoles)
     ? memberOrRoles

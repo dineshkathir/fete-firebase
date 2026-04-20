@@ -178,21 +178,64 @@ const Cloud = (() => {
       : team && typeof team === 'object'
         ? Object.values(team)
         : [];
-    const seen = new Set();
-    const normalized = [];
+    const byEmail = new Map();
     for (const member of source) {
       const email = normalizeEmail(member?.email);
-      if (!email || seen.has(email)) continue;
-      seen.add(email);
-      normalized.push({
-        userId: member?.userId || (fallbackSession && normalizeEmail(fallbackSession.email) === email ? fallbackSession.id : ''),
+      if (!email) continue;
+      const normalizedRoles = normalizeTeamRoles(member);
+      const existing = byEmail.get(email);
+      const mergedRoles = mergeTeamRoles(existing?.roles || existing?.role, normalizedRoles);
+      byEmail.set(email, {
+        userId: member?.userId || existing?.userId || (fallbackSession && normalizeEmail(fallbackSession.email) === email ? fallbackSession.id : ''),
         email,
-        name: member?.name || email.split('@')[0],
-        role: member?.role || 'room',
-        addedAt: member?.addedAt || Date.now()
+        name: member?.name || existing?.name || email.split('@')[0],
+        roles: mergedRoles,
+        role: getPrimaryTeamRole(mergedRoles),
+        addedAt: existing?.addedAt || member?.addedAt || Date.now()
       });
     }
-    return normalized;
+    return Array.from(byEmail.values());
+  }
+
+  function normalizeTeamRoles(memberOrRoles) {
+    const valid = new Set(['organizer', 'cash', 'room']);
+    const source = Array.isArray(memberOrRoles)
+      ? memberOrRoles
+      : Array.isArray(memberOrRoles?.roles)
+        ? memberOrRoles.roles
+        : memberOrRoles?.role
+          ? [memberOrRoles.role]
+          : [];
+    const roles = [...new Set(source.map(role => String(role || '').trim().toLowerCase()).filter(role => valid.has(role)))];
+    if (roles.includes('organizer')) return ['organizer'];
+    const secondaryRoles = roles.filter(role => role === 'cash' || role === 'room');
+    return secondaryRoles.length ? secondaryRoles : ['room'];
+  }
+
+  function mergeTeamRoles(existingRoles, incomingRoles) {
+    const merged = [...new Set([...normalizeTeamRoles(existingRoles), ...normalizeTeamRoles(incomingRoles)])];
+    return merged.includes('organizer') ? ['organizer'] : merged;
+  }
+
+  function getPrimaryTeamRole(memberOrRoles) {
+    const roles = normalizeTeamRoles(memberOrRoles);
+    if (roles.includes('organizer')) return 'organizer';
+    if (roles.includes('cash')) return 'cash';
+    if (roles.includes('room')) return 'room';
+    return null;
+  }
+
+  function teamMemberHasRole(member, role) {
+    return normalizeTeamRoles(member).includes(role);
+  }
+
+  function getTeamRoleLabel(memberOrRoles) {
+    const roles = normalizeTeamRoles(memberOrRoles);
+    if (roles.includes('organizer')) return 'Organizer';
+    const labels = [];
+    if (roles.includes('cash')) labels.push('Cash Collector');
+    if (roles.includes('room')) labels.push('Room Coordinator');
+    return labels.length ? labels.join(' + ') : 'Team Member';
   }
 
   function hydrateTeamForSession(team, session) {
@@ -233,8 +276,8 @@ function serializeEvent(event, team, session) {
       updatedAt: Date.now(),
       team: normalizedTeam,
       memberEmails: normalizedTeam.map(member => member.email),
-      organizerEmails: normalizedTeam.filter(member => member.role === 'organizer').map(member => member.email),
-      roomEmails: normalizedTeam.filter(member => member.role === 'organizer' || member.role === 'room').map(member => member.email)
+      organizerEmails: normalizedTeam.filter(member => teamMemberHasRole(member, 'organizer')).map(member => member.email),
+      roomEmails: normalizedTeam.filter(member => teamMemberHasRole(member, 'organizer') || teamMemberHasRole(member, 'room')).map(member => member.email)
     });
   }
 
@@ -507,7 +550,7 @@ function serializeEvent(event, team, session) {
     for (const event of localEvents) {
       const team = hydrateTeamForSession(Auth.getTeam(event.id), session);
       const mine = team.find(member => member.email === sessEmail);
-      if (!mine || mine.role !== 'organizer') continue;
+      if (!mine || !teamMemberHasRole(mine, 'organizer')) continue;
       await saveEvent(event, team, session);
     }
     await loadEventsForSession(session);
@@ -662,22 +705,26 @@ const Auth = (() => {
     if(showWelcomeToast) toast(`Welcome, ${sess.name}!`);
   }
 
-  // Role resolution: returns 'organizer'|'cash'|'room'|null for current user + active event
-  function currentRole(eventId) {
+  function currentRoles(eventId) {
     const sess = getSession();
-    if(!sess) return null;
+    if(!sess) return [];
     const evId = eventId || (typeof DB!=='undefined'?DB.activeEvent:null);
-    if(!evId) return null;
+    if(!evId) return [];
     const email = (sess.email||'').trim().toLowerCase();
     const team = Cloud.hydrateTeamForSession(getTeam(evId), sess);
     saveTeam(evId, team);
     const member = team.find(m=>m.userId===sess.id || ((m.email||'').trim().toLowerCase()===email));
-    return member ? member.role : null;
+    return member ? normalizeTeamRoles(member) : [];
   }
 
-  function isOrganizer(eventId) { return currentRole(eventId)==='organizer'; }
-  function isCash(eventId) { const r=currentRole(eventId); return r==='organizer'||r==='cash'; }
-  function isRoom(eventId) { const r=currentRole(eventId); return r==='organizer'||r==='room'; }
+  // Role resolution: returns primary role for current user + active event
+  function currentRole(eventId) {
+    return getPrimaryTeamRole(currentRoles(eventId));
+  }
+
+  function isOrganizer(eventId) { return currentRoles(eventId).includes('organizer'); }
+  function isCash(eventId) { const roles=currentRoles(eventId); return roles.includes('organizer')||roles.includes('cash'); }
+  function isRoom(eventId) { const roles=currentRoles(eventId); return roles.includes('organizer')||roles.includes('room'); }
   function canManageGuests(eventId) { return isOrganizer(eventId); }
 
   // When a new event is created, add the creator as organizer
@@ -690,9 +737,10 @@ const Auth = (() => {
     if(member){
       member.userId = sess.id;
       member.name = sess.name;
+      member.roles = ['organizer'];
       member.role = 'organizer';
     } else {
-      team.push({userId:sess.id, email, name:sess.name, role:'organizer', addedAt:Date.now()});
+      team.push({userId:sess.id, email, name:sess.name, roles:['organizer'], role:'organizer', addedAt:Date.now()});
     }
     saveTeam(eventId, team);
   }
@@ -705,53 +753,87 @@ const Auth = (() => {
     const selectedEvent = DB.events.find(ev=>ev.id===eventId);
     const canEdit = isOrganizer(eventId);
     const inviteEmailEl=document.getElementById('team-invite-email');
-    const inviteRoleEl=document.getElementById('team-invite-role');
+    const inviteRoleEls=document.querySelectorAll('#mo-team input[name="team-invite-role"]');
     const inviteBtn=document.querySelector('#mo-team .btn-p[onclick="App.sendTeamInvite()"]');
     if(inviteEmailEl){
       inviteEmailEl.disabled=!canEdit;
       inviteEmailEl.style.opacity=canEdit?'1':'0.6';
       inviteEmailEl.placeholder=canEdit?'colleague@email.com':'Only organisers can invite members';
     }
-    if(inviteRoleEl){
+    inviteRoleEls.forEach(inviteRoleEl=>{
       inviteRoleEl.disabled=!canEdit;
-      inviteRoleEl.style.opacity=canEdit?'1':'0.6';
-    }
+      inviteRoleEl.parentElement.style.opacity=canEdit?'1':'0.6';
+    });
     if(inviteBtn){
       inviteBtn.disabled=!canEdit;
       inviteBtn.style.opacity=canEdit?'1':'0.6';
     }
+    if (typeof syncTeamInviteRoles === 'function') syncTeamInviteRoles();
     if(!el) return;
     if(team.length===0){el.innerHTML=`<div class="empty" style="padding:20px 0"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('guests',38)}</div><div class="empty-t" style="font-size:16px">No team members yet</div><div class="empty-s" style="font-size:12px">${selectedEvent?selectedEvent.name:''}</div></div>`;return;}
     el.innerHTML = team.map(m=>{
       const memberEmail = (m.email||'').trim().toLowerCase();
       const isMe = m.userId===sess?.id || memberEmail===((sess?.email||'').trim().toLowerCase());
-      const roleLabel = m.role==='organizer'?'Organizer':m.role==='cash'?'Cash Collector':'Room Coord.';
-      const roleCls = m.role==='organizer'?'organizer':m.role==='cash'?'cash':'room';
+      const roles = normalizeTeamRoles(m);
       const ini = (m.name||m.email||'?')[0].toUpperCase();
       return `<div class="team-member-row">
         <div class="team-av">${ini}</div>
         <div class="team-info">
           <div class="team-name">${m.name||m.email} ${isMe?'<span style="font-size:10px;color:var(--txt4)">(you)</span>':''}</div>
           <div class="team-email">${m.email}</div>
+          ${isOrganizer(eventId)&&!isMe
+            ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+                <label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--txt2);cursor:pointer">
+                  <input type="checkbox" ${roles.includes('organizer')?'checked':''} onchange="Auth._setOrganizerRole('${eventId}','${memberEmail}',this.checked)" />
+                  <span>Organizer</span>
+                </label>
+                <label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--txt2);cursor:pointer;opacity:${roles.includes('organizer')?'.55':'1'}">
+                  <input type="checkbox" ${roles.includes('cash')?'checked':''} ${roles.includes('organizer')?'disabled':''} onchange="Auth._toggleMemberRole('${eventId}','${memberEmail}','cash',this.checked)" />
+                  <span>Cash Collector</span>
+                </label>
+                <label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--txt2);cursor:pointer;opacity:${roles.includes('organizer')?'.55':'1'}">
+                  <input type="checkbox" ${roles.includes('room')?'checked':''} ${roles.includes('organizer')?'disabled':''} onchange="Auth._toggleMemberRole('${eventId}','${memberEmail}','room',this.checked)" />
+                  <span>Room Coord.</span>
+                </label>
+              </div>`
+            : `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+                ${roles.map(role=>`<span class="role-badge role-${role}">${role==='organizer'?'Organizer':role==='cash'?'Cash Collector':'Room Coord.'}</span>`).join('')}
+              </div>`}
         </div>
         ${isOrganizer(eventId)&&!isMe
-          ?`<select class="role-sel" onchange="Auth._changeRole('${eventId}','${memberEmail}',this.value)">
-              <option value="organizer" ${m.role==='organizer'?'selected':''}>Organizer</option>
-              <option value="cash" ${m.role==='cash'?'selected':''}>Cash</option>
-              <option value="room" ${m.role==='room'?'selected':''}>Room</option>
-            </select>
-            <button onclick="Auth._removeMember('${eventId}','${m.userId}')" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 4px;font-weight:700">X</button>`
-          :`<span class="role-badge role-${roleCls}">${roleLabel}</span>`}
+          ? `<button onclick="Auth._removeMember('${eventId}','${m.userId || memberEmail}')" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--txt4);padding:0 4px;font-weight:700">X</button>`
+          : ``}
       </div>`;
     }).join('');
   }
 
-  function _changeRole(eventId, userId, role) {
+  function _setOrganizerRole(eventId, userId, enabled) {
     const team = getTeam(eventId);
     const key = (userId||'').trim().toLowerCase();
     const m = team.find(x=>x.userId===userId || ((x.email||'').trim().toLowerCase()===key));
     if(m) {
-      m.role=role;
+      m.roles = enabled ? ['organizer'] : ['room'];
+      m.role = getPrimaryTeamRole(m.roles);
+      saveTeam(eventId, team);
+      const ev = DB.events.find(e=>e.id===eventId);
+      if(ev) Cloud.saveEvent(ev, team, getSession()).catch(()=>toast('⚠️ Could not sync team changes'));
+      renderTeamModal(eventId);
+      render();
+    }
+  }
+
+  function _toggleMemberRole(eventId, userId, role, enabled) {
+    const team = getTeam(eventId);
+    const key = (userId||'').trim().toLowerCase();
+    const m = team.find(x=>x.userId===userId || ((x.email||'').trim().toLowerCase()===key));
+    if(m) {
+      let roles = normalizeTeamRoles(m);
+      roles = roles.filter(item => item !== 'organizer');
+      if (enabled && !roles.includes(role)) roles.push(role);
+      if (!enabled) roles = roles.filter(item => item !== role);
+      if (!roles.length) roles = ['room'];
+      m.roles = normalizeTeamRoles(roles);
+      m.role = getPrimaryTeamRole(m.roles);
       saveTeam(eventId, team);
       const ev = DB.events.find(e=>e.id===eventId);
       if(ev) Cloud.saveEvent(ev, team, getSession()).catch(()=>toast('⚠️ Could not sync team changes'));
@@ -770,12 +852,13 @@ const Auth = (() => {
     render();
   }
 
-  function sendInvite(eventId, email, role) {
+  function sendInvite(eventId, email, roles) {
     if(!email||!/\S+@\S+\.\S+/.test(email)){return false;}
     const team = getTeam(eventId);
     const normalizedEmail = email.toLowerCase().trim();
     if(team.find(m=>((m.email||'').trim().toLowerCase()===normalizedEmail))){return 'exists';}
-    team.push({userId:'', email:normalizedEmail, name:normalizedEmail.split('@')[0], role, addedAt:Date.now()});
+    const normalizedRoles = normalizeTeamRoles(roles);
+    team.push({userId:'', email:normalizedEmail, name:normalizedEmail.split('@')[0], roles:normalizedRoles, role:getPrimaryTeamRole(normalizedRoles), addedAt:Date.now()});
     saveTeam(eventId, team);
     const ev = DB.events.find(e=>e.id===eventId);
     if(ev) Cloud.saveEvent(ev, team, getSession()).catch(()=>toast('⚠️ Could not sync invite'));
@@ -822,7 +905,7 @@ const Auth = (() => {
 
   function currentSession() { return getSession(); }
 
-  return { toggleMode, emailSubmit, googleLogin, logout, currentRole, isOrganizer, isCash, isRoom, canManageGuests, addCreatorAsOrganizer, renderTeamModal, sendInvite, _changeRole, _removeMember, getTeam, currentSession, init };
+  return { toggleMode, emailSubmit, googleLogin, logout, currentRole, currentRoles, isOrganizer, isCash, isRoom, canManageGuests, addCreatorAsOrganizer, renderTeamModal, sendInvite, _setOrganizerRole, _toggleMemberRole, _removeMember, getTeam, currentSession, init, getTeamRoleLabel };
 })();
 
 // Expose Auth globally for inline onclick
@@ -1059,8 +1142,8 @@ const NotificationCenter = (() => {
       const team = Cloud.hydrateTeamForSession(event.team||Auth.getTeam(event.id)||[], session);
       const mine = team.find(member=>normalizeEmailValue(member.email)===email);
       _knownEventIds.add(event.id);
-      if(!mine || mine.role==='organizer') return;
-      const roleLabel = mine.role==='cash' ? 'Cash Collector' : mine.role==='room' ? 'Room Coordinator' : 'Team Member';
+      if(!mine || teamMemberHasRole(mine, 'organizer')) return;
+      const roleLabel = getTeamRoleLabel(mine);
       show('Team invite received', `You were added to ${event.name} as ${roleLabel}.`, {
         tag:`team-${event.id}`,
         data:{ type:'team-invite', eventId:event.id }
@@ -2329,15 +2412,14 @@ function openGuestSwipeActions(guestId){
   _guestSwipeActionGuestId=guestId;
   const sub=document.getElementById('guest-swipe-sub');
   if(sub) sub.textContent=`Choose what you want to do for ${fullGuestName(guest)||guest.first||'this guest'}.`;
-  const role=Auth.currentRole(DB.activeEvent);
   const allocateBtn=document.getElementById('guest-swipe-allocate-btn');
   const giftBtn=document.getElementById('guest-swipe-gift-btn');
   const cashBtn=document.getElementById('guest-swipe-cash-btn');
   const giftRow=document.getElementById('guest-swipe-gift-row');
   const contactRow=document.getElementById('guest-swipe-contact-row');
-  const canAllocate=role==='organizer'||role==='room';
-  const canAddGift=role==='organizer';
-  const canAddCashGift=role==='organizer'||role==='cash';
+  const canAllocate=Auth.isRoom(DB.activeEvent);
+  const canAddGift=Auth.isOrganizer(DB.activeEvent);
+  const canAddCashGift=Auth.isCash(DB.activeEvent);
   if(contactRow) contactRow.style.display='none';
   if(allocateBtn) allocateBtn.style.display=canAllocate?'block':'none';
   if(giftBtn) giftBtn.style.display=canAddGift?'block':'none';
@@ -3058,10 +3140,9 @@ function renderGuests(){
     <span class="fchip ${_guestFilter==='invited'?'on':''}" onclick="App.setGFilter('invited')">Invited (${invited})</span>
   </div>`;
   const isOrg=Auth.isOrganizer(DB.activeEvent);
-  const role=Auth.currentRole(DB.activeEvent);
-  const canSwipeAllocate=role==='organizer'||role==='room';
-  const canSwipeGift=role==='organizer';
-  const canSwipeCash=role==='organizer'||role==='cash';
+  const canSwipeAllocate=Auth.isRoom(DB.activeEvent);
+  const canSwipeGift=Auth.isOrganizer(DB.activeEvent);
+  const canSwipeCash=Auth.isCash(DB.activeEvent);
   const organizerActions=isOrg?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       ${feedbackGuests.length?`<button class="fchip" style="padding:8px 14px;font-size:12px" onclick="App.scrollGuestsToFeedback()">Jump to Feedback</button>`:''}
     </div>`:'';
@@ -4936,10 +5017,6 @@ function renderMasterGuestList(){
 }
 
 function openMasterGuestModal(mode='manage'){
-  if(mode==='manage' && DB.activeEvent && !Auth.isOrganizer(DB.activeEvent)){
-    toast('⚠️ Only Organisers can manage the master guest list');
-    return;
-  }
   _masterGuestMode=mode;
   _masterGuestSearch='';
   clearMasterGuestSelection();
@@ -6844,16 +6921,38 @@ async function sendTeamInvite(){
   if(!targetEventId){toast('⚠️ Select an event first');return;}
   if(!Auth.isOrganizer(targetEventId)){toast('⚠️ Only organisers can invite members');return;}
   const email=document.getElementById('team-invite-email').value.trim().toLowerCase();
-  const role=document.getElementById('team-invite-role').value;
+  const organizerChecked=!!document.getElementById('team-invite-role-organizer')?.checked;
+  const cashChecked=!!document.getElementById('team-invite-role-cash')?.checked;
+  const roomChecked=!!document.getElementById('team-invite-role-room')?.checked;
+  const roles=organizerChecked ? ['organizer'] : [cashChecked?'cash':'', roomChecked?'room':''].filter(Boolean);
   if(!email){toast('⚠️ Enter an email');return;}
-  const result=Auth.sendInvite(targetEventId,email,role);
+  if(!roles.length){toast('⚠️ Select at least one role');return;}
+  const result=Auth.sendInvite(targetEventId,email,roles);
   if(result==='exists'){toast('⚠️ Already a team member');return;}
   if(result===false){toast('⚠️ Invalid email');return;}
   document.getElementById('team-invite-email').value='';
-  const roleLabel=role==='organizer'?'Organizer':role==='cash'?'Cash Collector':'Room Coordinator';
-  toast(`${email} added as ${roleLabel}`);
+  const organizerEl=document.getElementById('team-invite-role-organizer');
+  const cashEl=document.getElementById('team-invite-role-cash');
+  const roomEl=document.getElementById('team-invite-role-room');
+  if(organizerEl) organizerEl.checked=false;
+  if(cashEl) cashEl.checked=true;
+  if(roomEl) roomEl.checked=false;
+  syncTeamInviteRoles();
+  toast(`${email} added as ${Auth.getTeamRoleLabel(roles)}`);
   try{ await Cloud.loadEventsForSession(Auth.currentSession()); }catch(e){}
   Auth.renderTeamModal(targetEventId);
+}
+
+function syncTeamInviteRoles(){
+  const organizerEl=document.getElementById('team-invite-role-organizer');
+  const cashEl=document.getElementById('team-invite-role-cash');
+  const roomEl=document.getElementById('team-invite-role-room');
+  if(!organizerEl || !cashEl || !roomEl) return;
+  const organizerMode=!!organizerEl.checked;
+  cashEl.disabled=organizerMode;
+  roomEl.disabled=organizerMode;
+  cashEl.parentElement.style.opacity=organizerMode?'.55':'1';
+  roomEl.parentElement.style.opacity=organizerMode?'.55':'1';
 }
 
 function renderTeamEventPicker(toggle=true){
@@ -6908,8 +7007,7 @@ function renderTeamEventPickerLabelOnly(){
 function openUserMenu(){
   const sess=Auth.currentSession();
   if(!sess){openProfileModal();return;}
-  const role=Auth.currentRole(DB.activeEvent);
-  const roleLabel=role==='organizer'?'Organizer':role==='cash'?'Cash Collector':role==='room'?'Room Coordinator':'—';
+  const roleLabel=Auth.getTeamRoleLabel(Auth.currentRoles(DB.activeEvent))||'—';
   openConfirm(
     sess.name||sess.email,
     `${sess.email}\nRole: ${roleLabel}\n\nSign out of eventise?`,
@@ -6997,7 +7095,7 @@ window.App={
   onRoomAllocGuestChange,
   unassignGuestRoom:unassignGuestRoomGated,
   clearGuestRooms:_requireRoom(clearGuestRooms),
-  openTeamModal,sendTeamInvite,renderTeamEventPicker,pickTeamEvent,openUserMenu,
+  openTeamModal,sendTeamInvite,syncTeamInviteRoles,renderTeamEventPicker,pickTeamEvent,openUserMenu,
   toast,
 };
 

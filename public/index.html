@@ -720,11 +720,20 @@ html.boot-loading #auth-screen{visibility:hidden}
     <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">Invite by Email</div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
       <input class="fi" type="email" id="team-invite-email" placeholder="colleague@email.com" style="flex:1" />
-      <select class="fi" id="team-invite-role" style="width:130px">
-        <option value="organizer">Organizer</option>
-        <option value="cash" selected>Cash Collector</option>
-        <option value="room">Room Coord.</option>
-      </select>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px">
+      <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--txt2);cursor:pointer">
+        <input type="checkbox" id="team-invite-role-organizer" name="team-invite-role" onchange="App.syncTeamInviteRoles()" />
+        <span>Organizer</span>
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--txt2);cursor:pointer">
+        <input type="checkbox" id="team-invite-role-cash" name="team-invite-role" checked onchange="App.syncTeamInviteRoles()" />
+        <span>Cash Collector</span>
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--txt2);cursor:pointer">
+        <input type="checkbox" id="team-invite-role-room" name="team-invite-role" onchange="App.syncTeamInviteRoles()" />
+        <span>Room Coord.</span>
+      </label>
     </div>
     <button class="btn-p" onclick="App.sendTeamInvite()">＋ Add Member</button>
     <button class="btn-s" onclick="App.closeModal('team')">Close</button>

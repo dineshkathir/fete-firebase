@@ -1205,7 +1205,7 @@ const NotificationCenter = (() => {
       const mine = team.find(member=>normalizeEmailValue(member.email)===email);
       _knownEventIds.add(event.id);
       if(!mine || teamMemberHasRole(mine, 'organizer')) return;
-      const roleLabel = getTeamRoleLabel(mine);
+      const roleLabel = getTeamRoleLabelFromRoles(mine);
       show('Team invite received', `You were added to ${event.name} as ${roleLabel}.`, {
         tag:`team-${event.id}`,
         data:{ type:'team-invite', eventId:event.id }

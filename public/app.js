@@ -27,6 +27,22 @@ function normalizePhoneValue(value){
   return String(value||'').replace(/\D/g,'').slice(0,15);
 }
 
+function getTeamRoleLabelFromRoles(memberOrRoles){
+  const source = Array.isArray(memberOrRoles)
+    ? memberOrRoles
+    : Array.isArray(memberOrRoles?.roles)
+      ? memberOrRoles.roles
+      : memberOrRoles?.role
+        ? [memberOrRoles.role]
+        : [];
+  const roles = [...new Set(source.map(role => String(role || '').trim().toLowerCase()).filter(Boolean))];
+  if (roles.includes('organizer')) return 'Organizer';
+  const labels = [];
+  if (roles.includes('cash')) labels.push('Cash Collector');
+  if (roles.includes('room')) labels.push('Room Coordinator');
+  return labels.length ? labels.join(' + ') : 'Team Member';
+}
+
 function contributorMatchesEmail(email){
   const normalized=normalizeEmailValue(email);
   if(!normalized) return false;
@@ -231,12 +247,7 @@ const Cloud = (() => {
   }
 
   function getTeamRoleLabel(memberOrRoles) {
-    const roles = normalizeTeamRoles(memberOrRoles);
-    if (roles.includes('organizer')) return 'Organizer';
-    const labels = [];
-    if (roles.includes('cash')) labels.push('Cash Collector');
-    if (roles.includes('room')) labels.push('Room Coordinator');
-    return labels.length ? labels.join(' + ') : 'Team Member';
+    return getTeamRoleLabelFromRoles(normalizeTeamRoles(memberOrRoles));
   }
 
   function hydrateTeamForSession(team, session) {

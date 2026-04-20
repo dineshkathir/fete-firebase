@@ -7123,7 +7123,7 @@ const unassignGuestRoomGated=_requireRoom(unassignGuestRoom);
 // ═══════════════════════════════════════════════
 // PUBLIC API
 // ═══════════════════════════════════════════════
-window.App={
+Object.assign(window.App,{
   togglePastEvents(show){_showPastEvents=!!show; renderEvents();},
   switchTab,openModal: window.openModal,closeModal,
   openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,openRoomConfig:_requireRoom(openRoomConfig),openEventFoodMenuEditor,saveEvent,saveRoomConfig,saveEventFoodMenus,confirmDeleteEvent:confirmDeleteEventGated,
@@ -7162,7 +7162,7 @@ window.App={
   clearGuestRooms:_requireRoom(clearGuestRooms),
   openTeamModal,sendTeamInvite,syncTeamInviteRoles,renderTeamEventPicker,pickTeamEvent,openUserMenu,
   toast,
-};
+});
 
 // Expose modal helpers globally for inline onclick in dynamic HTML
 window.setMoiTy=setMoiTy;

@@ -932,6 +932,53 @@ function finishBoot(){
   root.classList.remove('boot-loading');
 }
 
+const BOOT_TIMEOUT_MS = 4500;
+
+function withTimeout(promise, ms, fallbackValue){
+  return new Promise(resolve=>{
+    let settled=false;
+    const timer=window.setTimeout(()=>{
+      if(settled) return;
+      settled=true;
+      resolve(fallbackValue);
+    }, ms);
+    Promise.resolve(promise)
+      .then(value=>{
+        if(settled) return;
+        settled=true;
+        window.clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(()=>{
+        if(settled) return;
+        settled=true;
+        window.clearTimeout(timer);
+        resolve(fallbackValue);
+      });
+  });
+}
+
+function recoverBootUi(){
+  if(!document.documentElement.classList.contains('boot-loading')) return;
+  const hasInviteScreen=!!_publicInviteContext?.eventId;
+  if(hasInviteScreen){
+    showPublicInviteScreen();
+    finishBoot();
+    return;
+  }
+  if(Auth.currentSession()){
+    const app=document.getElementById('app');
+    const auth=document.getElementById('auth-screen');
+    const invite=document.getElementById('public-invite-screen');
+    if(auth) auth.style.display='none';
+    if(invite) invite.style.display='none';
+    if(app) app.style.display='flex';
+  }else{
+    showAuthScreen();
+  }
+  finishBoot();
+}
+
 function syncActiveEventData(){
   const sess = Auth.currentSession();
   if(!sess || !DB.activeEvent) return Promise.resolve();
@@ -6568,7 +6615,7 @@ async function submitPublicInviteForm(){
 }
 
 async function initPublicInviteMode(){
-  const context=await parsePublicInviteFromUrl();
+  const context=await withTimeout(parsePublicInviteFromUrl(), 2500, null);
   if(!context) return false;
   _publicInviteContext=context;
   renderPublicInviteScreen(context);
@@ -7208,6 +7255,10 @@ if(false && DB.events.length===0){
 }
 
 // Initialize auth — shows login screen or app based on session
+window.setTimeout(()=>{
+  recoverBootUi();
+}, BOOT_TIMEOUT_MS);
+
 initPublicInviteMode().then(isInviteMode=>{
   if(!isInviteMode){
     Auth.init();

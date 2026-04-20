@@ -7301,7 +7301,7 @@ document.getElementById('main-scroll')?.addEventListener('scroll',()=>{
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260420-1').catch(() => {});
   });
 }
 

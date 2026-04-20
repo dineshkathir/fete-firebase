@@ -43,6 +43,10 @@ function getTeamRoleLabelFromRoles(memberOrRoles){
   return labels.length ? labels.join(' + ') : 'Team Member';
 }
 
+function getTeamRoleLabel(memberOrRoles){
+  return getTeamRoleLabelFromRoles(memberOrRoles);
+}
+
 function contributorMatchesEmail(email){
   const normalized=normalizeEmailValue(email);
   if(!normalized) return false;

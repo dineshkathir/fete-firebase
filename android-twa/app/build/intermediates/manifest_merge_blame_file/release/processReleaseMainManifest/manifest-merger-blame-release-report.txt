@@ -1,8 +1,8 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.eventise.twa"
-4    android:versionCode="5"
-5    android:versionName="1.0.1" >
+4    android:versionCode="6"
+5    android:versionName="1.0.2" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="21"
@@ -21,7 +21,7 @@
 15-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:30:27-75
 16
 17            <data android:scheme="https" />
-17-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:31:17-33:58
+17-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:31:17-33:61
 17-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:32:21-43
 18        </intent>
 19    </queries>
@@ -98,9 +98,9 @@
 56-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:30:27-75
 57
 58                <data
-58-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:31:17-33:58
-59                    android:host="eventise.vercel.app"
-59-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:33:21-55
+58-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:31:17-33:61
+59                    android:host="fete-app-c07ec.web.app"
+59-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:33:21-58
 60                    android:scheme="https" />
 60-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:32:21-43
 61            </intent-filter>

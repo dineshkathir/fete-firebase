@@ -1,15 +1,4 @@
 <resources>
     <string name="app_name">eventise</string>
-    <string name="launch_url">https://eventise.vercel.app/</string>
-
-    <string name="asset_statements">
-        [{
-            \"relation\": [\"delegate_permission/common.handle_all_urls\"],
-            \"target\": {
-                \"namespace\": \"android_app\",
-                \"package_name\": \"com.eventise.twa.debug\",
-                \"sha256_cert_fingerprints\": [\"C3:DA:A0:8B:26:AF:C0:7D:F5:A3:9A:C4:A3:E1:37:37:B7:37:96:3F:F6:CB:66:D9:3E:A2:DD:10:11:82:86:A0\"]
-            }
-        }]
-    </string>
+    <string name="launch_url">https://fete-app-c07ec.web.app/</string>
 </resources>

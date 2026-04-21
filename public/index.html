@@ -18,6 +18,72 @@
 <script>
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
+window.__eventiseConsent = {
+  storageKey: 'eventise_cookie_consent',
+  mapConsent(value){
+    const granted = value === 'granted';
+    return {
+      ad_storage: granted ? 'granted' : 'denied',
+      ad_user_data: granted ? 'granted' : 'denied',
+      ad_personalization: granted ? 'granted' : 'denied',
+      analytics_storage: granted ? 'granted' : 'denied',
+      functionality_storage: granted ? 'granted' : 'denied',
+      personalization_storage: granted ? 'granted' : 'denied',
+      security_storage: 'granted'
+    };
+  },
+  applyConsent(value, persist = false){
+    const consentState = this.mapConsent(value);
+    gtag('consent', 'update', consentState);
+    if(persist){
+      try{ localStorage.setItem(this.storageKey, value); }catch(e){}
+    }
+    try{
+      document.documentElement.dataset.consentChoice = value;
+      const banner = document.getElementById('consent-banner');
+      if(banner) banner.hidden = true;
+    }catch(e){}
+  },
+  initBanner(){
+    let saved = null;
+    try{
+      saved = localStorage.getItem(this.storageKey);
+    }catch(e){}
+    if(saved === 'granted' || saved === 'denied'){
+      document.documentElement.dataset.consentChoice = saved;
+      return;
+    }
+    const banner = document.getElementById('consent-banner');
+    if(!banner) return;
+    banner.hidden = false;
+    const acceptBtn = document.getElementById('consent-accept');
+    const rejectBtn = document.getElementById('consent-reject');
+    if(acceptBtn){
+      acceptBtn.addEventListener('click', ()=>this.applyConsent('granted', true));
+    }
+    if(rejectBtn){
+      rejectBtn.addEventListener('click', ()=>this.applyConsent('denied', true));
+    }
+  }
+};
+
+gtag('consent', 'default', {
+  ad_storage: 'denied',
+  ad_user_data: 'denied',
+  ad_personalization: 'denied',
+  analytics_storage: 'denied',
+  functionality_storage: 'denied',
+  personalization_storage: 'denied',
+  security_storage: 'granted'
+});
+
+try{
+  const savedConsent = localStorage.getItem(window.__eventiseConsent.storageKey);
+  if(savedConsent === 'granted' || savedConsent === 'denied'){
+    window.__eventiseConsent.applyConsent(savedConsent, false);
+  }
+}catch(e){}
+
 gtag('js', new Date());
 gtag('config', 'G-5HEZ0X6GK8');
 
@@ -92,6 +158,12 @@ window.addEventListener('error', event=>{
 window.addEventListener('unhandledrejection', event=>{
   const message=event?.reason?.message || 'A startup error occurred.';
   window.__eventiseBoot.fail(message);
+});
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  try{
+    window.__eventiseConsent.initBanner();
+  }catch(e){}
 });
 
 try{
@@ -684,8 +756,19 @@ html.boot-loading #auth-screen{visibility:hidden}
 .switch-copy-value.room-on{color:#2F80ED}
 .switch-copy-value.room-off{color:var(--txt3)}
 .invite-share-meta{background:var(--surf2);border:1px solid var(--bord2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px}
+.consent-banner{position:fixed;left:50%;bottom:calc(var(--tab) + 16px);transform:translateX(-50%);width:min(92vw,420px);background:rgba(255,255,255,.98);border:1px solid var(--bord);border-radius:20px;box-shadow:0 18px 40px rgba(30,20,16,.14);padding:16px;z-index:1200}
+.consent-banner[hidden]{display:none}
+.consent-title{font-size:15px;font-weight:600;color:var(--txt);margin-bottom:6px}
+.consent-copy{font-size:12px;line-height:1.6;color:var(--txt2)}
+.consent-actions{display:flex;gap:10px;margin-top:14px}
+.consent-btn{flex:1;border:none;border-radius:12px;padding:11px 12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:transform .16s var(--ease-out),opacity .16s var(--ease-out),box-shadow .16s var(--ease-out)}
+.consent-btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(30,20,16,.08)}
+.consent-btn:active{transform:scale(.98)}
+.consent-btn-accept{background:var(--rose-d);color:#fff}
+.consent-btn-reject{background:var(--surf2);color:var(--txt2);border:1px solid var(--bord)}
 @media (max-width:420px){
   .public-invite-grid{grid-template-columns:1fr 1fr}
+  .consent-banner{bottom:calc(var(--tab) + 10px);width:calc(100vw - 20px);padding:14px}
 }
 </style>
 </head>
@@ -1697,6 +1780,16 @@ html.boot-loading #auth-screen{visibility:hidden}
 
 <!-- TOAST -->
 <div id="toast"></div>
+
+<!-- CONSENT BANNER -->
+<div class="consent-banner" id="consent-banner" hidden>
+  <div class="consent-title">Privacy choices</div>
+  <div class="consent-copy">We use Google Analytics to understand usage and improve eventise. You can accept analytics cookies or continue with only essential storage.</div>
+  <div class="consent-actions">
+    <button class="consent-btn consent-btn-reject" id="consent-reject" type="button">Essential only</button>
+    <button class="consent-btn consent-btn-accept" id="consent-accept" type="button">Accept analytics</button>
+  </div>
+</div>
 
 <script type="module" src="app.js?v=20260420-2" onerror="window.__eventiseBoot.fail('The app script failed to load.')"></script>
 

@@ -528,6 +528,24 @@ function serializeEvent(event, team, session) {
   function loadEventsForSession(session) {
     const myToken = ++_sessionToken;
     const email = normalizeEmail(session?.email);
+    let resolveInitialLoad=()=>{};
+    let initialLoadSettled=false;
+    let memberSnapshotReady=false;
+    let guestSnapshotReady=false;
+    const initialLoad = new Promise(resolve=>{
+      resolveInitialLoad=()=>{
+        if(initialLoadSettled) return;
+        initialLoadSettled=true;
+        resolve();
+      };
+    });
+    const initialLoadTimer=window.setTimeout(()=>resolveInitialLoad(), 1600);
+    const settleInitialLoad=()=>{
+      if(memberSnapshotReady && guestSnapshotReady){
+        window.clearTimeout(initialLoadTimer);
+        resolveInitialLoad();
+      }
+    };
     
     if (_unsubs.eventsMem) { _unsubs.eventsMem(); _unsubs.eventsMem = null; }
     if (_unsubs.eventsGst) { _unsubs.eventsGst(); _unsubs.eventsGst = null; }
@@ -536,7 +554,9 @@ function serializeEvent(event, team, session) {
       applyEventsToLocal([], session);
       listenMasterGuestShares(session);
       render();
-      return;
+      window.clearTimeout(initialLoadTimer);
+      resolveInitialLoad();
+      return initialLoad;
     }
     
     let memEvents = new Map();
@@ -555,6 +575,8 @@ function serializeEvent(event, team, session) {
       if (myToken !== _sessionToken) return;
       memEvents.clear();
       snapshot.docs.forEach(docSnap => memEvents.set(docSnap.id, { id: docSnap.id, _isGuestOnly: false, ...docSnap.data() }));
+      memberSnapshotReady = true;
+      settleInitialLoad();
       flushEvents();
     });
 
@@ -563,10 +585,13 @@ function serializeEvent(event, team, session) {
       if (myToken !== _sessionToken) return;
       gstEvents.clear();
       snapshot.docs.forEach(docSnap => gstEvents.set(docSnap.id, { id: docSnap.id, _isGuestOnly: true, ...docSnap.data() }));
+      guestSnapshotReady = true;
+      settleInitialLoad();
       flushEvents();
     });
 
     listenMasterGuestShares(session);
+    return initialLoad;
   }
 
   async function saveEvent(event, team, session) {
@@ -740,17 +765,34 @@ const Auth = (() => {
     document.getElementById('app').style.display='none';
     document.getElementById('hdr-team-btn').style.display='none';
     document.documentElement.classList.remove('boot-authenticated');
+    document.documentElement.classList.remove('app-hydrating');
+  }
+
+  function startAppHydration() {
+    document.documentElement.classList.add('app-hydrating');
+  }
+
+  function finishAppHydration() {
+    document.documentElement.classList.remove('app-hydrating');
   }
 
   function _onLogin(sess, showWelcomeToast=true) {
-    // If first ever user — make them organizer of all events automatically
+    startAppHydration();
     showAppShell();
-    Cloud.migrateLocalEvents(sess).catch(()=>Cloud.loadEventsForSession(sess).catch(()=>{}));
-    Cloud.loadContributors().then(()=>{ render(); }).catch(()=>{});
     NotificationCenter.initKnownState();
-    render();
-    finishBoot();
-    if(showWelcomeToast) toast(`Welcome, ${sess.name}!`);
+    Promise.allSettled([
+      withTimeout(
+        Cloud.migrateLocalEvents(sess).catch(()=>Cloud.loadEventsForSession(sess).catch(()=>{})),
+        1600,
+        null
+      ),
+      withTimeout(Cloud.loadContributors().catch(()=>null), 1600, null)
+    ]).finally(()=>{
+      render();
+      finishAppHydration();
+      finishBoot();
+      if(showWelcomeToast) toast(`Welcome, ${sess.name}!`);
+    });
   }
 
   function currentRoles(eventId) {
@@ -7416,15 +7458,12 @@ window.setTimeout(()=>{
 initPublicInviteMode().then(isInviteMode=>{
   if(!isInviteMode){
     Auth.init();
-    render();
     return;
   }
   render();
   finishBoot();
 }).catch(()=>{
   Auth.init();
-  render();
-  finishBoot();
 });
 
 document.getElementById('main-scroll')?.addEventListener('scroll',()=>{

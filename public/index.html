@@ -22,6 +22,7 @@ gtag('js', new Date());
 gtag('config', 'G-5HEZ0X6GK8');
 
 try{
+  document.documentElement.classList.add('boot-loading');
   if(localStorage.getItem('fete_session')){
     document.documentElement.classList.add('boot-authenticated');
   }

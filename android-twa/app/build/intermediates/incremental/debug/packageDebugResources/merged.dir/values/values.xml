@@ -14,7 +14,7 @@
             }
         }]
     </string>
-    <string name="launch_url">https://eventise.vercel.app/</string>
+    <string name="launch_url">https://fete-app-c07ec.web.app/</string>
     <style name="Theme.Eventise" parent="Theme.AppCompat.Light.NoActionBar">
     <item name="android:statusBarColor">@color/brand_surface</item>
     <item name="android:navigationBarColor">@color/brand_surface</item>

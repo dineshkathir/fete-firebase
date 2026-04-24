@@ -22,7 +22,12 @@ gtag('js', new Date());
 gtag('config', 'G-5HEZ0X6GK8');
 
 try{
-  document.documentElement.classList.add('boot-loading');
+  const isStandaloneLaunch =
+    window.matchMedia?.('(display-mode: standalone)')?.matches ||
+    window.navigator.standalone === true;
+  if(!isStandaloneLaunch){
+    document.documentElement.classList.add('boot-loading');
+  }
   if(localStorage.getItem('fete_session')){
     document.documentElement.classList.add('boot-authenticated');
   }

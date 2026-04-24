@@ -44,7 +44,7 @@
                 android:resource="@color/brand_surface" />
             <meta-data
                 android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
-                android:resource="@drawable/ic_splash" />
+                android:resource="@drawable/splash_wordmark" />
             <meta-data
                 android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
                 android:value="com.eventise.twa.fileprovider" />

@@ -1,42 +1,42 @@
 [
     {
-        "merged": "com.eventise.twa.app-debug-25:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "com.eventise.twa.app-main-27:/mipmap-anydpi-v26/ic_launcher_round.xml"
+        "merged": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-debug-25:\\drawable_ic_splash.xml.flat",
+        "source": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-main-27:\\drawable\\ic_splash.xml"
     },
     {
-        "merged": "com.eventise.twa.app-debug-25:/drawable_ic_splash.xml.flat",
-        "source": "com.eventise.twa.app-main-27:/drawable/ic_splash.xml"
+        "merged": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-debug-25:\\mipmap_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-main-27:\\mipmap\\ic_launcher_round.xml"
     },
     {
-        "merged": "com.eventise.twa.app-debug-25:/drawable_ic_logo.xml.flat",
-        "source": "com.eventise.twa.app-main-27:/drawable/ic_logo.xml"
+        "merged": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-debug-25:\\drawable-nodpi_splash_wordmark.png.flat",
+        "source": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-main-27:\\drawable-nodpi\\splash_wordmark.png"
     },
     {
-        "merged": "com.eventise.twa.app-debug-25:/mipmap_ic_launcher.xml.flat",
-        "source": "com.eventise.twa.app-main-27:/mipmap/ic_launcher.xml"
+        "merged": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-debug-25:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-main-27:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
     },
     {
-        "merged": "com.eventise.twa.app-debug-25:/drawable_ic_launcher.xml.flat",
-        "source": "com.eventise.twa.app-main-27:/drawable/ic_launcher.xml"
+        "merged": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-debug-25:\\xml_filepaths.xml.flat",
+        "source": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-main-27:\\xml\\filepaths.xml"
     },
     {
-        "merged": "com.eventise.twa.app-debug-25:/mipmap_ic_launcher_round.xml.flat",
-        "source": "com.eventise.twa.app-main-27:/mipmap/ic_launcher_round.xml"
+        "merged": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-debug-25:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-main-27:\\mipmap-anydpi-v26\\ic_launcher.xml"
     },
     {
-        "merged": "com.eventise.twa.app-debug-25:/xml_filepaths.xml.flat",
-        "source": "com.eventise.twa.app-main-27:/xml/filepaths.xml"
+        "merged": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-debug-25:\\drawable_ic_launcher.xml.flat",
+        "source": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-main-27:\\drawable\\ic_launcher.xml"
     },
     {
-        "merged": "com.eventise.twa.app-debug-25:/drawable_ic_launcher_foreground.xml.flat",
-        "source": "com.eventise.twa.app-main-27:/drawable/ic_launcher_foreground.xml"
+        "merged": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-debug-25:\\drawable_ic_logo.xml.flat",
+        "source": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-main-27:\\drawable\\ic_logo.xml"
     },
     {
-        "merged": "com.eventise.twa.app-debug-25:/drawable-nodpi_splash_wordmark.png.flat",
-        "source": "com.eventise.twa.app-main-27:/drawable-nodpi/splash_wordmark.png"
+        "merged": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-debug-25:\\mipmap_ic_launcher.xml.flat",
+        "source": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-main-27:\\mipmap\\ic_launcher.xml"
     },
     {
-        "merged": "com.eventise.twa.app-debug-25:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.eventise.twa.app-main-27:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-debug-25:\\drawable_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\Lenovo\\.gradle\\daemon\\9.0.0\\com.eventise.twa.app-main-27:\\drawable\\ic_launcher_foreground.xml"
     }
 ]

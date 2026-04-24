@@ -921,9 +921,6 @@ const Auth = (() => {
       DB.profile.name=cachedSession.name||DB.profile.name||'';
       DB.profile.email=cachedSession.email||DB.profile.email||'';
       save();
-    } else {
-      showAuthScreen();
-      finishBoot();
     }
     onAuthStateChanged(_fbAuth, user => {
       if(user){
@@ -940,16 +937,16 @@ const Auth = (() => {
         save();
         const shouldWelcome=!cachedSession || cachedSession.id!==sess.id;
         _onLogin(sess, shouldWelcome);
-    } else {
-      clearSession();
-      DB.events=[];DB.guests=[];DB.gifts=[];DB.activeEvent=null;
-      NotificationCenter.reset();
-      save();
-      showAuthScreen();
-      finishBoot();
-    }
-  });
-}
+      } else {
+        clearSession();
+        DB.events=[];DB.guests=[];DB.gifts=[];DB.activeEvent=null;
+        NotificationCenter.reset();
+        save();
+        showAuthScreen();
+        finishBoot();
+      }
+    });
+  }
 
   function currentSession() { return getSession(); }
 
@@ -964,6 +961,56 @@ const STORE = {
   get(k){try{return JSON.parse(localStorage.getItem('fete_'+k))||null}catch{return null}},
   set(k,v){localStorage.setItem('fete_'+k,JSON.stringify(v))},
 };
+
+function getGuestDeclinedEventsByUser(){
+  return STORE.get('guestDeclinedEventsByUser')||{};
+}
+function getGuestDeclinedEventsKey(){
+  return normalizeEmailValue(Auth.currentSession()?.email||DB?.profile?.email||'');
+}
+function getDeclinedGuestEventIds(){
+  const key=getGuestDeclinedEventsKey();
+  if(!key) return [];
+  const byUser=getGuestDeclinedEventsByUser();
+  return Array.isArray(byUser[key]) ? byUser[key].filter(Boolean) : [];
+}
+function setDeclinedGuestEventIds(eventIds){
+  const key=getGuestDeclinedEventsKey();
+  if(!key) return;
+  const byUser=getGuestDeclinedEventsByUser();
+  const nextIds=[...new Set((eventIds||[]).filter(Boolean))];
+  if(nextIds.length) byUser[key]=nextIds;
+  else delete byUser[key];
+  STORE.set('guestDeclinedEventsByUser', byUser);
+}
+function isGuestEventDeclined(eventId){
+  return getDeclinedGuestEventIds().includes(eventId);
+}
+function declineGuestEvent(eventId){
+  const event=DB.events.find(item=>item.id===eventId);
+  if(!event || !event._isGuestOnly) return;
+  if(isGuestEventDeclined(eventId)) return;
+  const nextIds=[...getDeclinedGuestEventIds(), eventId];
+  setDeclinedGuestEventIds(nextIds);
+  if(DB.activeEvent===eventId){
+    const fallback=DB.events.find(item=>item._isGuestOnly && item.id!==eventId && !isGuestEventDeclined(item.id))
+      || DB.events.find(item=>item.id!==eventId);
+    DB.activeEvent=fallback?.id||null;
+    save();
+  }
+  renderEvents();
+  toast('Event moved to declined');
+}
+function restoreDeclinedGuestEvent(eventId){
+  if(!isGuestEventDeclined(eventId)) return;
+  setDeclinedGuestEventIds(getDeclinedGuestEventIds().filter(id=>id!==eventId));
+  if(!DB.activeEvent){
+    DB.activeEvent=eventId;
+    save();
+  }
+  renderEvents();
+  toast('Event restored');
+}
 
 function finishBoot(){
   if(window.__eventiseBoot && typeof window.__eventiseBoot.release==='function'){
@@ -2117,6 +2164,7 @@ let _eventMenuEditorDisabled=false;
 let _publicInviteShareEventId='';
 let _giftPhotoData=null;
 let _showPastEvents=false;
+let _showDeclinedEvents=false;
 let _suppressOverlayPop=false;
 let _publicInviteContext=null;
 
@@ -2668,6 +2716,7 @@ window.addEventListener('popstate', (event) => {
 function renderEvents(){
   const el=document.getElementById('scr-events');
   const sess=Auth.currentSession();
+  const declinedGuestIds=new Set(getDeclinedGuestEventIds());
   const getRoomStats=eventId=>{
     const event=DB.events.find(item=>item.id===eventId);
     const eventGuests=DB.guests.filter(g=>g.eventId===eventId);
@@ -2681,15 +2730,20 @@ function renderEvents(){
     const team=Cloud.hydrateTeamForSession(Auth.getTeam(ev.id), sess);
     return team.some(m=>m.userId===sess?.id || ((m.email||'').trim().toLowerCase()===(sess?.email||'').trim().toLowerCase()));
   });
-  const upcomingEvents=accessibleEvents.filter(ev=>{
+  const declinedEvents=accessibleEvents.filter(ev=>ev._isGuestOnly && declinedGuestIds.has(ev.id));
+  const visibleEvents=accessibleEvents.filter(ev=>!(ev._isGuestOnly && declinedGuestIds.has(ev.id)));
+  const upcomingEvents=visibleEvents.filter(ev=>{
     const days=daysUntil(ev.date);
     return days===null || days>=0;
   });
-  const pastEvents=accessibleEvents.filter(ev=>{
+  const pastEvents=visibleEvents.filter(ev=>{
     const days=daysUntil(ev.date);
     return days!==null && days<0;
   });
   const myEvents=_showPastEvents ? [...upcomingEvents, ...pastEvents] : upcomingEvents;
+  const declinedToggle=declinedEvents.length
+    ? `<button class="fchip ${_showDeclinedEvents?'on':''}" style="padding:8px 14px;font-size:12px;margin:${accessibleEvents.length?(_showPastEvents||myEvents.length?'6px 8px 14px 0':'10px 8px 0 0'):'10px 8px 0 0'}" onclick="App.toggleDeclinedEvents(${_showDeclinedEvents?'false':'true'})">${_showDeclinedEvents?'Hide Declined Events':'View Declined Events'} (${declinedEvents.length})</button>`
+    : '';
   if(accessibleEvents.length===0){
     el.innerHTML=`<div class="no-events">
       <div class="no-events-ico" style="color:var(--rose-d)">${uiIcon('event',44)}</div>
@@ -2698,7 +2752,7 @@ function renderEvents(){
     </div><div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add event" aria-label="Add event" onclick="App.openAddEvent()">${uiIcon('event',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
     return;
   }
-  if(myEvents.length===0&&pastEvents.length){
+  if(myEvents.length===0&&pastEvents.length&&!_showDeclinedEvents){
     el.innerHTML=`<div class="no-events">
       <div class="no-events-ico" style="color:var(--txt3)">${uiIcon('calendar',44)}</div>
       <div class="no-events-t">No upcoming events</div>
@@ -2706,6 +2760,16 @@ function renderEvents(){
       <div style="display:flex;justify-content:center;margin-top:10px">
         <button class="fchip" style="padding:8px 16px;font-size:12.5px" onclick="App.togglePastEvents(true)">View Past Events</button>
       </div>
+      ${declinedEvents.length?`<div style="display:flex;justify-content:center;margin-top:10px">${declinedToggle}</div>`:''}
+    </div>`;
+    return;
+  }
+  if(myEvents.length===0&&declinedEvents.length&&!_showDeclinedEvents){
+    el.innerHTML=`<div class="no-events">
+      <div class="no-events-ico" style="color:var(--txt3)">${uiIcon('event',44)}</div>
+      <div class="no-events-t">No visible events</div>
+      <p class="no-events-s">You can bring back any guest invites you previously declined.</p>
+      <div style="display:flex;justify-content:center;margin-top:10px">${declinedToggle}</div>
     </div>`;
     return;
   }
@@ -2773,7 +2837,8 @@ function renderEvents(){
             ${ev._isGuestOnly
               ?`${(normalizeEventMenus(ev.foodMenus).length||normalizeEventTimeline(ev.timeline).length)?`<button class="ev-btn" title="Agenda and food menu" aria-label="Agenda and food menu" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFoodMenuModal('${ev.id}')">${uiIcon('calendar',16)}</button>`:''}
             ${isFeedbackEnabled(ev)?`<button class="ev-btn" title="Feedback" aria-label="Feedback" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');App.openGuestFeedbackModal('${ev.id}')">${uiIcon('star',16)}</button>`:''}
-            <button class="ev-btn" title="${isRoomRequestEnabled(ev)?'Request room':'View rooms'}" aria-label="${isRoomRequestEnabled(ev)?'Request room':'View rooms'}" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${uiIcon('room',16)}</button>`
+            <button class="ev-btn" title="${isRoomRequestEnabled(ev)?'Request room':'View rooms'}" aria-label="${isRoomRequestEnabled(ev)?'Request room':'View rooms'}" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');${isRoomRequestEnabled(ev)?`App.openGuestRequestModal('${ev.id}')`:`App.switchTab('rooms')`}">${uiIcon('room',16)}</button>
+            <button class="ev-btn" type="button" title="Decline invite" aria-label="Decline invite" style="padding:0 12px;width:auto" onclick="event.stopPropagation();App.declineGuestEvent('${ev.id}')">Decline</button>`
               :`<button class="ev-btn" title="Guests" aria-label="Guests" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('guests')">${uiIcon('guests',16)}</button>
             <button class="ev-btn" title="Gifts" aria-label="Gifts" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.setActive('${ev.id}');App.switchTab('gifts')">${uiIcon('gift',16)}</button>
             <button class="ev-btn" title="Contacts" aria-label="Contacts" style="display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;height:36px" onclick="event.stopPropagation();App.openEventContacts('${ev.id}')">${uiIcon('contact',16)}</button>
@@ -2786,10 +2851,39 @@ function renderEvents(){
   const pastToggle=pastEvents.length
     ? `<button class="fchip ${_showPastEvents?'on':''}" style="padding:8px 14px;font-size:12px;margin:6px 0 14px" onclick="App.togglePastEvents(${_showPastEvents?'false':'true'})">${_showPastEvents?'Hide Past Events':'View Past Events'} (${pastEvents.length})</button>`
     : '';
+  const declinedCards=_showDeclinedEvents&&declinedEvents.length
+    ? `<div class="ph"><div class="ph-title">Declined Events</div><div class="ph-sub">${declinedEvents.length} event${declinedEvents.length!==1?'s':''}</div></div>`+
+      declinedEvents.map(ev=>{
+        const days=daysUntil(ev.date);
+        const col=COLORS[ev.color]||COLORS.rose;
+        return `<div class="ev-card anim">
+          <div class="ev-accent" style="background:${col.accent}"></div>
+          <div class="ev-body">
+            <div class="ev-top">
+              <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+                <div class="ev-name" style="margin:0;flex:1;min-width:0">${ev.name}</div>
+              </div>
+            </div>
+            <div class="ev-meta">
+              ${ev.date?`<span class="ev-meta-item">${uiIcon('calendar',12)} ${fmtDate(ev.date)}</span>`:''}
+              ${ev.time?`<span class="ev-meta-item">${uiIcon('time',12)} ${fmtTime(ev.time)}</span>`:''}
+              ${ev.location?`<span class="ev-meta-item">${uiIcon('location',12)} ${formatEventLocation(ev.location)}</span>`:''}
+            </div>
+            <div class="ev-footer">
+              ${days!==null?`<span class="countdown" style="background:${col.accent}">${days>0?days+' days':days===0?'Today':'Past'}</span>`:'<span></span>'}
+              <div class="ev-actions">
+                <button class="ev-btn" type="button" style="padding:0 12px;width:auto" onclick="event.stopPropagation();App.restoreDeclinedGuestEvent('${ev.id}')">Show Again</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')
+    : '';
   el.innerHTML=heroHtml+
     `<div class="ph"><div class="ph-title">My Events</div><div class="ph-sub">${myEvents.length} event${myEvents.length!==1?'s':''}</div></div>`+
-    pastToggle+
+    `<div style="display:flex;flex-wrap:wrap;align-items:center">${pastToggle}${declinedToggle}</div>`+
     cards+
+    declinedCards+
     `<div class="floating-stack"><button class="floating-bubble floating-bubble-primary" type="button" title="Add event" aria-label="Add event" onclick="App.openAddEvent()">${uiIcon('event',18)}<span style="position:absolute;right:10px;top:7px;font-size:18px;font-weight:500;line-height:1">+</span></button></div>`;
 }
 
@@ -7162,11 +7256,12 @@ const unassignGuestRoomGated=_requireRoom(unassignGuestRoom);
 // ═══════════════════════════════════════════════
 Object.assign(window.App,{
   togglePastEvents(show){_showPastEvents=!!show; renderEvents();},
+  toggleDeclinedEvents(show){_showDeclinedEvents=!!show; renderEvents();},
   switchTab,openModal: window.openModal,closeModal,
   openAddEvent:openAddEventGated,openEditEvent:openEditEventGated,openRoomConfig:_requireRoom(openRoomConfig),openEventFoodMenuEditor,saveEvent,saveRoomConfig,saveEventFoodMenus,confirmDeleteEvent:confirmDeleteEventGated,
   openEventTimelineEditor,saveEventTimeline,addEventTimelineRow,_updateEventTimelineTime,_updateEventTimelineTitle,_removeEventTimeline,
   addEventContact,_updateEventContact,_removeEventContact,openEventContacts,saveEventContacts,toggleEventContactsEditMode,handleEventContactsHeaderAction,handleEventContactPhoneKey,shareEventContact,callEventContact,whatsAppEventContact,openEventContactActions,callActiveEventContact,whatsAppActiveEventContact,shareActiveEventContact,
-  setActive,
+  setActive,declineGuestEvent,restoreDeclinedGuestEvent,
   openAddGuest:openAddGuestGated,openEditGuest:openEditGuestGated,saveGuest,cycleRsvp,
   confirmDeleteGuest:confirmDeleteGuestGated,openGuestDetail,setRsvpDirect,handleGuestRowTap,swipeAllocateRoom,swipeAddGift,swipeAddCashGift,openGuestSwipeActions,openGuestContactActions,swipeCallGuest:callGuestFromSwipe,swipeWhatsAppGuest:whatsAppGuestFromSwipe,toggleGuestRowEdit,saveGuestRowEdit,undoGuestRemoval,
   openMasterGuestModal,filterMasterGuests,pickMasterGuest,exportCurrentEventToMaster,openMasterGuestEditor,saveMasterGuest,confirmDeleteMasterGuest,updateEventGuestToMaster,resolveMasterGuestConflict,toggleMasterGuestSelection,toggleMasterGuestGroupSelection,openMasterGuestShareComposer,sendMasterGuestShare,openMasterGuestShares,acceptMasterGuestShare,rejectMasterGuestShare,

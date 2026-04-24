@@ -1,8 +1,8 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.eventise.twa"
-4    android:versionCode="6"
-5    android:versionName="1.0.2" >
+4    android:versionCode="7"
+5    android:versionName="1.0.3" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="21"
@@ -124,11 +124,11 @@
 71                android:resource="@color/brand_surface" />
 71-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:44:17-56
 72            <meta-data
-72-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:45:13-47:58
+72-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:45:13-47:64
 73                android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
 73-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:46:17-88
-74                android:resource="@drawable/ic_splash" />
-74-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:47:17-55
+74                android:resource="@drawable/splash_wordmark" />
+74-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:47:17-61
 75            <meta-data
 75-->D:\projects\fete-firebase\android-twa\app\src\main\AndroidManifest.xml:48:13-50:65
 76                android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"

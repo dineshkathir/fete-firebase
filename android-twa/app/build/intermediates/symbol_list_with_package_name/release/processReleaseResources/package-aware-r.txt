@@ -636,7 +636,6 @@ drawable ic_launcher
 drawable ic_launcher_foreground
 drawable ic_logo
 drawable ic_site_settings
-drawable ic_splash
 drawable notification_action_background
 drawable notification_bg
 drawable notification_bg_low

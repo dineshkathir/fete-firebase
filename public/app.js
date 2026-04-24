@@ -1059,17 +1059,22 @@ function finishBoot(){
     window.__eventiseBoot.release();
   }
   const root=document.documentElement;
-  if(!root.classList.contains('boot-loading')) return;
+  if(!root.classList.contains('boot-loading')){
+    root.classList.remove('app-hydrating');
+    return;
+  }
   const bootScreen=document.getElementById('boot-screen');
   if(bootScreen){
     bootScreen.classList.add('boot-hide');
     window.setTimeout(()=>{
       root.classList.remove('boot-loading');
+      root.classList.remove('app-hydrating');
       bootScreen.classList.remove('boot-hide');
     },180);
     return;
   }
   root.classList.remove('boot-loading');
+  root.classList.remove('app-hydrating');
 }
 
 const BOOT_TIMEOUT_MS = 4500;

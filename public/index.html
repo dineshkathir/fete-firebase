@@ -25,8 +25,11 @@ try{
   const isStandaloneLaunch =
     window.matchMedia?.('(display-mode: standalone)')?.matches ||
     window.navigator.standalone === true;
-  if(!isStandaloneLaunch){
+  const isTwaLaunch = document.referrer.startsWith('android-app://');
+  if(!isStandaloneLaunch && !isTwaLaunch){
     document.documentElement.classList.add('boot-loading');
+  } else {
+    document.documentElement.classList.add('app-hydrating');
   }
   if(localStorage.getItem('fete_session')){
     document.documentElement.classList.add('boot-authenticated');
@@ -47,6 +50,7 @@ window.__eventiseBoot={
     try{
       if(this.timer) window.clearTimeout(this.timer);
       document.documentElement.classList.remove('boot-loading');
+      document.documentElement.classList.remove('app-hydrating');
       const status=document.getElementById('boot-status');
       if(status && reason) status.textContent=reason;
     }catch(e){}
@@ -591,6 +595,8 @@ html.boot-loading #boot-screen{display:flex}
 html.boot-loading #app{visibility:hidden}
 html.boot-loading #auth-screen{visibility:hidden}
 html.app-hydrating #app{visibility:hidden}
+html.app-hydrating #auth-screen{visibility:hidden}
+html.app-hydrating #public-invite-screen{visibility:hidden}
 .boot-card{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
 .boot-card-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
 .boot-card .brand-lockup{height:136px;width:auto}

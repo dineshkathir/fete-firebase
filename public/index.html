@@ -103,20 +103,7 @@ window.addEventListener('unhandledrejection', event=>{
   window.__eventiseBoot.fail(message);
 });
 
-try{
-  const adsHosts=new Set([
-    'fete-app-c07ec.web.app',
-    'fete-app-c07ec.firebaseapp.com'
-  ]);
-  if(adsHosts.has(window.location.hostname)){
-    const adsScript=document.createElement('script');
-    adsScript.async=true;
-    adsScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4755369691776718';
-    adsScript.crossOrigin='anonymous';
-    adsScript.onerror=()=>console.warn('AdSense script could not be loaded on this device.');
-    document.head.appendChild(adsScript);
-  }
-}catch(e){}
+window.loadEventiseAds=()=>{};
 </script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}

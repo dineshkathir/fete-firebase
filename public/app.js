@@ -2284,15 +2284,18 @@ document.querySelectorAll('.mo').forEach(el=>{
 // CONFIRM SYSTEM
 // ═══════════════════════════════════════════════
 let _confirmCb=null;
-function openConfirm(title,sub,cb){
+function openConfirm(title,sub,cb,{confirmLabel='Delete',confirmTone='danger'}={}){
   document.getElementById('confirm-t').textContent=title;
   document.getElementById('confirm-s').textContent=sub;
   const confirmOk=document.getElementById('confirm-ok');
   if(confirmOk){
-    confirmOk.textContent='Delete';
-    confirmOk.style.background='var(--rose-d)';
+    const isNeutral=confirmTone==='neutral';
+    const isPrimary=confirmTone==='primary';
+    const bg=isNeutral?'var(--txt2)':isPrimary?'var(--sage-d)':'var(--rose-d)';
+    confirmOk.textContent=confirmLabel;
+    confirmOk.style.background=bg;
     confirmOk.style.color='white';
-    confirmOk.style.borderColor='var(--rose-d)';
+    confirmOk.style.borderColor=bg;
   }
   _confirmCb=cb;
   document.getElementById('confirm-ok').onclick=()=>{
@@ -4966,7 +4969,8 @@ function exportCurrentEventToMaster(){
   openConfirm(
     'Export guests to master guest list?',
     `${eventGuests.length} guest${eventGuests.length!==1?'s':''} from ${eventName} will be checked against your saved master guest list.`,
-    ()=>{ runCurrentEventExportToMaster(); }
+    ()=>{ runCurrentEventExportToMaster(); },
+    { confirmLabel:'Export', confirmTone:'primary' }
   );
 }
 

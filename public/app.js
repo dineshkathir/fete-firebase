@@ -3395,9 +3395,6 @@ function renderGuests(){
     listHtml=`<div class="empty"><div class="empty-ico" style="color:var(--rose-d)">${uiIcon('guests',42)}</div><div class="empty-t">No guests yet</div><div class="empty-s">${_guestSearch||_guestFilter!=='pending'?'Try clearing filters':'Add your first guest to get started'}</div></div>`;
   } else {
     guests.forEach((g,i)=>{
-      if(i>0&&i%15===0&&!DB.premium){
-        listHtml+=`<div class="ad-inline"><span>Order a custom cake at <strong>FNP</strong> with free delivery</span><span class="adlbl" style="font-size:9px">AD</span></div>`;
-      }
       const first=g.first||'Guest';
       const last=g.last||'';
       const party=g.party||1;
@@ -3787,7 +3784,6 @@ function renderGifts(){
       body+=`<div class="empty"><div class="empty-ico" style="color:var(--txt3)">${uiIcon('search',42)}</div><div class="empty-t">None in this category</div></div>`;
     } else {
       filtered.forEach((g,i)=>{
-        if(i>0&&i%8===0&&!DB.premium) body+=`<div class="ad-inline"><span>Send cards at <strong>Hallmark</strong></span><span class="adlbl" style="font-size:9px">AD</span></div>`;
         body+=giftCard(g);
       });
     }
